@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
+import warnings
 
 """
 Annotation BED file format:
@@ -42,6 +43,7 @@ if __name__ == '__main__':
     parser.add_argument('-b', help='Matplotlib backend to use', default="agg", type=str, choices=bklist)
     parser.add_argument('-v', help='Plot vertical chromosome', default=False, action='store_true')
 
+    args = parser.parse_args([])
     args = parser.parse_args()
 
     # CONSTANTS
@@ -62,80 +64,76 @@ if __name__ == '__main__':
     if S < 0.1 or S > 0.9:
         sys.exit('Out of range value for S. Please provide a value in the range 0.1-0.9')
 
-    from plotsr.plotsr_func import readfasta
-    reflenghts = {id: len(seq) for id, seq in readfasta(args.r.name).items()}
-    qrylenghts = {id: len(seq) for id, seq in readfasta(args.q.name).items()}
-    # qrylenghts = {i.id: len(i.seq) for i in parse(args.q.name, 'fasta')}
+    from plotsr.plotsr_func import VARS, readfasta
+    from collections import deque
 
-    from collections import deque, OrderedDict
-    syri_regs = deque()
-    # with open(args.reg.name, 'r') as fin:
-    with open(args.reg.name, 'r') as fin:
-        for line in fin:
-            l = line.strip().split()
-            if l[10] in VARS:
-                syri_regs.append(l)
-
-    from pandas import DataFrame, concat
-    import numpy as np
-
-    df = DataFrame(list(syri_regs))[[0, 1, 2, 5, 6, 7, 10]]
-    df[[0, 5, 10]] = df[[0, 5, 10]].astype(str)
-    df[[1, 2, 6, 7]] = df[[1, 2, 6, 7]].astype(int)
-
-    # chr ID map
-    chrid = []
-    chrid_dict = OrderedDict()
-    for i in np.unique(df[0]):
-        chrid.append((i, np.unique(df.loc[(df[0] == i) & (df[10] == 'SYN'), 5])[0]))
-        chrid_dict[i] = np.unique(df.loc[(df[0] == i) & (df[10] == 'SYN'), 5])[0]
+    fins = ['col_lersyri.out', 'ler_cvisyri.out', 'cvi_colsyri.out']
+    # Read alignment coords
+    alignments = deque()
+    chrids = deque()
+    if syriout: # TODO: write proper check
+        for fin in fins:    ## TODO: define proper fins
+            al, cid = readsyriout(fin)
+            alignments.append([os.path.basename(fin), al])
+            chrids.append((os.path.basename(fin), cid))
+    elif bedout: # TODO: write proper check
+        for fin in fins: # TODO: define proper fins
+            al, cid = readbedout(fin)
+            alignments.append([os.path.basename(fin), al])
+            chrids.append((os.path.basename(fin), cid))
 
     # Check chromsome IDs and sizes
+    chrlengths = validalign2fasta(alignments, args.genomes) # TODO: define args.genomes
+    chrlengths = validalign2fasta(alignments, 'genomes.txt') # TODO: define args.genomes
 
-    # Reference genome
-    for i in np.unique(df[0]):
-        if i not in list(reflenghts.keys()):
-            raise SystemExit('Chromosome ID ' + i + ' not present in reference genome. Exiting.')
-        if np.max(np.max(df.loc[df[0] == i, [1, 2]])) > reflenghts[i]:
-            raise SystemExit('For chromosome ID ' + i + ' in reference genome, max coordinate in syri.out is more than length of chromosome. Exiting.')
+    # Filter alignments to select long alignments between homologous chromosomes
+    for i in range(len(alignments)):
+        alignments[i][1] = filterinput(args, alignments[i][1], chrids[i][1])
 
-    # Query genome
-    for i in np.unique(df[5]):
-        if i not in list(qrylenghts.keys()):
-            raise SystemExit('Chromosome ID ' + i + ' not present in query genome. Exiting.')
-        if np.max(np.max(df.loc[df[5] == i, [6, 7]])) > qrylenghts[i]:
-            raise SystemExit('For chromosome ID ' + i + ' in query genome, max coordinate in syri.out is more than length of chromosome. Exiting.')
-
-    df = filterinput(args, df, reflenghts, chrid_dict)
-
-    df.sort_values([5, 6, 7], inplace=True)
-    df.sort_values([0, 1, 2], inplace=True)
-
+    # Select only chromosomes selected by --chr
+    if args.chr is not None:
+        # TODO: IMPLEMENT selectchrs
+        pass
 
     # Combine Ribbon is selected than combine rows
-    if R: df = createribbon(df)
+    if R:
+        for i in range(len(alignments)):
+            alignments[i][1] = createribbon(alignments[i][1])
 
     # invert coord for inverted query genome
-    invindex = ['INV' in i for i in df[10]]
-    df.loc[invindex, 6] = df.loc[invindex, 6] + df.loc[invindex, 7]
-    df.loc[invindex, 7] = df.loc[invindex, 6] - df.loc[invindex, 7]
-    df.loc[invindex, 6] = df.loc[invindex, 6] - df.loc[invindex, 7]
-    chrs = [k for k in chrid_dict.keys() if k in df[0].unique()]
+
+    for i in range(len(alignments)):
+        df = alignments[i][1].copy()
+        invindex = ['INV' in i for i in df['type']]
+        df.loc[invindex, 'bstart'] = df.loc[invindex, 'bstart'] + df.loc[invindex, 'bend']
+        df.loc[invindex, 'bend'] = df.loc[invindex, 'bstart'] - df.loc[invindex, 'bend']
+        df.loc[invindex, 'bstart'] = df.loc[invindex, 'bstart'] - df.loc[invindex, 'bend']
+        alignments[i][1] = df.copy()
+
+    chrs = [k for k in chrids[0][1].keys() if k in alignments[0][1]['achr'].unique()] # TODO: SEE WHAT TO DO WITH THIS
+    # Get groups of homologous chromosomes
+    chrgrps = {}
+    for c in chrs:
+        cg = deque([c])
+        cur = c
+        for i in range(len(chrids)):
+            n = chrids[i][1][cur]
+            cg.append(n)
+            cur = n
+        chrgrps[c] = cg
 
     import matplotlib
     try:
-        matplotlib.use(args.b)
-        # matplotlib.use('Qt5Agg')
+        # matplotlib.use(args.b)
+        matplotlib.use('Qt5Agg')
     except:
         sys.exit('Matplotlib backend cannot be selected')
     from matplotlib import pyplot as plt
-    import matplotlib.patches as patches
-    from matplotlib.path import Path
 
     plt.rcParams['font.size'] = FS
     try:
         if H is None and W is None:
-            H = len(chrid)
+            H = len(chrs)
             W = 3
             fig = plt.figure(figsize=[W, H])
         if H is not None and W is None:
@@ -145,11 +143,12 @@ if __name__ == '__main__':
         if H is not None and W is not None:
             fig = plt.figure(figsize=[W, H])
     except Exception as e:
-        sys.exit("Error in initiliazing figure. Try using a differnt backend." + '\n' + e.with_traceback())
+        sys.exit("Error in initiliazing figure. Try using a different backend." + '\n' + e.with_traceback())
     ax = fig.add_subplot(111, frameon=False)
-    ax, max_l = drawax(ax, chrid_dict, reflenghts, qrylenghts, V, S, chrs)
+    ax, max_l = drawax(ax, chrgrps, chrlengths, V, S)
 
     # Draw chromosomes
+    chrlabs = [False]*len(chrlengths)
     adRefLab = False
     adQryLab = False
     adSynLab = False
@@ -157,68 +156,74 @@ if __name__ == '__main__':
     adTraLab = False
     adDupLab = False
 
+    CHRCOLS = plt.get_cmap('Dark2')                 # TODO: READ COLORS FROM CONFIG FILE
+    if len(chrlengths) > 8:
+        warnings.warn("More than 8 chromosomes are being analysed. This could result in different chromosomes having same color. Provide colors manually in config.")
     # Plot chromosomes
     pltchr = ax.axhline if not V else ax.axvline
     if not V:
-        rindent = len(chrs)-0.02
-        qindent = len(chrs)-S-0.02
+        rend = len(chrs)-0.02
+        qend = len(chrs)-S-0.02
+        step = S/(len(chrlengths)-1)
+        indents = [rend - (i*step) for i in range(len(chrlengths))]
+        # rindent = len(chrs)-0.02
+        # qindent = len(chrs)-S-0.02
     elif V:
+        # TODO: set indent for vertical chromosome arrangement
         rindent = 1-S-0.02
         qindent = 1-0.02
 
-    for i in range(len(chrs)):
-        offset = i if not V else -i
-        if not adRefLab:
-            pltchr(rindent-offset, 0, reflenghts[chrs[i]]/max_l, color=COLORS[6], linewidth=3, label='Reference')
-            adRefLab = True
-        else:
-            pltchr(rindent-offset, 0, reflenghts[chrs[i]]/max_l, color=COLORS[6], linewidth=3)
-        if not adQryLab:
-            pltchr(qindent-offset, 0, qrylenghts[chrid_dict[chrs[i]]]/max_l, color=COLORS[7], linewidth=3, label='Query')
-            adQryLab = True
-        else:
-            pltchr(qindent-offset, 0, qrylenghts[chrid_dict[chrs[i]]]/max_l, color=COLORS[7], linewidth=3)
+    for s in range(len(chrlengths)):
+        for i in range(len(chrs)):
+            offset = i if not V else -i
+            if not chrlabs[s]:
+                pltchr(indents[s]-offset, 0, chrlengths[s][1][chrgrps[chrs[i]][s]]/max_l, color=CHRCOLS(s), linewidth=3, label=chrlengths[s][0])
+                chrlabs[s] = True
+            else:
+                pltchr(indents[s]-offset, 0, chrlengths[s][1][chrgrps[chrs[i]][s]]/max_l, color=CHRCOLS(s), linewidth=3)
 
 
     # Plot structural annotations
     alpha = 0.8
-    for i in range(len(chrs)):
-        offset = i if not V else -i
-        # Plot syntenic regions
-        for row in df.loc[(df[0] == chrs[i]) & (df[10] == 'SYN')].itertuples(index=False):
-            if not adSynLab:
-                p = bezierpath(row[1], row[2], row[4], row[5], rindent-offset, qindent-offset, V, col=COLORS[0], alpha=alpha-0.2, label='Syntenic')
-                adSynLab = True
-            else:
-                p = bezierpath(row[1], row[2], row[4], row[5], rindent-offset, qindent-offset, V, col=COLORS[0], alpha=alpha-0.2)
-            ax.add_patch(p)
+    for s in range(len(alignments)):
+        df = alignments[s][1]
+        for i in range(len(chrs)):
+            offset = i if not V else -i
+            # Plot syntenic regions
+            for row in df.loc[(df['achr'] == chrgrps[chrs[i]][s]) & (df['type'] == 'SYN')].itertuples(index=False):
+                if not adSynLab:
+                    p = bezierpath(row[1], row[2], row[4], row[5], indents[s]-offset, indents[s+1]-offset, V, col=COLORS[0], alpha=alpha, label='Syntenic')
+                    adSynLab = True
+                else:
+                    p = bezierpath(row[1], row[2], row[4], row[5], indents[s]-offset, indents[s+1]-offset, V, col=COLORS[0], alpha=alpha)
+                ax.add_patch(p)
 
-        # Plot Inversions
-        for row in df.loc[(df[0] == chrs[i]) & (df[10] == 'INV')].itertuples(index=False):
-            if not adInvLab:
-                p = bezierpath(row[1], row[2], row[4], row[5], rindent-offset, qindent-offset, V, col=COLORS[1], alpha=alpha, label='Inversion', lw=0.1)
-                adInvLab=True
-            else:
-                p = bezierpath(row[1], row[2], row[4], row[5], rindent-offset, qindent-offset, V, col=COLORS[1], alpha=alpha, lw=0.1)
-            ax.add_patch(p)
+            # Plot Inversions
+            for row in df.loc[(df['achr'] == chrgrps[chrs[i]][s]) & (df['type'] == 'INV')].itertuples(index=False):
+                if not adInvLab:
+                    p = bezierpath(row[1], row[2], row[4], row[5], indents[s]-offset, indents[s+1]-offset, V, col=COLORS[1], alpha=alpha, label='Inversion', lw=0.1)
+                    adInvLab=True
+                else:
+                    p = bezierpath(row[1], row[2], row[4], row[5], indents[s]-offset, indents[s+1]-offset, V, col=COLORS[1], alpha=alpha, lw=0.1)
+                ax.add_patch(p)
 
-        # Plot Translocations
-        for row in df.loc[(df[0] == chrs[i]) & (df[10].isin(['TRANS', 'INVTR']))].itertuples(index=False):
-            if not adTraLab:
-                p = bezierpath(row[1], row[2], row[4], row[5], rindent-offset, qindent-offset, V, col=COLORS[2], alpha=alpha, label='Translocation', lw=0.1)
-                adTraLab = True
-            else:
-                p = bezierpath(row[1], row[2], row[4], row[5], rindent-offset, qindent-offset, V, col=COLORS[2], alpha=alpha, lw=0.1)
-            ax.add_patch(p)
+            # Plot Translocations
+            for row in df.loc[(df['achr'] == chrgrps[chrs[i]][s]) & (df['type'].isin(['TRANS', 'INVTR']))].itertuples(index=False):
+                if not adTraLab:
+                    p = bezierpath(row[1], row[2], row[4], row[5], indents[s]-offset, indents[s+1]-offset, V, col=COLORS[2], alpha=alpha, label='Translocation', lw=0.1)
+                    adTraLab = True
+                else:
+                    p = bezierpath(row[1], row[2], row[4], row[5], indents[s]-offset, indents[s+1]-offset, V, col=COLORS[2], alpha=alpha, lw=0.1)
+                ax.add_patch(p)
 
-        # Plot Duplications
-        for row in df.loc[(df[0] == chrs[i]) & (df[10].isin(['DUP', 'INVDP']))].itertuples(index=False):
-            if not adDupLab:
-                p = bezierpath(row[1], row[2], row[4], row[5], rindent-offset, qindent-offset, V, col=COLORS[4], alpha=alpha, label='Duplication', lw=0.1)
-                adDupLab=True
-            else:
-                p = bezierpath(row[1], row[2], row[4], row[5], rindent-offset, qindent-offset, V, col=COLORS[4], alpha=alpha, lw=0.1)
-            ax.add_patch(p)
+            # Plot Duplications
+            for row in df.loc[(df['achr'] == chrgrps[chrs[i]][s]) & (df['type'].isin(['DUP', 'INVDP']))].itertuples(index=False):
+                if not adDupLab:
+                    p = bezierpath(row[1], row[2], row[4], row[5], indents[s]-offset, indents[s+1]-offset, V, col=COLORS[4], alpha=alpha, label='Duplication', lw=0.1)
+                    adDupLab=True
+                else:
+                    p = bezierpath(row[1], row[2], row[4], row[5], indents[s]-offset, indents[s+1]-offset, V, col=COLORS[4], alpha=alpha, lw=0.1)
+                ax.add_patch(p)
 
     ax.legend(loc='lower left', bbox_to_anchor=(0, 1.01, 1, 1.01), ncol=3, mode='expand', borderaxespad=0., frameon=False)
     
