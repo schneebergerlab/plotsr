@@ -145,12 +145,16 @@ if __name__ == '__main__':
     except Exception as e:
         sys.exit("Error in initiliazing figure. Try using a different backend." + '\n' + e.with_traceback())
     ax = fig.add_subplot(111, frameon=False)
+
+
+    ## Draw Axes
     ax, max_l = drawax(ax, chrgrps, chrlengths, V, S)
 
-    # Draw chromosomes
+    ## Draw Chromosomes
+    # TODO: Set parsing of colors
+    ax = pltchrom(ax, chrs, chrgrps, chrlengths, V, S)
+
     chrlabs = [False]*len(chrlengths)
-    adRefLab = False
-    adQryLab = False
     adSynLab = False
     adInvLab = False
     adTraLab = False
@@ -161,17 +165,18 @@ if __name__ == '__main__':
         warnings.warn("More than 8 chromosomes are being analysed. This could result in different chromosomes having same color. Provide colors manually in config.")
     # Plot chromosomes
     pltchr = ax.axhline if not V else ax.axvline
+    step = S/(len(chrlengths)-1)
     if not V:
         rend = len(chrs)-0.02
-        qend = len(chrs)-S-0.02
-        step = S/(len(chrlengths)-1)
         indents = [rend - (i*step) for i in range(len(chrlengths))]
         # rindent = len(chrs)-0.02
         # qindent = len(chrs)-S-0.02
     elif V:
         # TODO: set indent for vertical chromosome arrangement
-        rindent = 1-S-0.02
-        qindent = 1-0.02
+        # rindent = 1-S-0.02
+        rend = 1-S-0.02
+        indents = [rend + (i*step) for i in range(len(chrlengths))]
+        # qindent = 1-0.02
 
     for s in range(len(chrlengths)):
         for i in range(len(chrs)):
@@ -184,9 +189,17 @@ if __name__ == '__main__':
 
 
     # Plot structural annotations
-    alpha = 0.8
+    ax = plotchromosomes()
+    adSynLab = False
+    adInvLab = False
+    adTraLab = False
+    adDupLab = False
+
+    alpha = 0.8 # TODO: Set alpha as a parameter
+    ax = plotalignments(alignments, chrs, chrgrps, V, indents, s )
     for s in range(len(alignments)):
         df = alignments[s][1]
+
         for i in range(len(chrs)):
             offset = i if not V else -i
             # Plot syntenic regions
@@ -224,9 +237,8 @@ if __name__ == '__main__':
                 else:
                     p = bezierpath(row[1], row[2], row[4], row[5], indents[s]-offset, indents[s+1]-offset, V, col=COLORS[4], alpha=alpha, lw=0.1)
                 ax.add_patch(p)
-
     ax.legend(loc='lower left', bbox_to_anchor=(0, 1.01, 1, 1.01), ncol=3, mode='expand', borderaxespad=0., frameon=False)
-    
+
     # Plot markers
     if B is not None:
         mdata = readbed(B, V)

@@ -42,7 +42,9 @@ VARS = ['SYN', 'INV', 'TRANS', 'INVTR', 'DUP', 'INVDP']
 COLORS = ['#DEDEDE', '#FFA500', '#9ACD32', '#9ACD32', '#00BBFF', '#00BBFF', '#83AAFF', '#FF6A33']
 
 
-## DEFINE READERS/PARSERS
+"""
+DEFINE READERS/PARSERS
+"""
 def readfasta(f):
     from gzip import open as gzopen
     from gzip import BadGzipFile
@@ -167,8 +169,9 @@ def readbedout(f):
     return df, chrid_dict
 # END
 
-
-## Validation and filtering
+"""
+Validation and filtering
+"""
 def validalign2fasta(als, genf):
     """
     Check that the chromosome ID and length in the alignment file matches the
@@ -324,6 +327,9 @@ def createribbon(df):
 # END
 
 
+"""
+Draw and plot
+"""
 def drawax(ax, chrgrps, chrlengths, V, S):
     import numpy as np
     nchr = len(chrgrps)
@@ -376,6 +382,33 @@ def drawax(ax, chrgrps, chrlengths, V, S):
     return ax, max_l
 # END
 
+
+def pltchrom(ax, chrs, chrgrps, chrlengths, V, S):
+    import warnings
+    chrlabs = [False]*len(chrlengths)
+    max_l = np.max([chrlengths[i][1][v[i]] for v in chrgrps.values() for i in range(len(v))])
+    CHRCOLS = plt.get_cmap('Dark2')                 # TODO: READ COLORS FROM CONFIG FILE
+    if len(chrlengths) > 8:
+        warnings.warn("More than 8 chromosomes are being analysed. This could result in different chromosomes having same color. Provide colors manually in config.")
+    # Plot chromosomes
+    pltchr = ax.axhline if not V else ax.axvline
+    step = S/(len(chrlengths)-1)
+    if not V:
+        rend = len(chrs)-0.02
+        indents = [rend - (i*step) for i in range(len(chrlengths))]
+    elif V:
+        rend = 1-S-0.02
+        indents = [rend + (i*step) for i in range(len(chrlengths))]
+    for s in range(len(chrlengths)):
+        for i in range(len(chrs)):
+            offset = i if not V else -i
+            if not chrlabs[s]:
+                pltchr(indents[s]-offset, 0, chrlengths[s][1][chrgrps[chrs[i]][s]]/max_l, color=CHRCOLS(s), linewidth=3, label=chrlengths[s][0])
+                chrlabs[s] = True
+            else:
+                pltchr(indents[s]-offset, 0, chrlengths[s][1][chrgrps[chrs[i]][s]]/max_l, color=CHRCOLS(s), linewidth=3)
+    return ax
+#END
 
 class bedanno():
     def __init__(self, chr, start, end, genome, V):
