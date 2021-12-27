@@ -287,6 +287,52 @@ def readbedout(f):
     return df, chrid_dict
 # END
 
+def gettrack(f, bw, chrlengths):
+    """
+    Reads BED file and creates a histogram for the number of bases per bin
+    :param f:
+    :param bw: binwidth
+    :param chrlengths:
+    :return:
+    """
+    from collections import deque
+    import pandas as pd
+    import sys
+    bed = deque()
+    logger = logging.getLogger("Reading track BED")
+    # Read the BED file
+    chrs = list(chrlengths[0][1].keys())
+    with open(f, 'r') as fin:
+        for line in fin:
+            line = line.strip().split()
+            if len(line) < 3:
+                logger.error("Incomplete information in BED file at line: {}".format("\t".join(line)))
+                sys.exit()
+            if line[0] not in chrs:
+                logger.error("Chromosome in BED is not present in FASTA at line: {}".format("\t".join(line)))
+                sys.exit()
+            try:
+                bed.append([line[0], int(line[1]), int(line[2])])
+            except ValueError:
+                logger.error("Invalid values for line: {}".format("\t".join(line)))
+                sys.exit()
+    bed = pd.DataFrame(bed)
+
+    # Create bins
+    bins = {}
+    for k,v in chrlengths[0][1].items():
+        s = np.array(range(0, v, bw))
+        e = np.concatenate((s[1:], [v]))
+        bins[k] = np.array(list(zip(s, e)))
+
+    bincnt = {}
+    for k, v in bins.items():
+        for r in v:
+            garb = bed.loc[(bed[0]==k) & (bed[1]>=r[0]) & (bed[2]<r[1])]
+            bincnt[(k, r[0], r[1])] = (garb[2] - garb[1]).sum()/bw
+
+
+# END
 """
 ################################################################################
 Validation and filtering
@@ -587,13 +633,13 @@ def pltsv(ax, alignments, chrs, V, chrgrps, indents):
 # END
 
 
-def bezierpath(rs, re, qs, qe, ry, qy, V, col, alpha, label='', lw=0):
+def bezierpath(rs, re, qs, qe, ry, qy, v, col, alpha, label='', lw=0):
     import matplotlib.patches as patches
     from matplotlib.path import Path
     smid = (qs-rs)/2    # Start increment
     emid = (qe-re)/2    # End increment
     hmid = (qy-ry)/2    # Heinght increment
-    if not V:
+    if not v:
         verts = [(rs, ry),
                  (rs, ry+hmid),
                  (rs+2*smid, ry+hmid),
@@ -637,3 +683,19 @@ def bezierpath(rs, re, qs, qe, ry, qy, V, col, alpha, label='', lw=0):
     return patch
 # END
 
+
+def drawmarkers(ax, b, v, chrlengths, indents, chrs, chrgrps):
+    mdata = readannobed(b, v, chrlengths)
+    for m in mdata:
+        ind = [i for i in range(len(chrlengths)) if chrlengths[i][0] == m.genome][0]
+        indent = indents[ind]
+        offset = chrs.index([k for k, v in chrgrps.items() if v[ind] == m.chr][0])
+        if not v:
+            ax.plot(m.start, indent-offset, marker=m.mtype, color=m.mcol, markersize=m.msize)
+            if m.text != '':
+                ax.text(m.start, indent-offset+m.tpos, m.text, color=m.tcol, fontsize=m.tsize, fontfamily=m.tfont, ha='center', va='bottom')
+        elif v:
+            ax.plot(indent+offset, m.start, marker=m.mtype, color=m.mcol, markersize=m.msize)
+            if m.text != '':
+                ax.text(indent+offset-m.tpos, m.start, m.text, color=m.tcol, fontsize=m.tsize, fontfamily=m.tfont, ha='left', va='center', rotation='vertical')
+    return ax
