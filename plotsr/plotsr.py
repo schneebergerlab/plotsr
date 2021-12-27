@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
-import warnings
+
 
 """
 Annotation BED file format:
@@ -42,9 +42,51 @@ if __name__ == '__main__':
     parser.add_argument('-d', help='DPI for the final image', default="300", type=int)
     parser.add_argument('-b', help='Matplotlib backend to use', default="agg", type=str, choices=bklist)
     parser.add_argument('-v', help='Plot vertical chromosome', default=False, action='store_true')
+    parser.add_argument('--log', help='Log-level', choices=['DEBUG', 'INFO', 'WARN'], default='WARN', type=str)
+
 
     args = parser.parse_args([])
     args = parser.parse_args()
+
+    import logging
+    import logging.config
+
+    logging.config.dictConfig({
+        'version': 1,
+        'disable_existing_loggers': False,
+        'formatters': {
+            'log_file': {
+                'format': "%(asctime)s - %(name)s - %(levelname)s - %(funcName)s:%(lineno)d - %(message)s",
+            },
+            'stdout': {
+                'format': "%(name)s - %(levelname)s - %(message)s",
+            },
+        },
+        'handlers': {
+            'stdout': {
+                'class': 'logging.StreamHandler',
+                'formatter': 'stdout',
+                'level': 'WARNING',
+            },
+            # 'log_file': {
+            #     'class': 'logging.FileHandler',
+            #     'filename': args.log_fin.name,
+            #     'mode': 'a',
+            #     'formatter': 'log_file',
+            #     'level': args.log,
+            # },
+        },
+        'loggers': {
+            '': {
+                'level': args.log,
+                'handlers': ['stdout'],
+                # 'handlers': ['stdout', 'log_file'],
+            },
+        },
+    })
+
+    logger = logging.getLogger("Plotsr")
+
 
     # CONSTANTS
     VARS = ['SYN', 'INV', 'TRANS', 'INVTR', 'DUP', 'INVDP']
@@ -146,130 +188,39 @@ if __name__ == '__main__':
         sys.exit("Error in initiliazing figure. Try using a different backend." + '\n' + e.with_traceback())
     ax = fig.add_subplot(111, frameon=False)
 
-
     ## Draw Axes
     ax, max_l = drawax(ax, chrgrps, chrlengths, V, S)
 
     ## Draw Chromosomes
     # TODO: Set parsing of colors
-    ax = pltchrom(ax, chrs, chrgrps, chrlengths, V, S)
-
-    chrlabs = [False]*len(chrlengths)
-    adSynLab = False
-    adInvLab = False
-    adTraLab = False
-    adDupLab = False
-
-    CHRCOLS = plt.get_cmap('Dark2')                 # TODO: READ COLORS FROM CONFIG FILE
-    if len(chrlengths) > 8:
-        warnings.warn("More than 8 chromosomes are being analysed. This could result in different chromosomes having same color. Provide colors manually in config.")
-    # Plot chromosomes
-    pltchr = ax.axhline if not V else ax.axvline
-    step = S/(len(chrlengths)-1)
-    if not V:
-        rend = len(chrs)-0.02
-        indents = [rend - (i*step) for i in range(len(chrlengths))]
-        # rindent = len(chrs)-0.02
-        # qindent = len(chrs)-S-0.02
-    elif V:
-        # TODO: set indent for vertical chromosome arrangement
-        # rindent = 1-S-0.02
-        rend = 1-S-0.02
-        indents = [rend + (i*step) for i in range(len(chrlengths))]
-        # qindent = 1-0.02
-
-    for s in range(len(chrlengths)):
-        for i in range(len(chrs)):
-            offset = i if not V else -i
-            if not chrlabs[s]:
-                pltchr(indents[s]-offset, 0, chrlengths[s][1][chrgrps[chrs[i]][s]]/max_l, color=CHRCOLS(s), linewidth=3, label=chrlengths[s][0])
-                chrlabs[s] = True
-            else:
-                pltchr(indents[s]-offset, 0, chrlengths[s][1][chrgrps[chrs[i]][s]]/max_l, color=CHRCOLS(s), linewidth=3)
-
+    ax, indents = pltchrom(ax, chrs, chrgrps, chrlengths, V, S)
 
     # Plot structural annotations
-    ax = plotchromosomes()
-    adSynLab = False
-    adInvLab = False
-    adTraLab = False
-    adDupLab = False
+    # TODO: Parameterise: colors, alpha,
+    ax = pltsv(ax, alignments, chrs, V, chrgrps, indents)
 
-    alpha = 0.8 # TODO: Set alpha as a parameter
-    ax = plotalignments(alignments, chrs, chrgrps, V, indents, s )
-    for s in range(len(alignments)):
-        df = alignments[s][1]
-
-        for i in range(len(chrs)):
-            offset = i if not V else -i
-            # Plot syntenic regions
-            for row in df.loc[(df['achr'] == chrgrps[chrs[i]][s]) & (df['type'] == 'SYN')].itertuples(index=False):
-                if not adSynLab:
-                    p = bezierpath(row[1], row[2], row[4], row[5], indents[s]-offset, indents[s+1]-offset, V, col=COLORS[0], alpha=alpha, label='Syntenic')
-                    adSynLab = True
-                else:
-                    p = bezierpath(row[1], row[2], row[4], row[5], indents[s]-offset, indents[s+1]-offset, V, col=COLORS[0], alpha=alpha)
-                ax.add_patch(p)
-
-            # Plot Inversions
-            for row in df.loc[(df['achr'] == chrgrps[chrs[i]][s]) & (df['type'] == 'INV')].itertuples(index=False):
-                if not adInvLab:
-                    p = bezierpath(row[1], row[2], row[4], row[5], indents[s]-offset, indents[s+1]-offset, V, col=COLORS[1], alpha=alpha, label='Inversion', lw=0.1)
-                    adInvLab=True
-                else:
-                    p = bezierpath(row[1], row[2], row[4], row[5], indents[s]-offset, indents[s+1]-offset, V, col=COLORS[1], alpha=alpha, lw=0.1)
-                ax.add_patch(p)
-
-            # Plot Translocations
-            for row in df.loc[(df['achr'] == chrgrps[chrs[i]][s]) & (df['type'].isin(['TRANS', 'INVTR']))].itertuples(index=False):
-                if not adTraLab:
-                    p = bezierpath(row[1], row[2], row[4], row[5], indents[s]-offset, indents[s+1]-offset, V, col=COLORS[2], alpha=alpha, label='Translocation', lw=0.1)
-                    adTraLab = True
-                else:
-                    p = bezierpath(row[1], row[2], row[4], row[5], indents[s]-offset, indents[s+1]-offset, V, col=COLORS[2], alpha=alpha, lw=0.1)
-                ax.add_patch(p)
-
-            # Plot Duplications
-            for row in df.loc[(df['achr'] == chrgrps[chrs[i]][s]) & (df['type'].isin(['DUP', 'INVDP']))].itertuples(index=False):
-                if not adDupLab:
-                    p = bezierpath(row[1], row[2], row[4], row[5], indents[s]-offset, indents[s+1]-offset, V, col=COLORS[4], alpha=alpha, label='Duplication', lw=0.1)
-                    adDupLab=True
-                else:
-                    p = bezierpath(row[1], row[2], row[4], row[5], indents[s]-offset, indents[s+1]-offset, V, col=COLORS[4], alpha=alpha, lw=0.1)
-                ax.add_patch(p)
+    # Draw legend
+    # TODO: Consider grouping the chromosomes legends at one place
     ax.legend(loc='lower left', bbox_to_anchor=(0, 1.01, 1, 1.01), ncol=3, mode='expand', borderaxespad=0., frameon=False)
 
     # Plot markers
     if B is not None:
-        mdata = readbed(B, V)
+        mdata = readannobed(B, V, chrlengths)
         for m in mdata:
+            ind = [i for i in range(len(chrlengths)) if chrlengths[i][0] == m.genome][0]
+            indent = indents[ind]
+            offset = chrs.index([k for k, v in chrgrps.items() if v[ind] == m.chr][0])
             if not V:
-                rindent = len(chrs)-0.02+0.1
-                qindent = len(chrs)-0.02-S-0.1
-                if m.genome == 'R':
-                    offset = chrs.index(m.chr)
-                    ax.plot(m.start, rindent-offset, marker=m.mtype, color=m.mcol, markersize=m.msize)
-                    if hasattr(m, 'text'):
-                        ax.text(m.start, rindent-offset+0.05, m.text, color=m.col, fontsize=m.size, ha='center', va='bottom')
-                else:
-                    offset = [j for j in range(len(chrs)) if chrid_dict[chrs[j]] == m.chr][0]
-                    ax.plot(m.start, qindent-offset, marker=m.mtype, color=m.mcol, markersize=m.msize)
-                    if hasattr(m, 'text'):
-                        ax.text(m.start, qindent-offset-0.05, m.text, color=m.col, fontsize=m.size, ha='center', va='top')
-            elif V:
-                rindent = 1-S-0.02-0.1
-                qindent = 1-0.02+0.1
-                if m.genome == 'R':
-                    offset = -chrs.index(m.chr)
-                    ax.plot(rindent-offset, m.start, marker=m.mtype, color=m.mcol, markersize=m.msize)
-                    if hasattr(m, 'text'):
-                        ax.text(rindent-offset-0.05, m.start, m.text, color=m.col, fontsize=m.size, ha='right', va='center', rotation='vertical')
-                else:
-                    offset = -[j for j in range(len(chrs)) if chrid_dict[chrs[j]] == m.chr][0]
-                    ax.plot(qindent-offset, m.start, marker=m.mtype, color=m.mcol, markersize=m.msize)
-                    if hasattr(m, 'text'):
-                        ax.text(qindent-offset+0.05, m.start, m.text, color=m.col, fontsize=m.size, ha='left', va='center', rotation='vertical')
+                ax.plot(m.start, indent-offset, marker=m.mtype, color=m.mcol, markersize=m.msize)
+                if m.text != '':
+                    ax.text(m.start, indent-offset+m.tpos, m.text, color=m.tcol, fontsize=m.tsize, fontfamily=m.tfont, ha='center', va='bottom')
 
+            elif V:
+                ax.plot(indent+offset, m.start, marker=m.mtype, color=m.mcol, markersize=m.msize)
+                if m.text != '':
+                    ax.text(indent+offset-m.tpos, m.start, m.text, color=m.tcol, fontsize=m.tsize, fontfamily=m.tfont, ha='left', va='center', rotation='vertical')
+
+    # Save the plot
     try:
         fig.savefig('syri.'+O, dpi=D, bbox_inches='tight', pad_inches=0.01)
     except Exception as e:

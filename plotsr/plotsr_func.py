@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+import matplotlib.font_manager
+
 ## Constants
 MARKERS = {".": "point",
            ",": "pixel",
@@ -40,10 +42,19 @@ MARKERS = {".": "point",
            "i11": "caretdown"}
 VARS = ['SYN', 'INV', 'TRANS', 'INVTR', 'DUP', 'INVDP']
 COLORS = ['#DEDEDE', '#FFA500', '#9ACD32', '#9ACD32', '#00BBFF', '#00BBFF', '#83AAFF', '#FF6A33']
+FONT_NAMES = []
+for fn in matplotlib.font_manager.findSystemFonts():
+    try: FONT_NAMES.append(matplotlib.font_manager.get_font(fn).family_name)
+    except RuntimeError: pass
 
+for fn in FONT_NAMES:
+    if re.findall('Comic', f, re.IGNORECASE) != []:
+        print(fn)
 
 """
+################################################################################
 DEFINE READERS/PARSERS
+################################################################################
 """
 def readfasta(f):
     from gzip import open as gzopen
@@ -98,20 +109,127 @@ def readfasta(f):
 # END
 
 
-def readbed(path, v):
+class bedAnno():
+    def __init__(self, c, start, end, genome, v):
+        import matplotlib
+        self.chr = c
+        self.start = int(start)
+        self.end = int(end)
+        self.genome = genome
+        # if genome in ['R', 'Q']: self.genome = genome
+        # else: print("Incorrect genome for position {}:{}-{}. Setting marker to line".format(self.start, self.start, self.end))
+        self.v = v
+        self.mcol='black'
+        self.msize=1
+        self.mtype='.'
+        self.text=''
+        self.tcol='black'
+        self.tsize=matplotlib.rcParamsDefault['font.size']
+        self.tfont='Arial'
+        self.tpos='0.05'
+        self.logger = logging.getLogger("bedAnno")
+
+# Define marker type
+    def setmarker(self, marker):
+        import matplotlib
+        import sys
+        marker = marker.split(":")
+        if marker[0][:2] != 'm=' or marker[1][:2] != 'c=' or marker[2][:2] != 's=':
+            raise ValueError("Incomplete information {} for marker at {}:{}-{}. Require: type, color, and color.".format(':'.join(marker), self.chr, self.start, self.end))
+        # Set marker type
+        m = marker[0].split("=")
+        if m[1] not in MARKERS.keys():
+            self.logger.error("Unrecongised marker used for position {}:{}-{}. Plotsr accepts markers defined in matplotlib (https://matplotlib.org/stable/api/markers_api.html) with some modifications.".format(self.start, self.start, self.end))
+            for k, v in MARKERS.items():
+                print("{} : {}".format(k, v))
+            sys.exit()
+        self.mtype = m[1] if m[1][0] != 'i' else int(m[1][1:])
+        # Set marker color
+        m = marker[1].split("=")
+        try:
+            if m[1][0] == '#': matplotlib.colors.to_rgb(m[1])
+            else: matplotlib.colors.to_hex(m[1])
+        except ValueError:
+            self.logger.error("Error in using colour: {} for position {}:{}-{}. Use correct hexadecimal colours or named colours define in matplotlib (https://matplotlib.org/stable/gallery/color/named_colors.html)".format(m[1], self.chr, self.start, self.end))
+            sys.exit()
+        self.mcol = m[1]
+        # Set marker size
+        m = marker[2].split("=")
+        try: self.msize = int(m[1])
+        except ValueError:
+            self.logger.error("Non-integer size ({}) for marker at {}:{}-{}".format(m[1], self.start, self.start, self.end))
+            sys.exit()
+        # Set line marker when marker length > 1
+        if self.end - self.start > 1:
+            self.logger.warning("Range selected for position {}:{}-{}. Setting marker to line".format(self.start, self.start, self.end))
+            self.mtype = "|" if self.v else "_"
+        return
+
+    # Define text type
+    def settext(self, text):
+        import warnings
+        import matplotlib
+        import sys
+        text=text.split(":")
+        if text[0][:2] != 't=' or text[1][:2] != 'c=' or text[2][:2] != 's=' or text[3][:2] != 'f=' or text[4][:2] != 'p=':
+            raise ValueError("Incomplete information {} for text at {}:{}-{}. Require: text, color, size, and font_name.".format(':'.join(text), self.chr, self.start, self.end))
+        # Set text
+        t = text[0].split("=")
+        self.text = t[1]
+        # Set text color
+        t = text[1].split("=")
+        try:
+            if t[1][0] == '#': matplotlib.colors.to_rgb(t[1])
+            else: matplotlib.colors.to_hex(t[1])
+        except ValueError:
+            warnings.warn("Error in using colour: {} for position {}:{}-{}. Use correct hexadecimal colours or named colours define in matplotlib (https://matplotlib.org/stable/gallery/color/named_colors.html)".format(t[1], self.chr, self.start, self.end))
+            sys.exit()
+        self.tcol = t[1]
+        # Set text size
+        t = text[2].split("=")
+        try: self.tsize = int(t[1])
+        except ValueError:
+            raise ValueError("Non-integer size ({}) for marker at {}:{}-{}".format(t[1], self.chr, self.start, self.end))
+        # Set text font
+        t = text[3].split("=")
+        if t[1] in FONT_NAMES: self.tfont = t[1]
+        else:
+            with open("plotsr_available_font_names.txt", 'w') as fout:
+                fout.write("\n".join(FONT_NAMES))
+            raise ValueError("Font ({}) for marker at {}:{}-{} is not available. Check plotsr_available_font_names.txt for list of available system markers".format(t[1], self.chr, self.start, self.end))
+        # Set text position:
+        t = text[4].split("=")
+        self.tpos=float(t[1])
+        return
+# END
+
+
+def readannobed(path, v, chrlengths):
+    import warnings
     from collections import deque
+    import matplotlib
+    logger = logging.getLogger('readannobed')
     mdata = deque()
     with open(path, 'r') as fin:
         for line in fin:
-            line = line.strip().split("\t")
-            if len(line) not in [7, 10]:
-                print(line)
-                print("Incomplete data in BED file line: \n {}.\n Marker information (type, col, size) is necessary. Text annotation (text, col, size) is optional".format('\t'.join(line)))
+            if line[0] == '#':
+                logger.warning("Skipping line\n{}".format(line.strip()))
                 continue
-            anno = bedanno(line[0], line[1], line[2], line[3], v)
-            anno.setmarker(line[4], line[5], line[6])
-            if len(line) > 7:
-                anno.settext(line[7], line[8], line[9])
+            line = line.strip().split("\t")
+            if len(line) not in [5, 6]:
+                raise ValueError("Incomplete data in BED file line:\n{}\nMarker information (type:col:size) is necessary. Text annotation (text:col:size:font) is optional".format('\t'.join(line)))
+                sys.exit()
+            found = False
+            for i in chrlengths:
+                if i[0] == line[3]:
+                    if line[0] in list(i[1].keys()):
+                        found = True
+            if not found:
+                raise ValueError("Incorrect marker information. Chromosome: {} is not present in genome {}.".format(line[0], line[3]))
+            anno = bedAnno(line[0], line[1], line[2], line[3], v)
+            anno.setmarker(line[4])
+            if len(line) == 6:
+                anno.settext(line[5])
             mdata.append(anno)
     return mdata
 # END
@@ -170,7 +288,9 @@ def readbedout(f):
 # END
 
 """
+################################################################################
 Validation and filtering
+################################################################################
 """
 def validalign2fasta(als, genf):
     """
@@ -326,9 +446,13 @@ def createribbon(df):
     return df
 # END
 
-
+################################################################################
+################################################################################
+################################################################################
 """
+################################################################################
 Draw and plot
+################################################################################
 """
 def drawax(ax, chrgrps, chrlengths, V, S):
     import numpy as np
@@ -343,20 +467,21 @@ def drawax(ax, chrgrps, chrlengths, V, S):
         ax.set_yticklabels(ticklabels[::-1])
         ax.tick_params(axis='y', right=False, left=False)
         ax.set_xlim(0, max_l)
+        ax.xaxis.grid(True, which='major', linestyle='--')
         ax.ticklabel_format(axis='x', useOffset=False, style='plain')
         xticks = ax.get_xticks()
         if max_l >= 1000000000:
-            xticks = xticks/1000000000
+            xticksl = xticks/1000000000
             ax.set_xlabel('chromosome position (in Gbp)')
         elif max_l >= 1000000:
-            xticks = xticks/1000000
+            xticksl = xticks/1000000
             ax.set_xlabel('chromosome position (in Mbp)')
         elif max_l >= 1000:
-            xticks = xticks/1000
+            xticksl = xticks/1000
             ax.set_xlabel('chromosome position (in Kbp)')
-        ax.set_xticklabels(xticks)
+        ax.set_xticks(xticks[:-1])
+        ax.set_xticklabels(xticksl[:-1])
         ax.set_ylabel('reference chromosome id')
-        ax.xaxis.grid(True, which='major', linestyle='--')
         ax.set_axisbelow(True)
     else:
         ax.set_xlim(0, nchr+0.2)
@@ -367,15 +492,16 @@ def drawax(ax, chrgrps, chrlengths, V, S):
         ax.ticklabel_format(axis='y', useOffset=False, style='plain')
         yticks = ax.get_yticks()
         if max_l >= 1000000000:
-            yticks = yticks/1000000000
+            yticksl = yticks/1000000000
             ax.set_ylabel('chromosome position (in Gbp)')
         elif max_l >= 1000000:
-            yticks = yticks/1000000
+            yticksl = yticks/1000000
             ax.set_ylabel('chromosome position (in Mbp)')
         elif max_l >= 1000:
-            yticks = yticks/1000
+            yticksl = yticks/1000
             ax.set_ylabel('chromosome position (in Kbp)')
-        ax.set_yticklabels(yticks)
+        ax.set_yticks(yticks)
+        ax.set_yticklabels(yticksl)
         ax.set_xlabel('reference chromosome id')
         ax.yaxis.grid(True, which='major', linestyle='--')
         ax.set_axisbelow(True)
@@ -385,13 +511,15 @@ def drawax(ax, chrgrps, chrlengths, V, S):
 
 def pltchrom(ax, chrs, chrgrps, chrlengths, V, S):
     import warnings
+    import numpy as np
     chrlabs = [False]*len(chrlengths)
     max_l = np.max([chrlengths[i][1][v[i]] for v in chrgrps.values() for i in range(len(v))])
     CHRCOLS = plt.get_cmap('Dark2')                 # TODO: READ COLORS FROM CONFIG FILE
     if len(chrlengths) > 8:
         warnings.warn("More than 8 chromosomes are being analysed. This could result in different chromosomes having same color. Provide colors manually in config.")
-    # Plot chromosomes
+    # Set chromosome direction
     pltchr = ax.axhline if not V else ax.axvline
+    # Define indents # TODO: Check how the indents would change when plotting tracks
     step = S/(len(chrlengths)-1)
     if not V:
         rend = len(chrs)-0.02
@@ -407,52 +535,55 @@ def pltchrom(ax, chrs, chrgrps, chrlengths, V, S):
                 chrlabs[s] = True
             else:
                 pltchr(indents[s]-offset, 0, chrlengths[s][1][chrgrps[chrs[i]][s]]/max_l, color=CHRCOLS(s), linewidth=3)
-    return ax
+    return ax, indents
 #END
 
-class bedanno():
-    def __init__(self, chr, start, end, genome, V):
-        self.chr = chr
-        self.start = int(start)
-        self.end = int(end)
-        if genome in ['R', 'Q']: self.genome = genome
-        else: print("Incorrect genome for position {}:{}-{}. Setting marker to line".format(self.start, self.start, self.end))
-        self.V = V
 
-    def setmarker(self, mtype, mcol, msize):
-        if mtype not in MARKERS.keys():
-            print("Unrecongised marker used for position {}:{}-{}. Plotsr accepts markers defined in matplotlib (https://matplotlib.org/stable/api/markers_api.html) with some modifications.".format(self.start, self.start, self.end))
-            for k, v in MARKERS.items():
-                print("{} : {}".format(k, v))
-            sys.exit()
-        self.mtype = mtype if mtype[0] != i else int(mtype[1:])
+def pltsv(ax, alignments, chrs, V, chrgrps, indents):
+    adSynLab = False
+    adInvLab = False
+    adTraLab = False
+    adDupLab = False
 
-        try:
-            if mcol[0] == '#':
-                matplotlib.colors.to_rgb(mcol)
-            else:
-                matplotlib.colors.to_hex(mcol)
-        except ValueError as e:
-            print("Error in using colour: {} for position {}:{}-{}. Use correct hexadecimal colours or named colours define in matplotlib (https://matplotlib.org/stable/gallery/color/named_colors.html)".format(mcol, self.start, self.start, self.end))
-            sys.exit()
-        self.mcol = mcol
-        self.msize = int(msize)
-        if self.end - self.start > 1:
-            print("Range selected for position {}:{}-{}. Setting marker to line".format(self.start, self.start, self.end))
-            self.mtype = "|" if self.V else "_"
+    alpha = 0.8 # TODO: Set alpha as a parameter
+    for s in range(len(alignments)):
+        df = alignments[s][1]
+        for i in range(len(chrs)):
+            offset = i if not V else -i
+            # Plot syntenic regions
+            for row in df.loc[(df['achr'] == chrgrps[chrs[i]][s]) & (df['type'] == 'SYN')].itertuples(index=False):
+                if not adSynLab:
+                    p = bezierpath(row[1], row[2], row[4], row[5], indents[s]-offset, indents[s+1]-offset, V, col=COLORS[0], alpha=alpha, label='Syntenic')
+                    adSynLab = True
+                else:
+                    p = bezierpath(row[1], row[2], row[4], row[5], indents[s]-offset, indents[s+1]-offset, V, col=COLORS[0], alpha=alpha)
+                ax.add_patch(p)
 
-    def settext(self, text, col, size):
-        self.text = text
-        try:
-            if col[0] == '#':
-                matplotlib.colors.to_rgb(col)
-            else:
-                matplotlib.colors.to_hex(col)
-        except ValueError as e:
-            print("Error in using colour: {} for position {}:{}-{}. Use correct hexadecimal colours or named colours define in matplotlib (https://matplotlib.org/stable/gallery/color/named_colors.html)".format(col, self.start, self.start, self.end))
-            sys.exit()
-        self.col = col
-        self.size = int(size)
+            # Plot Inversions
+            for row in df.loc[(df['achr'] == chrgrps[chrs[i]][s]) & (df['type'] == 'INV')].itertuples(index=False):
+                if not adInvLab:
+                    p = bezierpath(row[1], row[2], row[4], row[5], indents[s]-offset, indents[s+1]-offset, V, col=COLORS[1], alpha=alpha, label='Inversion', lw=0.1)
+                    adInvLab=True
+                else:
+                    p = bezierpath(row[1], row[2], row[4], row[5], indents[s]-offset, indents[s+1]-offset, V, col=COLORS[1], alpha=alpha, lw=0.1)
+                ax.add_patch(p)
+            # Plot Translocations
+            for row in df.loc[(df['achr'] == chrgrps[chrs[i]][s]) & (df['type'].isin(['TRANS', 'INVTR']))].itertuples(index=False):
+                if not adTraLab:
+                    p = bezierpath(row[1], row[2], row[4], row[5], indents[s]-offset, indents[s+1]-offset, V, col=COLORS[2], alpha=alpha, label='Translocation', lw=0.1)
+                    adTraLab = True
+                else:
+                    p = bezierpath(row[1], row[2], row[4], row[5], indents[s]-offset, indents[s+1]-offset, V, col=COLORS[2], alpha=alpha, lw=0.1)
+                ax.add_patch(p)
+            # Plot Duplications
+            for row in df.loc[(df['achr'] == chrgrps[chrs[i]][s]) & (df['type'].isin(['DUP', 'INVDP']))].itertuples(index=False):
+                if not adDupLab:
+                    p = bezierpath(row[1], row[2], row[4], row[5], indents[s]-offset, indents[s+1]-offset, V, col=COLORS[4], alpha=alpha, label='Duplication', lw=0.1)
+                    adDupLab=True
+                else:
+                    p = bezierpath(row[1], row[2], row[4], row[5], indents[s]-offset, indents[s+1]-offset, V, col=COLORS[4], alpha=alpha, lw=0.1)
+                ax.add_patch(p)
+    return ax
 # END
 
 

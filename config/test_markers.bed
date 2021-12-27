@@ -1,0 +1,5 @@
+#chr    start   end genome_id   mtype:mcolor:msize  ttext:tcolor:tsize:tfont
+Chr1	10000000	10000001	col-0   m=.:c=red:s=12
+Chr2	5000000	5000001	ler	m=^:c=black:s=6   t=black marker:c=black:s=6:f=Arial
+Chr3	12000000	12000010	cvi	m=,:c=#78AB46:s=12
+Chr4	15000000	15000001	col-0a	m=8:c=#78AB46:s=12    t=new marker:c=gold:s=10:f=Helvetica
