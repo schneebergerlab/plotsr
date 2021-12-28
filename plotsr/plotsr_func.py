@@ -51,6 +51,41 @@ for fn in FONT_NAMES:
     if re.findall('Comic', f, re.IGNORECASE) != []:
         print(fn)
 
+
+"""
+################################################################################
+SUPPORT FUNCTIONS
+################################################################################
+"""
+
+def mergeRanges(ranges):
+    """
+    Take a 2D numpy array, with each row as a range and return merged ranges
+    i.e. ranges which are overlapping would be combined.
+    :param ranges:
+    :return:
+    """
+    from collections import deque
+    import numpy as np
+    if len(ranges) < 2:
+        return ranges
+    for i in ranges:
+        if i[0] > i[1]:
+            i[1], i[0] = i[0], i[1]
+    ranges = ranges[ranges[:, 0].argsort()]
+    min_value = ranges[0, 0]
+    max_value = ranges[0, 1]
+    out_range = deque()
+    for i in ranges[1:]:
+        if i[0] > max_value:
+            out_range.append([min_value, max_value])
+            min_value = i[0]
+            max_value = i[1]
+        elif i[1] > max_value:
+            max_value = i[1]
+    out_range.append([min_value, max_value])
+    return np.array(out_range)
+#END
 """
 ################################################################################
 DEFINE READERS/PARSERS
@@ -197,6 +232,7 @@ class bedAnno():
             with open("plotsr_available_font_names.txt", 'w') as fout:
                 fout.write("\n".join(FONT_NAMES))
             raise ValueError("Font ({}) for marker at {}:{}-{} is not available. Check plotsr_available_font_names.txt for list of available system markers".format(t[1], self.chr, self.start, self.end))
+            sys.exit()
         # Set text position:
         t = text[4].split("=")
         self.tpos=float(t[1])
@@ -205,9 +241,7 @@ class bedAnno():
 
 
 def readannobed(path, v, chrlengths):
-    import warnings
     from collections import deque
-    import matplotlib
     logger = logging.getLogger('readannobed')
     mdata = deque()
     with open(path, 'r') as fin:
@@ -287,7 +321,100 @@ def readbedout(f):
     return df, chrid_dict
 # END
 
-def gettrack(f, bw, chrlengths):
+
+class track():
+    def __init__(self, f, n):
+        import matplotlib
+        self.f = f
+        self.n = n
+        self.nc = 'black'
+        self.ns = matplotlib.rcParamsDefault['font.size']
+        self.nf = 'Arial'
+        self.bw = 100000
+        self.lc = 'black'
+        self.lw = 1
+        self.bc = 'lightgrey'
+        self.ba = 0.7
+        self.logger = logging.getLogger("track")
+        self.bincnt = {}
+
+    # Add tags
+    def addtags(self, tags):
+        import matplotlib
+        for i in tags.split(";"):
+            n, v = i.split(":")
+            if hasattr(self, n):
+                if n in ['nc', 'lc', 'bc']:
+                    try:
+                        if v[0] == '#': matplotlib.colors.to_rgb(v)
+                        else: matplotlib.colors.to_hex(v)
+                    except ValueError:
+                        self.logger.error("Error in using colour: {} for track {}. Use correct hexadecimal colours or named colours define in matplotlib (https://matplotlib.org/stable/gallery/color/named_colors.html)".format(v, self.n))
+                        sys.exit()
+                    setattr(self, n, v)
+                elif n in ['ns', 'bw', 'lw', 'ba']:
+                    try: float(v)
+                    except ValueError:
+                        self.logger.error("Non-numerical value {} for {} in track{}".format(v, n, self.n))
+                        sys.exit()
+                    setattr(self, n, float(v))
+                elif n in ['nf']:
+                    if v not in FONT_NAMES:
+                        with open("plotsr_available_font_names.txt", 'w') as fout:
+                            fout.write("\n".join(FONT_NAMES))
+                        raise ValueError("Font {} in track {} is not available. Check plotsr_available_font_names.txt for list of available system markers".format(v, self.n))
+                        sys.exit()
+                    setattr(self, n, v)
+            else:
+                raise ValueError("{} is not a valid tag".format(n))
+        return
+    #END
+
+    # Read input bed file and get histogram with binwidths==self.bw
+    def readbed(self, chrlengths):
+        from collections import deque, defaultdict
+        import pandas as pd
+        import sys
+        import numpy as np
+        bed = deque()
+        # Read the BED file
+        chrs = list(chrlengths[0][1].keys())
+        with open(self.f, 'r') as fin:
+            for line in fin:
+                line = line.strip().split()
+                if len(line) < 3:
+                    self.logger.error("Incomplete information in BED file at line: {}".format("\t".join(line)))
+                    sys.exit()
+                if line[0] not in chrs:
+                    self.logger.error("Chromosome in BED is not present in FASTA at line: {}".format("\t".join(line)))
+                    sys.exit()
+                try:
+                    bed.append([line[0], int(line[1]), int(line[2])])
+                except ValueError:
+                    self.logger.error("Invalid values for line: {}".format("\t".join(line)))
+                    sys.exit()
+        bed = pd.DataFrame(bed)
+        # Create bins
+        bins = {}
+        for k,v in chrlengths[0][1].items():
+            s = np.array(range(0, v, int(self.bw)))
+            e = np.concatenate((s[1:], [v]))
+            bins[k] = np.array(list(zip(s, e)))
+        bincnt = defaultdict(deque)
+        for k, v in bins.items():
+            for r in v:
+                # TODO: Fix range value count
+                garb = bed.loc[(bed[0]==k) & (bed[1]>=r[0]) & (bed[2]<r[1])]
+                if garb.shape[0] == 0:
+                    bincnt[k].append(((r[0]+r[1])/2, 0))
+                    continue
+                garbr = mergeRanges(np.array(list(zip(garb[1], garb[2]))))
+                bincnt[k].append(((r[0]+r[1])/2, (garbr[:,1] - garbr[:,0]).sum()/int(self.bw)))
+        self.bincnt = bincnt
+        return
+    # END
+# END
+def readtrack(f, chrlengths):
     """
     Reads BED file and creates a histogram for the number of bases per bin
     :param f:
@@ -296,42 +423,24 @@ def gettrack(f, bw, chrlengths):
     :return:
     """
     from collections import deque
-    import pandas as pd
-    import sys
-    bed = deque()
-    logger = logging.getLogger("Reading track BED")
-    # Read the BED file
-    chrs = list(chrlengths[0][1].keys())
+    tdata = deque()
     with open(f, 'r') as fin:
         for line in fin:
-            line = line.strip().split()
-            if len(line) < 3:
-                logger.error("Incomplete information in BED file at line: {}".format("\t".join(line)))
+            if line[0] == '#':
+                # logger.warning("Skipping line\n{}".format(line.strip()))
+                continue
+            line = line.strip().split("\t")
+            if len(line) < 2:
+                raise ValueError("Incomplete data in track file line:\n{}\nFile path and name are necessary columns, tags is optional columns".format('\t'.join(line)))
                 sys.exit()
-            if line[0] not in chrs:
-                logger.error("Chromosome in BED is not present in FASTA at line: {}".format("\t".join(line)))
-                sys.exit()
-            try:
-                bed.append([line[0], int(line[1]), int(line[2])])
-            except ValueError:
-                logger.error("Invalid values for line: {}".format("\t".join(line)))
-                sys.exit()
-    bed = pd.DataFrame(bed)
-
-    # Create bins
-    bins = {}
-    for k,v in chrlengths[0][1].items():
-        s = np.array(range(0, v, bw))
-        e = np.concatenate((s[1:], [v]))
-        bins[k] = np.array(list(zip(s, e)))
-
-    bincnt = {}
-    for k, v in bins.items():
-        for r in v:
-            garb = bed.loc[(bed[0]==k) & (bed[1]>=r[0]) & (bed[2]<r[1])]
-            bincnt[(k, r[0], r[1])] = (garb[2] - garb[1]).sum()/bw
-
-
+            t = track(line[0], line[1])
+            # Read tags
+            if len(line) == 3:
+                t.addtags(line[2])
+            # Reads BED
+            t.readbed(chrlengths)
+            tdata.append(t)
+    return tdata
 # END
 """
 ################################################################################
@@ -504,11 +613,14 @@ def drawax(ax, chrgrps, chrlengths, V, S):
     import numpy as np
     nchr = len(chrgrps)
     # qchrs = [chrid_dict[k] for k in chrs]
-    tick_pos = 1 - (S/2)
+    # tick_pos = 1 - (S/2)
+    bottom_limit = -0.1
+    upper_limit = 0.1
     ticklabels = list(chrgrps.keys())
     max_l = np.max([chrlengths[i][1][v[i]] for v in chrgrps.values() for i in range(len(v))])
     if not V:
-        ax.set_ylim(0, nchr+0.2)
+        tick_pos = S/2 + 0.1
+        ax.set_ylim(bottom_limit, nchr+upper_limit)
         ax.set_yticks([tick_pos+i for i in range(nchr)])
         ax.set_yticklabels(ticklabels[::-1])
         ax.tick_params(axis='y', right=False, left=False)
@@ -530,7 +642,8 @@ def drawax(ax, chrgrps, chrlengths, V, S):
         ax.set_ylabel('reference chromosome id')
         ax.set_axisbelow(True)
     else:
-        ax.set_xlim(0, nchr+0.2)
+        tick_pos = 1 - 0.1 - S/2
+        ax.set_xlim(bottom_limit, nchr+upper_limit)
         ax.set_xticks([tick_pos+i for i in range(nchr)])
         ax.set_xticklabels(ticklabels)
         ax.tick_params(axis='x', top=False, bottom=False)
@@ -546,8 +659,8 @@ def drawax(ax, chrgrps, chrlengths, V, S):
         elif max_l >= 1000:
             yticksl = yticks/1000
             ax.set_ylabel('chromosome position (in Kbp)')
-        ax.set_yticks(yticks)
-        ax.set_yticklabels(yticksl)
+        ax.set_yticks(yticks[:-1])
+        ax.set_yticklabels(yticksl[:-1])
         ax.set_xlabel('reference chromosome id')
         ax.yaxis.grid(True, which='major', linestyle='--')
         ax.set_axisbelow(True)
@@ -555,7 +668,7 @@ def drawax(ax, chrgrps, chrlengths, V, S):
 # END
 
 
-def pltchrom(ax, chrs, chrgrps, chrlengths, V, S):
+def pltchrom(ax, chrs, chrgrps, chrlengths, v, S):
     import warnings
     import numpy as np
     chrlabs = [False]*len(chrlengths)
@@ -567,11 +680,11 @@ def pltchrom(ax, chrs, chrgrps, chrlengths, V, S):
     pltchr = ax.axhline if not V else ax.axvline
     # Define indents # TODO: Check how the indents would change when plotting tracks
     step = S/(len(chrlengths)-1)
-    if not V:
-        rend = len(chrs)-0.02
+    if not v:
+        rend = len(chrs)-1+S+0.1
         indents = [rend - (i*step) for i in range(len(chrlengths))]
-    elif V:
-        rend = 1-S-0.02
+    elif v:
+        rend = 1-S-0.1
         indents = [rend + (i*step) for i in range(len(chrlengths))]
     for s in range(len(chrlengths)):
         for i in range(len(chrs)):
@@ -582,7 +695,7 @@ def pltchrom(ax, chrs, chrgrps, chrlengths, V, S):
             else:
                 pltchr(indents[s]-offset, 0, chrlengths[s][1][chrgrps[chrs[i]][s]]/max_l, color=CHRCOLS(s), linewidth=3)
     return ax, indents
-#END
+# END
 
 
 def pltsv(ax, alignments, chrs, V, chrgrps, indents):
@@ -698,4 +811,35 @@ def drawmarkers(ax, b, v, chrlengths, indents, chrs, chrgrps):
             ax.plot(indent+offset, m.start, marker=m.mtype, color=m.mcol, markersize=m.msize)
             if m.text != '':
                 ax.text(indent+offset-m.tpos, m.start, m.text, color=m.tcol, fontsize=m.tsize, fontfamily=m.tfont, ha='left', va='center', rotation='vertical')
+    return ax
+# END
+
+
+def drawtracks(ax, tracks, s, chrgrps, chrlengths, v):
+    from matplotlib.patches import Rectangle
+    import numpy as np
+    th = (1 - s - 2*0.1 - 0.05)/len(tracks)
+    cl = len(chrgrps.keys())
+    chrs = list(chrgrps.keys())
+    margin = np.max([chrlengths[i][1][v[i]] for v in chrgrps.values() for i in range(len(v))])/500
+    for i in range(len(tracks)):
+        bedbin = tracks[i].bincnt
+        for j in range(cl):
+            chrpos = [k[0] for k in bedbin[chrs[j]]]
+            tpos = [k[1] for k in bedbin[chrs[j]]]
+            tposmax = max(tpos)
+            diff = 0.7*th
+            if not v:
+                y0 = cl - j - th*(i+1)
+                ypos = [(t*diff/tposmax)+y0 for t in tpos]
+                # TODO: parameterise colour
+                ax.add_patch(Rectangle((0, y0), chrlengths[0][1][chrs[j]], diff,  linewidth=0, facecolor=tracks[i].bc, alpha=tracks[i].ba))
+                ax.plot(chrpos, ypos, color=tracks[i].lc, lw=tracks[i].lw)
+                ax.text(chrlengths[0][1][chrs[j]] + margin, y0 + diff/2, tracks[i].n, color=tracks[i].nc, fontsize=tracks[i].ns, fontfamily=tracks[i].nf, ha='left', va='center', rotation='horizontal')
+            else:
+                x0 = j + (i+1)*th - diff
+                xpos = [x0 + diff - (t*diff/tposmax) for t in tpos]
+                ax.add_patch(Rectangle((x0, 0), diff, chrlengths[0][1][chrs[j]], linewidth=0, facecolor=tracks[i].bc, alpha=tracks[i].ba))
+                ax.plot(xpos, chrpos, color=tracks[i].lc, lw=tracks[i].lw)
+                ax.text(x0 + diff/2, chrlengths[0][1][chrs[j]] + margin,tracks[i].n, color=tracks[i].nc, fontsize=tracks[i].ns, fontfamily=tracks[i].nf, ha='center', va='bottom', rotation='vertical')
     return ax
