@@ -213,8 +213,7 @@ if __name__ == '__main__':
     if args.tracks is not None: #Todo: Validate this
         # tracks = readtrack(args.tracks, chrlengths)
         tracks = readtrack(f, chrlengths)
-        ax = drawtracks(ax, tracks, S, chrgrps, chrlengths, V)
-
+        ax = drawtracks(ax, tracks, S, chrgrps, chrlengths, V
 
     # Save the plot
     try:
