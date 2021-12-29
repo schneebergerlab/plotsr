@@ -403,6 +403,7 @@ class track():
         bincnt = defaultdict(deque)
         for k, v in bins.items():
             for r in v:
+                # TODO: Parallelise it or improve performance using cython or change algo
                 # TODO: Fix range value count
                 garb = bed.loc[(bed[0]==k) & (bed[1]>=r[0]) & (bed[2]<r[1])]
                 if garb.shape[0] == 0:
@@ -414,6 +415,8 @@ class track():
         return
     # END
 # END
+
+
 def readtrack(f, chrlengths):
     """
     Reads BED file and creates a histogram for the number of bases per bin
@@ -442,6 +445,8 @@ def readtrack(f, chrlengths):
             tdata.append(t)
     return tdata
 # END
+
+
 """
 ################################################################################
 Validation and filtering
@@ -625,7 +630,7 @@ def drawax(ax, chrgrps, chrlengths, V, S):
         ax.set_yticklabels(ticklabels[::-1])
         ax.tick_params(axis='y', right=False, left=False)
         ax.set_xlim(0, max_l)
-        ax.xaxis.grid(True, which='major', linestyle='--')
+        ax.xaxis.grid(True, which='both', linestyle='--')
         ax.ticklabel_format(axis='x', useOffset=False, style='plain')
         xticks = ax.get_xticks()
         if max_l >= 1000000000:
@@ -639,7 +644,7 @@ def drawax(ax, chrgrps, chrlengths, V, S):
             ax.set_xlabel('chromosome position (in Kbp)')
         ax.set_xticks(xticks[:-1])
         ax.set_xticklabels(xticksl[:-1])
-        ax.set_ylabel('reference chromosome id')
+        ax.set_ylabel('Reference Chromosome ID')
         ax.set_axisbelow(True)
     else:
         tick_pos = 1 - 0.1 - S/2
@@ -661,8 +666,8 @@ def drawax(ax, chrgrps, chrlengths, V, S):
             ax.set_ylabel('chromosome position (in Kbp)')
         ax.set_yticks(yticks[:-1])
         ax.set_yticklabels(yticksl[:-1])
-        ax.set_xlabel('reference chromosome id')
-        ax.yaxis.grid(True, which='major', linestyle='--')
+        ax.set_xlabel('Reference Chromosome ID')
+        ax.yaxis.grid(True, which='both', linestyle='--')
         ax.set_axisbelow(True)
     return ax, max_l
 # END
@@ -677,9 +682,11 @@ def pltchrom(ax, chrs, chrgrps, chrlengths, v, S):
     if len(chrlengths) > 8:
         warnings.warn("More than 8 chromosomes are being analysed. This could result in different chromosomes having same color. Provide colors manually in config.")
     # Set chromosome direction
-    pltchr = ax.axhline if not V else ax.axvline
+    # pltchr = ax.axhline if not V else ax.axvline
+    pltchr = ax.hlines if not V else ax.vlines
     # Define indents # TODO: Check how the indents would change when plotting tracks
     step = S/(len(chrlengths)-1)
+    chrlabels = []
     if not v:
         rend = len(chrs)-1+S+0.1
         indents = [rend - (i*step) for i in range(len(chrlengths))]
@@ -688,13 +695,15 @@ def pltchrom(ax, chrs, chrgrps, chrlengths, v, S):
         indents = [rend + (i*step) for i in range(len(chrlengths))]
     for s in range(len(chrlengths)):
         for i in range(len(chrs)):
-            offset = i if not V else -i
+            offset = i if not v else -i
             if not chrlabs[s]:
-                pltchr(indents[s]-offset, 0, chrlengths[s][1][chrgrps[chrs[i]][s]]/max_l, color=CHRCOLS(s), linewidth=3, label=chrlengths[s][0])
+                # pltchr(indents[s]-offset, 0, chrlengths[s][1][chrgrps[chrs[i]][s]]/max_l, color=CHRCOLS(s), linewidth=3, label=chrlengths[s][0])
+                chrlabels.append(pltchr(indents[s]-offset, 0, chrlengths[s][1][chrgrps[chrs[i]][s]], color=CHRCOLS(s), linewidth=3, label=chrlengths[s][0]))
                 chrlabs[s] = True
             else:
-                pltchr(indents[s]-offset, 0, chrlengths[s][1][chrgrps[chrs[i]][s]]/max_l, color=CHRCOLS(s), linewidth=3)
-    return ax, indents
+                # pltchr(indents[s]-offset, 0, chrlengths[s][1][chrgrps[chrs[i]][s]]/max_l, color=CHRCOLS(s), linewidth=3)
+                pltchr(indents[s]-offset, 0, chrlengths[s][1][chrgrps[chrs[i]][s]], color=CHRCOLS(s), linewidth=3)
+    return ax, indents, chrlabels
 # END
 
 
@@ -714,35 +723,38 @@ def pltsv(ax, alignments, chrs, V, chrgrps, indents):
                 if not adSynLab:
                     p = bezierpath(row[1], row[2], row[4], row[5], indents[s]-offset, indents[s+1]-offset, V, col=COLORS[0], alpha=alpha, label='Syntenic')
                     adSynLab = True
+                    syn = ax.add_patch(p)
                 else:
                     p = bezierpath(row[1], row[2], row[4], row[5], indents[s]-offset, indents[s+1]-offset, V, col=COLORS[0], alpha=alpha)
-                ax.add_patch(p)
-
+                    ax.add_patch(p)
             # Plot Inversions
             for row in df.loc[(df['achr'] == chrgrps[chrs[i]][s]) & (df['type'] == 'INV')].itertuples(index=False):
                 if not adInvLab:
                     p = bezierpath(row[1], row[2], row[4], row[5], indents[s]-offset, indents[s+1]-offset, V, col=COLORS[1], alpha=alpha, label='Inversion', lw=0.1)
                     adInvLab=True
+                    inv = ax.add_patch(p)
                 else:
                     p = bezierpath(row[1], row[2], row[4], row[5], indents[s]-offset, indents[s+1]-offset, V, col=COLORS[1], alpha=alpha, lw=0.1)
-                ax.add_patch(p)
+                    ax.add_patch(p)
             # Plot Translocations
             for row in df.loc[(df['achr'] == chrgrps[chrs[i]][s]) & (df['type'].isin(['TRANS', 'INVTR']))].itertuples(index=False):
                 if not adTraLab:
                     p = bezierpath(row[1], row[2], row[4], row[5], indents[s]-offset, indents[s+1]-offset, V, col=COLORS[2], alpha=alpha, label='Translocation', lw=0.1)
                     adTraLab = True
+                    tra = ax.add_patch(p)
                 else:
                     p = bezierpath(row[1], row[2], row[4], row[5], indents[s]-offset, indents[s+1]-offset, V, col=COLORS[2], alpha=alpha, lw=0.1)
-                ax.add_patch(p)
+                    ax.add_patch(p)
             # Plot Duplications
             for row in df.loc[(df['achr'] == chrgrps[chrs[i]][s]) & (df['type'].isin(['DUP', 'INVDP']))].itertuples(index=False):
                 if not adDupLab:
                     p = bezierpath(row[1], row[2], row[4], row[5], indents[s]-offset, indents[s+1]-offset, V, col=COLORS[4], alpha=alpha, label='Duplication', lw=0.1)
                     adDupLab=True
+                    dup = ax.add_patch(p)
                 else:
                     p = bezierpath(row[1], row[2], row[4], row[5], indents[s]-offset, indents[s+1]-offset, V, col=COLORS[4], alpha=alpha, lw=0.1)
-                ax.add_patch(p)
-    return ax
+                    ax.add_patch(p)
+    return ax, [syn, inv, tra, dup]
 # END
 
 

@@ -195,15 +195,16 @@ if __name__ == '__main__':
 
     ## Draw Chromosomes
     # TODO: Set parsing of colors
-    ax, indents = pltchrom(ax, chrs, chrgrps, chrlengths, V, S)
+    ax, indents, chrlabels = pltchrom(ax, chrs, chrgrps, chrlengths, V, S)
+
+    l1 = plt.legend(handles=chrlabels, loc='lower left', bbox_to_anchor=[0, 1.01, 0.5, 0.1], ncol=1, mode='expand', borderaxespad=0., frameon=False, title='Genome')
+    l1._legend_box.align = "left"
+    plt.gca().add_artist(l1)
 
     # Plot structural annotations
     # TODO: Parameterise: colors, alpha,
-    ax = pltsv(ax, alignments, chrs, V, chrgrps, indents)
-
-    # Draw legend
-    # TODO: Consider grouping the chromosomes legends at one place
-    ax.legend(loc='lower left', bbox_to_anchor=(0, 1.01, 1, 1.01), ncol=3, mode='expand', borderaxespad=0., frameon=False)
+    ax, svlabels = pltsv(ax, alignments, chrs, V, chrgrps, indents)
+    plt.legend(handles=svlabels, loc='lower left', bbox_to_anchor=[0.5, 1.01, 0.5, 0.3], ncol=1, mode='expand', borderaxespad=0., frameon=False, title='Annotation')._legend_box.align = "left"
 
     # Plot markers
     if B is not None:
@@ -213,7 +214,7 @@ if __name__ == '__main__':
     if args.tracks is not None: #Todo: Validate this
         # tracks = readtrack(args.tracks, chrlengths)
         tracks = readtrack(f, chrlengths)
-        ax = drawtracks(ax, tracks, S, chrgrps, chrlengths, V
+        ax = drawtracks(ax, tracks, S, chrgrps, chrlengths, V)
 
     # Save the plot
     try:
