@@ -1,4 +1,4 @@
-##bw = bin width(default=100000)
+##bw = bin width (default=100000)
 ##nc = name colour
 ##ns = name size
 ##nf = name font

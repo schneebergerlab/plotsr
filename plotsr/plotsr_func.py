@@ -42,6 +42,7 @@ MARKERS = {".": "point",
            "i11": "caretdown"}
 VARS = ['SYN', 'INV', 'TRANS', 'INVTR', 'DUP', 'INVDP']
 COLORS = ['#DEDEDE', '#FFA500', '#9ACD32', '#9ACD32', '#00BBFF', '#00BBFF', '#83AAFF', '#FF6A33']
+
 FONT_NAMES = []
 for fn in matplotlib.font_manager.findSystemFonts():
     try: FONT_NAMES.append(matplotlib.font_manager.get_font(fn).family_name)
@@ -281,9 +282,15 @@ def readsyriout(f):
             # TODO: DECIDE WHETHER TO HAVE STATIC VARS OR FLEXIBLE ANNOTATION
             if l[10] in VARS:
                 syri_regs.append(l)
-    df = DataFrame(list(syri_regs))[[0, 1, 2, 5, 6, 7, 10]]
+    try:
+        df = DataFrame(list(syri_regs))[[0, 1, 2, 5, 6, 7, 10]]
+    except KeyError:
+        raise ImportError("Incomplete input file {}, syri.out file should have 11 columns.".format(f))
     df[[0, 5, 10]] = df[[0, 5, 10]].astype(str)
-    df[[1, 2, 6, 7]] = df[[1, 2, 6, 7]].astype(int)
+    try:
+        df[[1, 2, 6, 7]] = df[[1, 2, 6, 7]].astype(int)
+    except ValueError:
+        raise ValueError("Non-numerical values used as genome coordinates in {}. Exiting".format(f))
     # chr ID map
     chrid = []
     chrid_dict = OrderedDict()
@@ -308,9 +315,16 @@ def readbedout(f):
             if l[6] in VARS:
                 bed_regs.append(l)
     df = DataFrame(list(bed_regs))
-    df[[0, 3, 6]] = df[[0, 3, 6]].astype(str)
+    try:
+        df[[0, 3, 6]] = df[[0, 3, 6]].astype(str)
+    except KeyError:
+        raise ImportError("Incomplete input file {}, BEDPE file should have 7 columns.".format(f))
+    try:
+        df[[1, 2, 4, 5]] = df[[1, 2, 4, 5]].astype(int)
+    except ValueError:
+        raise ValueError("Non-numerical values used as genome coordinates in {}. Exiting".format(f))
     df[[1, 2, 4, 5]] = df[[1, 2, 4, 5]].astype(int)
-    df[[1, 4]] = df[[1, 4]].astype(int) # Makes range closed as the terminal bases are also included
+    df[[1, 4]] = df[[1, 4]] + 1 # Makes range closed as the terminal bases are also included
     # chr ID map
     chrid = []
     chrid_dict = OrderedDict()
@@ -460,44 +474,61 @@ def validalign2fasta(als, genf):
     :param genf: path to file containing "genome_IDs:path_to_genome_fasta"
     :return: genome length dict.
     """
-    from collections import OrderedDict
+    from collections import deque, OrderedDict
     import sys
     import numpy as np
     import os
     out = deque()
+    errmess1 = 'Chromosome ID: {} in structural annotation file: {} not present in genome fasta: {}. Exiting.'
+    errmess2 = 'For chromosome ID: {}, length in genome fasta: {} is less than the maximum coordinate in the structural annotation file: {}. Exiting.'
+    tags = {'lc': {}}
+    taglist = set(tags.keys())
+    CHRCOLS = plt.get_cmap('Dark2')
+    gencol = deque()
     with open(genf, 'r') as fin:
         i = 0
         for line in fin:
-            line = line.strip().split(":")
-            if len(line) != 2:
-                raise SystemExit("Incorrect format for the genome path file.\nExpected format:\ngenome1_id:path_to_genome1\ngenome2_id:path_to_genome2")
-                sys.exit()
+            if line[0] =='#':
+                continue
+            line = line.strip().split("\t")
+            if len(line) < 2:
+                raise ImportError("Incomplete genomic information.\nExpected format for the genome file:\npath_to_genome1\tgenome1_id\ttags\npath_to_genome2\tgenome2_id\ttags")
             try:
                 # length of individual chromosomes
-                glen = {id: len(seq) for id, seq in readfasta(line[1]).items()}
+                glen = {c: len(seq) for c, seq in readfasta(line[0]).items()}
             except Exception as e:
-                raise SystemExit("Error in reading fasta: {}\n{}".format(line[1], e))
+                raise ImportError("Error in reading fasta: {}\n{}".format(line[1], e))
             # Check cases when the genome is the query-genome
             if i > 0:
                 df = als[i-1][1]
                 chrs = np.unique(df['bchr'])
                 for c in chrs:
                     if c not in list(glen.keys()):
-                        raise SystemExit('Chromosome ID: {} in structural annotation file: {} not present in genome fasta: {}. Exiting.'.format(c, als[i-1][0], os.path.basename(line[1])))
+                        raise ImportError(errmess1.format(c, als[i-1][0], os.path.basename(line[1])))
                     if np.max(np.max(df.loc[df['bchr'] == c, ['bstart', 'bend']])) > glen[c]:
-                        raise SystemExit('For chromosome ID: {}, length in genome fasta: {} is less than the maximum coordinate in the structural annotation file: {}. Exiting.'.format(c, os.path.basename(fin), als[i-1][0]))
+                        raise ImportError(errmess2.format(c, os.path.basename(fin), als[i-1][0]))
             # Check cases when the genome is the reference-genome
             if i < len(als):
                 df = als[i][1]
                 chrs = np.unique(df['achr'])
                 for c in chrs:
                     if c not in list(glen.keys()):
-                        raise SystemExit('Chromosome ID: {} in structural annotation file: {} not present in genome fasta: {}. Exiting.'.format(c, als[i][0], os.path.basename(line[1])))
+                        raise ImportError(errmess1.format(c, als[i][0], os.path.basename(line[1])))
                     if np.max(np.max(df.loc[df['achr'] == c, ['astart', 'aend']])) > glen[c]:
-                        raise SystemExit('For chromosome ID: {}, length in genome fasta: {} is less than the maximum coordinate in the structural annotation file: {}. Exiting.'.format(c, os.path.basename(fin), als[i][0]))
-            out.append((line[0], glen))
+                        raise ImportError(errmess2.format(c, os.path.basename(fin), als[i][0]))
+
+            # Reads tags
+            print(line)
+            if len(line) > 2:
+                tg = line[2].split(';')
+                for t in tg:
+                    t = t.split(':')
+                    print(t)
+                    if t[0] in taglist:
+                        tags[t[0]][line[1]] = t[1]
+            out.append((line[1], glen))
             i += 1
-    return out
+    return out, tags
 # END
 
 

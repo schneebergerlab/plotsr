@@ -1,3 +1,6 @@
-col-0:./data/TAIR10_Filtered.fasta
-ler:./data/ler.filtered.fa
-cvi:./data/cvi.filtered.fa
+##lc = line colour
+#file   name    tags
+./data/TAIR10_Filtered.fasta col-0  lc:#1b9e77
+./data/ler.filtered.fa  ler lc:#d95f02
+./data/cvi.filtered.fa  cvi lc:#7570b3
+./TAIR10_Filtered.fasta col-0a  lc:#e7298a
