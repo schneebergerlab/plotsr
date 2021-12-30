@@ -168,7 +168,7 @@ class bedAnno():
         self.tp='0.05'
         self.logger = logging.getLogger("bedAnno")
 
-        # Add tags
+    # Add tags
     def addtags(self, tags):
         import matplotlib
         import sys
@@ -180,25 +180,25 @@ class bedAnno():
                         if v[0] == '#': matplotlib.colors.to_rgb(v)
                         else: matplotlib.colors.to_hex(v)
                     except ValueError:
-                        self.logger.error("Error in using colour: {} for track {}. Use correct hexadecimal colours or named colours define in matplotlib (https://matplotlib.org/stable/gallery/color/named_colors.html)".format(v, self.n))
+                        self.logger.error("Error in using colour: {} for position {}:{}-{}. Use correct hexadecimal colours or named colours define in matplotlib (https://matplotlib.org/stable/gallery/color/named_colors.html)".format(v, self.chr, self.start, self.end))
                         sys.exit()
                     setattr(self, n, v)
                 elif n in ['ms', 'ts', 'tp']:
                     try: float(v)
                     except ValueError:
-                        self.logger.error("Non-numerical value {} for {} in track{}".format(v, n, self.n))
+                        self.logger.error("Non-numerical value {} for {} at marker position: {}:{}-{}".format(v, n, self.chr, self.start, self.end))
                         sys.exit()
                     setattr(self, n, float(v))
                 elif n in ['tf']:
                     if v not in FONT_NAMES:
                         with open("plotsr_available_font_names.txt", 'w') as fout:
                             fout.write("\n".join(FONT_NAMES))
-                        raise ValueError("Font {} in track {} is not available. Check plotsr_available_font_names.txt for list of available system markers".format(v, self.n))
+                        raise ValueError("Selected font {} at marker position {}:{}-{} is not available. Check plotsr_available_font_names.txt for list of available system markers".format(v, self.chr, self.start, self.end))
                         sys.exit()
                     setattr(self, n, v)
                 elif n in ['mt']:
                     if v not in MARKERS.keys():
-                        self.logger.error("Unrecongised marker used for position {}:{}-{}. Plotsr accepts markers defined in matplotlib (https://matplotlib.org/stable/api/markers_api.html) with some modifications.".format(self.start, self.start, self.end))
+                        self.logger.error("Unrecongised marker used for position {}:{}-{}. Plotsr accepts markers defined in matplotlib (https://matplotlib.org/stable/api/markers_api.html) with some modifications.".format(self.chr, self.start, self.end))
                         for k, v in MARKERS.items():
                             print("{} : {}".format(k, v))
                         sys.exit()
@@ -208,81 +208,7 @@ class bedAnno():
             else:
                 raise ValueError("{} is not a valid tag".format(n))
         return
-    #END
-#
-# # Define marker type
-#     def setmarker(self, marker):
-#         import matplotlib
-#         import sys
-#         marker = marker.split(":")
-#         if marker[0][:2] != 'm=' or marker[1][:2] != 'c=' or marker[2][:2] != 's=':
-#             raise ValueError("Incomplete information {} for marker at {}:{}-{}. Require: type, color, and color.".format(':'.join(marker), self.chr, self.start, self.end))
-#         # Set marker type
-#         m = marker[0].split("=")
-#         if m[1] not in MARKERS.keys():
-#             self.logger.error("Unrecongised marker used for position {}:{}-{}. Plotsr accepts markers defined in matplotlib (https://matplotlib.org/stable/api/markers_api.html) with some modifications.".format(self.start, self.start, self.end))
-#             for k, v in MARKERS.items():
-#                 print("{} : {}".format(k, v))
-#             sys.exit()
-#         self.mtype = m[1] if m[1][0] != 'i' else int(m[1][1:])
-#         # Set marker color
-#         m = marker[1].split("=")
-#         try:
-#             if m[1][0] == '#': matplotlib.colors.to_rgb(m[1])
-#             else: matplotlib.colors.to_hex(m[1])
-#         except ValueError:
-#             self.logger.error("Error in using colour: {} for position {}:{}-{}. Use correct hexadecimal colours or named colours define in matplotlib (https://matplotlib.org/stable/gallery/color/named_colors.html)".format(m[1], self.chr, self.start, self.end))
-#             sys.exit()
-#         self.mcol = m[1]
-#         # Set marker size
-#         m = marker[2].split("=")
-#         try: self.msize = int(m[1])
-#         except ValueError:
-#             self.logger.error("Non-integer size ({}) for marker at {}:{}-{}".format(m[1], self.start, self.start, self.end))
-#             sys.exit()
-#         # Set line marker when marker length > 1
-#         if self.end - self.start > 1:
-#             self.logger.warning("Range selected for position {}:{}-{}. Setting marker to line".format(self.start, self.start, self.end))
-#             self.mtype = "|" if self.v else "_"
-#         return
-#
-#     # Define text type
-#     def settext(self, text):
-#         import warnings
-#         import matplotlib
-#         import sys
-#         text=text.split(":")
-#         if text[0][:2] != 't=' or text[1][:2] != 'c=' or text[2][:2] != 's=' or text[3][:2] != 'f=' or text[4][:2] != 'p=':
-#             raise ValueError("Incomplete information {} for text at {}:{}-{}. Require: text, color, size, and font_name.".format(':'.join(text), self.chr, self.start, self.end))
-#         # Set text
-#         t = text[0].split("=")
-#         self.text = t[1]
-#         # Set text color
-#         t = text[1].split("=")
-#         try:
-#             if t[1][0] == '#': matplotlib.colors.to_rgb(t[1])
-#             else: matplotlib.colors.to_hex(t[1])
-#         except ValueError:
-#             warnings.warn("Error in using colour: {} for position {}:{}-{}. Use correct hexadecimal colours or named colours define in matplotlib (https://matplotlib.org/stable/gallery/color/named_colors.html)".format(t[1], self.chr, self.start, self.end))
-#             sys.exit()
-#         self.tcol = t[1]
-#         # Set text size
-#         t = text[2].split("=")
-#         try: self.tsize = int(t[1])
-#         except ValueError:
-#             raise ValueError("Non-integer size ({}) for marker at {}:{}-{}".format(t[1], self.chr, self.start, self.end))
-#         # Set text font
-#         t = text[3].split("=")
-#         if t[1] in FONT_NAMES: self.tfont = t[1]
-#         else:
-#             with open("plotsr_available_font_names.txt", 'w') as fout:
-#                 fout.write("\n".join(FONT_NAMES))
-#             raise ValueError("Font ({}) for marker at {}:{}-{} is not available. Check plotsr_available_font_names.txt for list of available system markers".format(t[1], self.chr, self.start, self.end))
-#             sys.exit()
-#         # Set text position:
-#         t = text[4].split("=")
-#         self.tpos=float(t[1])
-#         return
+    # END
 # END
 
 
@@ -886,13 +812,13 @@ def drawmarkers(ax, b, v, chrlengths, indents, chrs, chrgrps):
         indent = indents[ind]
         offset = chrs.index([k for k, v in chrgrps.items() if v[ind] == m.chr][0])
         if not v:
-            ax.plot(m.start, indent-offset, marker=m.mtype, color=m.mcol, markersize=m.msize)
-            if m.text != '':
-                ax.text(m.start, indent-offset+m.tpos, m.text, color=m.tcol, fontsize=m.tsize, fontfamily=m.tfont, ha='center', va='bottom')
+            ax.plot(m.start, indent-offset, marker=m.mt, color=m.mc, markersize=m.ms)
+            if m.tt != '':
+                ax.text(m.start, indent-offset+m.tp, m.tt, color=m.tc, fontsize=m.ts, fontfamily=m.tf, ha='center', va='bottom')
         elif v:
-            ax.plot(indent+offset, m.start, marker=m.mtype, color=m.mcol, markersize=m.msize)
-            if m.text != '':
-                ax.text(indent+offset-m.tpos, m.start, m.text, color=m.tcol, fontsize=m.tsize, fontfamily=m.tfont, ha='left', va='center', rotation='vertical')
+            ax.plot(indent+offset, m.start, marker=m.mt, color=m.mc, markersize=m.ms)
+            if m.tt != '':
+                ax.text(indent+offset-m.tp, m.start, m.tt, color=m.tc, fontsize=m.ts, fontfamily=m.tf, ha='left', va='center', rotation='vertical')
     return ax
 # END
 

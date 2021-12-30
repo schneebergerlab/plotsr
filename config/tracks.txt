@@ -6,6 +6,6 @@
 ##lw = line width
 ##bc = background colour
 ##ba = background alpha
-#file   name    tags
-snps.bed    all_snps    bw:100000;nc:black;ns:8;nf:Arial;lc:black;lw:1;bc:grey:ba:0.5
-snps.sample.bed    snps    bw:100000;nc:black;ns:8;nf:Arial;lc:colour;lw:2;bc:yellow:ba:0.7
+#file	name	tags
+snps.bed	all_snps	bw:100000;nc:black;ns:8;nf:Arial;lc:black;lw:1;bc:grey;ba:0.5
+snps.sample.bed	snps	bw:100000;nc:black;ns:8;nf:Arial;lc:colour;lw:2;bc:white;ba:0.7

@@ -207,7 +207,7 @@ if __name__ == '__main__':
     # Draw tracks
     if args.tracks is not None:
         tracks = readtrack(args.tracks.name, chrlengths)
-        # tracks = readtrack(f, chrlengths) #TODO: delete this
+        tracks = readtrack(f, chrlengths) #TODO: delete this
         ax = drawtracks(ax, tracks, S, chrgrps, chrlengths, V)
 
     # Save the plot
