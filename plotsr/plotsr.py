@@ -9,7 +9,7 @@ Date: 30.12.2021
 Description: Plotting multi genome structural annotations 
 """
 
-
+__version__ = "v0.1"
 if __name__ == '__main__':
     from matplotlib.rcsetup import non_interactive_bk as bklist
     parser = argparse.ArgumentParser("Plotting structural rearrangements between genomes", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -17,7 +17,7 @@ if __name__ == '__main__':
     parser.add_argument('--bp', help='Structural annotation mappings in BEDPE format', action='append', type=argparse.FileType('r'))
     parser.add_argument('--genomes', help='Path to genome files', type=argparse.FileType('r'), required=True)
     parser.add_argument('--markers', help='Path to markers (bed format)', type=argparse.FileType('r'))
-    parser.add_argument('--tracks', help='Add track histogram (requires: path_to_file and colour name', action='append', type=argparse.FileType('r'))
+    parser.add_argument('--tracks', help='File listing paths and details for all tracks to be plotted', type=argparse.FileType('r'))
     # parser.add_argument('-B', help='Annotation bed file for marking specific positions on genome', type=argparse.FileType('r'))
     parser.add_argument('--chr', help='Select specific chromosomes on reference for plotting.', type=str, action='append')
     parser.add_argument('--nosyn', help='Do not plot syntenic regions', default=False, action='store_true')
@@ -35,10 +35,10 @@ if __name__ == '__main__':
     parser.add_argument('-b', help='Matplotlib backend to use', default="agg", type=str, choices=bklist)
     parser.add_argument('-v', help='Plot vertical chromosome', default=False, action='store_true')
     parser.add_argument('--log', help='Log-level', choices=['DEBUG', 'INFO', 'WARN'], default='WARN', type=str)
+    parser.add_argument('--version', action='version', version='{version}'.format(version=__version__))
 
     # args = parser.parse_args([]) # TODO: Delete this line
     args = parser.parse_args()
-
     ## Define logger
     import logging
     import logging.config
@@ -86,7 +86,6 @@ if __name__ == '__main__':
         if len(args.sr) > 0 and len(args.bp) > 0:
             logger.error("Both --sr and --bp cannot be used. Use single file type for all input structural annotations files. User converter to reformat BEDPE/syri.out files")
             sys.exit()
-
     except TypeError:
         pass
 
