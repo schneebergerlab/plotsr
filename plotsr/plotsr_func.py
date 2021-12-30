@@ -163,7 +163,7 @@ class bedAnno():
         self.ms=8
         self.tt=''
         self.tc='black'
-        self.ts=matplotlib.rcParamsDefault['font.size']
+        self.ts=matplotlib.rcParams['font.size']
         self.tf='Arial'
         self.tp='0.05'
         self.logger = logging.getLogger("bedAnno")
@@ -223,14 +223,16 @@ def readannobed(path, v, chrlengths):
                 continue
             line = line.strip().split("\t")
             if len(line) < 4:
-                raise ImportError("Incomplete data in BED file line:\n{}\nGenome coordinate (chromosome, start,end) and genome name are required columns, while tags is an optional column".format('\t'.join(line)))
+                logger.warning("Incomplete data in BED file line:\n{}\nGenome coordinate (chromosome, start,end) and genome name are required columns, while tags is an optional column".format('\t'.join(line)))
+                continue
             found = False
             for i in chrlengths:
                 if i[0] == line[3]:
                     if line[0] in list(i[1].keys()):
                         found = True
             if not found:
-                raise ValueError("Incorrect marker information. Chromosome: {} is not present in genome {}.".format(line[0], line[3]))
+                logger.warning("Incorrect marker information. Chromosome: {} is not present in genome {}. Skipping it".format(line[0], line[3]))
+                continue
             anno = bedAnno(line[0], line[1], line[2], line[3], v)
             if len(line) == 5:
                 anno.addtags(line[4])
@@ -313,7 +315,7 @@ class track():
         self.f = f
         self.n = n
         self.nc = 'black'
-        self.ns = matplotlib.rcParamsDefault['font.size']
+        self.ns = matplotlib.rcParams['font.size']
         self.nf = 'Arial'
         self.bw = 100000
         self.lc = 'black'
@@ -332,10 +334,12 @@ class track():
             if hasattr(self, n):
                 if n in ['nc', 'lc', 'bc']:
                     try:
+                        # print(n, v)
                         if v[0] == '#': matplotlib.colors.to_rgb(v)
                         else: matplotlib.colors.to_hex(v)
                     except ValueError:
                         self.logger.error("Error in using colour: {} for track {}. Use correct hexadecimal colours or named colours define in matplotlib (https://matplotlib.org/stable/gallery/color/named_colors.html)".format(v, self.n))
+                        # continue
                         sys.exit()
                     setattr(self, n, v)
                 elif n in ['ns', 'bw', 'lw', 'ba']:
@@ -349,7 +353,6 @@ class track():
                         with open("plotsr_available_font_names.txt", 'w') as fout:
                             fout.write("\n".join(FONT_NAMES))
                         raise ValueError("Font {} in track {} is not available. Check plotsr_available_font_names.txt for list of available system markers".format(v, self.n))
-                        sys.exit()
                     setattr(self, n, v)
             else:
                 raise ValueError("{} is not a valid tag".format(n))
@@ -512,23 +515,6 @@ def filterinput(args, df, chrid):
 # END
 
 
-def selectchrs(als, chrids, clens. chrs):
-    """
-    # TODO: Given a list of reference chromsome IDs, filter alignments to select
-    alignments between chromosomes homologous to given reference chromosomes
-    """
-    # df = ''
-    # from warnings import warn
-    #
-    # if args.chr is not None:
-    #     for chr in args.chr:
-    #         if chr not in list(reflenghts.keys()):
-    #             warn('Selected chromosome ID: {} is not present in the reference genome. Only use reference chromsome ID for selecting chromsomes.'.format(chr))
-    #     df = df.loc[df[0].isin(args.chr)]
-    pass
-# END
-
-
 def createribbon(df):
     """
     Combine continuous syntenic regions to get larger ribbons for syntenic blocks
@@ -629,13 +615,13 @@ def drawax(ax, chrgrps, chrlengths, V, S):
         xticks = ax.get_xticks()
         if max_l >= 1000000000:
             xticksl = xticks/1000000000
-            ax.set_xlabel('chromosome position (in Gbp)')
+            ax.set_xlabel('Chromosome position (in Gbp)')
         elif max_l >= 1000000:
             xticksl = xticks/1000000
-            ax.set_xlabel('chromosome position (in Mbp)')
+            ax.set_xlabel('Chromosome position (in Mbp)')
         elif max_l >= 1000:
             xticksl = xticks/1000
-            ax.set_xlabel('chromosome position (in Kbp)')
+            ax.set_xlabel('Chromosome position (in Kbp)')
         ax.set_xticks(xticks[:-1])
         ax.set_xticklabels(xticksl[:-1])
         ax.set_ylabel('Reference Chromosome ID')
@@ -651,13 +637,13 @@ def drawax(ax, chrgrps, chrlengths, V, S):
         yticks = ax.get_yticks()
         if max_l >= 1000000000:
             yticksl = yticks/1000000000
-            ax.set_ylabel('chromosome position (in Gbp)')
+            ax.set_ylabel('Chromosome position (in Gbp)')
         elif max_l >= 1000000:
             yticksl = yticks/1000000
-            ax.set_ylabel('chromosome position (in Mbp)')
+            ax.set_ylabel('Chromosome position (in Mbp)')
         elif max_l >= 1000:
             yticksl = yticks/1000
-            ax.set_ylabel('chromosome position (in Kbp)')
+            ax.set_ylabel('Chromosome position (in Kbp)')
         ax.set_yticks(yticks[:-1])
         ax.set_yticklabels(yticksl[:-1])
         ax.set_xlabel('Reference Chromosome ID')

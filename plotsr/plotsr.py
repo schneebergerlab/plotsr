@@ -19,7 +19,7 @@ if __name__ == '__main__':
     parser.add_argument('--markers', help='Path to markers (bed format)', type=argparse.FileType('r'))
     parser.add_argument('--tracks', help='Add track histogram (requires: path_to_file and colour name', action='append', type=argparse.FileType('r'))
     # parser.add_argument('-B', help='Annotation bed file for marking specific positions on genome', type=argparse.FileType('r'))
-    parser.add_argument('--chr', help='Select specific region on reference chromosome to be plotted.', type=str, nargs='+')
+    parser.add_argument('--chr', help='Select specific chromosomes on reference for plotting.', type=str, action='append')
     parser.add_argument('--nosyn', help='Do not plot syntenic regions', default=False, action='store_true')
     parser.add_argument('--noinv', help='Do not plot inversions', default=False, action='store_true')
     parser.add_argument('--notr', help='Do not plot translocations regions', default=False, action='store_true')
@@ -82,9 +82,13 @@ if __name__ == '__main__':
     if len(args.sr) == 0 and len(args.bp) == 0:
         logger.error("No structural annotations provided. Use --sr or -bp to provide path to input files")
         sys.exit()
-    if len(args.sr) > 0 and len(args.bp) > 0:
-        logger.error("Both --sr and --bp cannot be used. Use single file type for all input structural annotations files. User converter to reformat BEDPE/syri.out files")
-        sys.exit()
+    try:
+        if len(args.sr) > 0 and len(args.bp) > 0:
+            logger.error("Both --sr and --bp cannot be used. Use single file type for all input structural annotations files. User converter to reformat BEDPE/syri.out files")
+            sys.exit()
+
+    except TypeError:
+        pass
 
     # Set Figure height and width. Change later based on chromosome number and size
     FS = args.f             # Font size
@@ -97,12 +101,19 @@ if __name__ == '__main__':
     S = args.S              # Space between homologous chromosomes
     MARKERS = None if args.markers is None else args.markers.name              # Annotation bed file
     TRACKS = None if args.tracks is None else args.tracks.name
-
     if S < 0.1 or S > 0.85:
         sys.exit('Out of range value for S. Please provide a value in the range 0.1-0.85')
 
     from plotsr.plotsr_func import VARS, readfasta
     from collections import deque, OrderedDict
+
+    ## Set matplotlib backend
+    import matplotlib
+    try:
+        # matplotlib.use(args.b)
+        matplotlib.use('Qt5Agg')
+    except:
+        sys.exit('Matplotlib backend cannot be selected')
 
     # fins = ['col_lersyri.out', 'ler_cvisyri.out', 'cvi_colsyri.out'] #TODO: Delete this line
     # Read alignment coords
@@ -121,9 +132,17 @@ if __name__ == '__main__':
             alignments.append([os.path.basename(fin), al])
             chrids.append((os.path.basename(fin), cid))
 
-    # Check chromsome IDs and sizes
-    chrlengths = validalign2fasta(alignments, args.genomes)
-    # chrlengths, chrtags = validalign2fasta(alignments, 'genomes.txt') # TODO: Delete this line
+    # Get groups of homologous chromosomes
+    chrs = [k for k in chrids[0][1].keys() if k in alignments[0][1]['achr'].unique()]
+    chrgrps = OrderedDict()
+    for c in chrs:
+        cg = deque([c])
+        cur = c
+        for i in range(len(chrids)):
+            n = chrids[i][1][cur]
+            cg.append(n)
+            cur = n
+        chrgrps[c] = cg
 
     # Filter alignments to select long alignments between homologous chromosomes
     for i in range(len(alignments)):
@@ -131,8 +150,38 @@ if __name__ == '__main__':
 
     # Select only chromosomes selected by --chr
     if args.chr is not None:
-        # TODO: IMPLEMENT selectchrs
-        pass
+        homchrs = deque()
+        for c in args.chr:
+            if c not in chrs:
+                logger.warning("Selected chromosome: {} is not in reference genome. Skipping it.".format(c))
+                continue
+            homchrs.append(chrgrps[c])
+        for i in range(len(alignments)):
+            alignments[i][1] = alignments[i][1].loc[alignments[i][1]['achr'].isin([h[i] for h in homchrs])]
+
+    # Check chromsome IDs and sizes
+    chrlengths = validalign2fasta(alignments, args.genomes)
+    # chrlengths, chrtags = validalign2fasta(alignments, 'genomes.txt') # TODO: Delete this line
+    ## Remove chromosomes that are not homologous to selected reference chromosomes
+    for i in range(len(chrlengths)):
+        ks = list(chrlengths[i][1].keys())
+        homs = [h[i] for h in homchrs]
+        for k in ks:
+            if k not in homs:
+                chrlengths[i][1].pop(k)
+
+    # Update groups of homologous chromosomes
+    chrs = [k for k in chrids[0][1].keys() if k in alignments[0][1]['achr'].unique()]
+    chrgrps = OrderedDict()
+    for c in chrs:
+        cg = deque([c])
+        cur = c
+        for i in range(len(chrids)):
+            n = chrids[i][1][cur]
+            cg.append(n)
+            cur = n
+        chrgrps[c] = cg
+
 
     # Combine Ribbon is selected than combine rows
     if R:
@@ -149,26 +198,10 @@ if __name__ == '__main__':
         df.loc[invindex, 'bstart'] = df.loc[invindex, 'bstart'] - df.loc[invindex, 'bend']
         alignments[i][1] = df.copy()
 
-    chrs = [k for k in chrids[0][1].keys() if k in alignments[0][1]['achr'].unique()]
-    # Get groups of homologous chromosomes
-    chrgrps = OrderedDict()
-    for c in chrs:
-        cg = deque([c])
-        cur = c
-        for i in range(len(chrids)):
-            n = chrids[i][1][cur]
-            cg.append(n)
-            cur = n
-        chrgrps[c] = cg
 
-    import matplotlib
-    try:
-        # matplotlib.use(args.b)
-        matplotlib.use('Qt5Agg')
-    except:
-        sys.exit('Matplotlib backend cannot be selected')
+
+
     from matplotlib import pyplot as plt
-
     plt.rcParams['font.size'] = FS
     try:
         if H is None and W is None:
@@ -191,14 +224,17 @@ if __name__ == '__main__':
     ## Draw Chromosomes
     ax, indents, chrlabels = pltchrom(ax, chrs, chrgrps, chrlengths, V, S, chrtags)
 
-    l1 = plt.legend(handles=chrlabels, loc='lower left', bbox_to_anchor=[0, 1.01, 0.5, 0.1], ncol=1, mode='expand', borderaxespad=0., frameon=False, title='Genome')
+    # Get Chromosome legend
+    bbox_to_anchor = [0, 1.01, 0.5, 0.3] if not V else [0, 1.1, 0.5, 0.3] # TODO: READ from base.cfg
+    l1 = plt.legend(handles=chrlabels, loc='lower left', bbox_to_anchor=bbox_to_anchor, ncol=1, mode='expand', borderaxespad=0., frameon=False, title='Genome')
     l1._legend_box.align = "left"
     plt.gca().add_artist(l1)
 
     # Plot structural annotations
     # TODO: Parameterise: colors, alpha,
     ax, svlabels = pltsv(ax, alignments, chrs, V, chrgrps, indents)
-    plt.legend(handles=svlabels, loc='lower left', bbox_to_anchor=[0.5, 1.01, 0.5, 0.3], ncol=1, mode='expand', borderaxespad=0., frameon=False, title='Annotation')._legend_box.align = "left"
+    bbox_to_anchor[0] += 0.5
+    plt.legend(handles=svlabels, loc='lower left', bbox_to_anchor=bbox_to_anchor, ncol=1, mode='expand', borderaxespad=0., frameon=False, title='Annotation')._legend_box.align = "left"
 
     # Plot markers
     if B is not None:
@@ -207,7 +243,7 @@ if __name__ == '__main__':
     # Draw tracks
     if args.tracks is not None:
         tracks = readtrack(args.tracks.name, chrlengths)
-        tracks = readtrack(f, chrlengths) #TODO: delete this
+        # tracks = readtrack(f, chrlengths) #TODO: delete this
         ax = drawtracks(ax, tracks, S, chrgrps, chrlengths, V)
 
     # Save the plot
