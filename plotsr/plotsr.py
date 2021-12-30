@@ -6,7 +6,7 @@ Date: 30.12.2021
 Description: Plotting multi genome structural annotations 
 """
 
-from __init__ import __version__
+from __init__  import __version__
 import argparse
 
 if __name__ == '__main__':
@@ -14,8 +14,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser("Plotting structural rearrangements between genomes", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--sr', help='Structural annotation mappings (syri.out) identified by SyRI', action='append', type=argparse.FileType('r'))
     parser.add_argument('--bp', help='Structural annotation mappings in BEDPE format', action='append', type=argparse.FileType('r'))
-    parser.add_argument('--genomes', help='Path to genome files', type=argparse.FileType('r'), required=True)
-    parser.add_argument('--markers', help='Path to markers (bed format)', type=argparse.FileType('r'))
+    parser.add_argument('--genomes', help='File containing path to genomes', type=argparse.FileType('r'), required=True)
+    parser.add_argument('--markers', help='File containing path to markers (bed format)', type=argparse.FileType('r'))
     parser.add_argument('--tracks', help='File listing paths and details for all tracks to be plotted', type=argparse.FileType('r'))
     # parser.add_argument('-B', help='Annotation bed file for marking specific positions on genome', type=argparse.FileType('r'))
     parser.add_argument('--chr', help='Select specific chromosomes on reference for plotting.', type=str, action='append')
@@ -97,13 +97,14 @@ if __name__ == '__main__':
     R = args.R              # Create ribbons
     V = args.v              # Vertical chromosomes
     S = args.S              # Space between homologous chromosomes
-    MARKERS = None if args.markers is None else args.markers.name              # Annotation bed file
+    B = None if args.markers is None else args.markers.name              # Annotation bed file
     TRACKS = None if args.tracks is None else args.tracks.name
     if S < 0.1 or S > 0.85:
         sys.exit('Out of range value for S. Please provide a value in the range 0.1-0.85')
 
-    from plotsr.func import *
+    from func import *
     from collections import deque, OrderedDict
+    import os
 
     ## Set matplotlib backend
     import matplotlib
@@ -118,15 +119,17 @@ if __name__ == '__main__':
     alignments = deque()
     chrids = deque()
     if len(args.sr) > 0:
-        for fin in args.sr:
-            al, cid = readsyriout(fin.name)
+        for f in args.sr:
+            fin = f.name
+            al, cid = readsyriout(fin)
         # for fin in fins: #TODO: Delete this line
         #     al, cid = readsyriout(fin) #TODO: Delete this line
             alignments.append([os.path.basename(fin), al])
             chrids.append((os.path.basename(fin), cid))
     elif len(args.bp) > 0:
-        for fin in args.bp:
-            al, cid = readbedout(fin.name)
+        for f in args.bp:
+            fin = f.name
+            al, cid = readbedout(fin)
             alignments.append([os.path.basename(fin), al])
             chrids.append((os.path.basename(fin), cid))
 
@@ -158,15 +161,17 @@ if __name__ == '__main__':
             alignments[i][1] = alignments[i][1].loc[alignments[i][1]['achr'].isin([h[i] for h in homchrs])]
 
     # Check chromsome IDs and sizes
-    chrlengths = validalign2fasta(alignments, args.genomes)
+    chrlengths, chrtags= validalign2fasta(alignments, args.genomes.name)
     # chrlengths, chrtags = validalign2fasta(alignments, 'genomes.txt') # TODO: Delete this line
     ## Remove chromosomes that are not homologous to selected reference chromosomes
-    for i in range(len(chrlengths)):
-        ks = list(chrlengths[i][1].keys())
-        homs = [h[i] for h in homchrs]
-        for k in ks:
-            if k not in homs:
-                chrlengths[i][1].pop(k)
+    print(chrlengths)
+    if args.chr is not None:
+        for i in range(len(chrlengths)):
+            ks = list(chrlengths[i][1].keys())
+            homs = [h[i] for h in homchrs]
+            for k in ks:
+                if k not in homs:
+                    chrlengths[i][1].pop(k)
 
     # Update groups of homologous chromosomes
     chrs = [k for k in chrids[0][1].keys() if k in alignments[0][1]['achr'].unique()]
@@ -235,6 +240,7 @@ if __name__ == '__main__':
     plt.legend(handles=svlabels, loc='lower left', bbox_to_anchor=bbox_to_anchor, ncol=1, mode='expand', borderaxespad=0., frameon=False, title='Annotation')._legend_box.align = "left"
 
     # Plot markers
+    print(B)
     if B is not None:
         ax = drawmarkers(ax, B, V, chrlengths, indents, chrs, chrgrps)
 

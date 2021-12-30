@@ -146,6 +146,7 @@ def readfasta(f):
 class bedAnno():
     def __init__(self, c, start, end, genome, v):
         import matplotlib
+        import logging
         self.chr = c
         self.start = int(start)
         self.end = int(end)
@@ -187,7 +188,6 @@ class bedAnno():
                         with open("plotsr_available_font_names.txt", 'w') as fout:
                             fout.write("\n".join(FONT_NAMES))
                         raise ValueError("Selected font {} at marker position {}:{}-{} is not available. Check plotsr_available_font_names.txt for list of available system markers".format(v, self.chr, self.start, self.end))
-                        sys.exit()
                     setattr(self, n, v)
                 elif n in ['mt']:
                     if v not in MARKERS.keys():
@@ -207,6 +207,7 @@ class bedAnno():
 
 def readannobed(path, v, chrlengths):
     from collections import deque
+    import logging
     logger = logging.getLogger('readannobed')
     mdata = deque()
     with open(path, 'r') as fin:
@@ -305,6 +306,7 @@ def readbedout(f):
 class track():
     def __init__(self, f, n):
         import matplotlib
+        import logging
         self.f = f
         self.n = n
         self.nc = 'black'
@@ -656,7 +658,7 @@ def pltchrom(ax, chrs, chrgrps, chrlengths, v, S, chrtags):
         warnings.warn("More than 8 chromosomes are being analysed. This could result in different chromosomes having same color. Provide colors manually in config.")
     # Set chromosome direction
     # pltchr = ax.axhline if not V else ax.axvline
-    pltchr = ax.hlines if not V else ax.vlines
+    pltchr = ax.hlines if not v else ax.vlines
     # Define indents
     step = S/(len(chrlengths)-1)
     chrlabels = []
