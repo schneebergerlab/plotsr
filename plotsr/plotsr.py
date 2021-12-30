@@ -4,18 +4,9 @@ import argparse
 
 
 """
-Annotation BED file format:
-
-Chromosome ID
-0-based start
-1-based end
-Genome (R/Q)
-Marker (As defined here: https://matplotlib.org/stable/api/markers_api.html)
-Marker colour (Name or hexadecimal)
-Marker size
-Annotations text
-Annotations text color (Name or hexadecimal)
-Annotations text size
+Author: Manish Goel
+Date: 30.12.2021
+Description: Plotting multi genome structural annotations 
 """
 
 
@@ -28,7 +19,7 @@ if __name__ == '__main__':
     parser.add_argument('--markers', help='Path to markers (bed format)', type=argparse.FileType('r'))
     parser.add_argument('--tracks', help='Add track histogram (requires: path_to_file and colour name', action='append', type=argparse.FileType('r'))
     # parser.add_argument('-B', help='Annotation bed file for marking specific positions on genome', type=argparse.FileType('r'))
-    parser.add_argument('--chr', help='Select reference chromosomes to be plotted. By default: all chromosomes are printed.', type=str, nargs='+')
+    parser.add_argument('--chr', help='Select specific region on reference chromosome to be plotted.', type=str, nargs='+')
     parser.add_argument('--nosyn', help='Do not plot syntenic regions', default=False, action='store_true')
     parser.add_argument('--noinv', help='Do not plot inversions', default=False, action='store_true')
     parser.add_argument('--notr', help='Do not plot translocations regions', default=False, action='store_true')
@@ -45,7 +36,7 @@ if __name__ == '__main__':
     parser.add_argument('-v', help='Plot vertical chromosome', default=False, action='store_true')
     parser.add_argument('--log', help='Log-level', choices=['DEBUG', 'INFO', 'WARN'], default='WARN', type=str)
 
-    args = parser.parse_args([])
+    # args = parser.parse_args([]) # TODO: Delete this line
     args = parser.parse_args()
 
     ## Define logger
@@ -113,13 +104,15 @@ if __name__ == '__main__':
     from plotsr.plotsr_func import VARS, readfasta
     from collections import deque, OrderedDict
 
-    # fins = ['col_lersyri.out', 'ler_cvisyri.out', 'cvi_colsyri.out']
+    # fins = ['col_lersyri.out', 'ler_cvisyri.out', 'cvi_colsyri.out'] #TODO: Delete this line
     # Read alignment coords
     alignments = deque()
     chrids = deque()
     if len(args.sr) > 0:
         for fin in args.sr:
             al, cid = readsyriout(fin.name)
+        # for fin in fins: #TODO: Delete this line
+        #     al, cid = readsyriout(fin) #TODO: Delete this line
             alignments.append([os.path.basename(fin), al])
             chrids.append((os.path.basename(fin), cid))
     elif len(args.bp) > 0:
@@ -130,7 +123,7 @@ if __name__ == '__main__':
 
     # Check chromsome IDs and sizes
     chrlengths = validalign2fasta(alignments, args.genomes)
-    chrlengths, chrtags = validalign2fasta(alignments, 'genomes.txt')
+    # chrlengths, chrtags = validalign2fasta(alignments, 'genomes.txt') # TODO: Delete this line
 
     # Filter alignments to select long alignments between homologous chromosomes
     for i in range(len(alignments)):
@@ -156,7 +149,7 @@ if __name__ == '__main__':
         df.loc[invindex, 'bstart'] = df.loc[invindex, 'bstart'] - df.loc[invindex, 'bend']
         alignments[i][1] = df.copy()
 
-    chrs = [k for k in chrids[0][1].keys() if k in alignments[0][1]['achr'].unique()] # TODO: SEE WHAT TO DO WITH THIS
+    chrs = [k for k in chrids[0][1].keys() if k in alignments[0][1]['achr'].unique()]
     # Get groups of homologous chromosomes
     chrgrps = OrderedDict()
     for c in chrs:
@@ -196,8 +189,7 @@ if __name__ == '__main__':
     ax, max_l = drawax(ax, chrgrps, chrlengths, V, S)
 
     ## Draw Chromosomes
-    # TODO: Set parsing of colors
-    ax, indents, chrlabels = pltchrom(ax, chrs, chrgrps, chrlengths, V, S)
+    ax, indents, chrlabels = pltchrom(ax, chrs, chrgrps, chrlengths, V, S, chrtags)
 
     l1 = plt.legend(handles=chrlabels, loc='lower left', bbox_to_anchor=[0, 1.01, 0.5, 0.1], ncol=1, mode='expand', borderaxespad=0., frameon=False, title='Genome')
     l1._legend_box.align = "left"
@@ -213,9 +205,9 @@ if __name__ == '__main__':
         ax = drawmarkers(ax, B, V, chrlengths, indents, chrs, chrgrps)
 
     # Draw tracks
-    if args.tracks is not None: #Todo: Validate this
-        # tracks = readtrack(args.tracks, chrlengths)
-        tracks = readtrack(f, chrlengths)
+    if args.tracks is not None:
+        tracks = readtrack(args.tracks.name, chrlengths)
+        # tracks = readtrack(f, chrlengths) #TODO: delete this
         ax = drawtracks(ax, tracks, S, chrgrps, chrlengths, V)
 
     # Save the plot

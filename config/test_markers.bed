@@ -1,5 +1,13 @@
-#chr    start   end genome_id   mtype:mcolor:msize  ttext:tcolor:tsize:tfont
-Chr1	10000000	10000001	col-0   m=.:c=red:s=12
-Chr2	5000000	5000001	ler	m=^:c=black:s=6   t=black marker:c=black:s=6:f=Arial
-Chr3	12000000	12000010	cvi	m=,:c=#78AB46:s=12
-Chr4	15000000	15000001	col-0a	m=8:c=#78AB46:s=12    t=new marker:c=gold:s=10:f=Helvetica
+##mt = bin width (default=100000)
+##mc = name colour
+##ms = name size
+##tt = name font
+##tc = line colour
+##ts = line width
+##tf = background colour
+##tp = background colour
+#chr	start	end genome_id	tags
+Chr1	10000000	10000001	col-0	mt:.;mc:red;ms:12
+LR699771.1	5000000	5000001	ler	mt:^;mc:black;ms:6;tt:black marker;tc:black;ts:6;tf:Arial;tp:0.1
+LR699762.1	12000000	12000010	cvi	mt:,;mc:#78AB46;ms:12
+Chr4	15000000	15000001	col-0a	mt:8;mc:#78AB46;ms:12;tt:new marker;tc:gold;ts:10;tf:Helvetica;tp:-0.01

@@ -97,6 +97,8 @@ def readfasta(f):
     from gzip import BadGzipFile
     from collections import deque
     import sys
+    NUCBP = 'ACGTRYSWKMBDHVN'
+    NUCBP += NUCBP.lower()
     out = {}
     chrid = ''
     chrseq = deque()
@@ -140,7 +142,10 @@ def readfasta(f):
         raise Exception(e)
     if chrid != '':
         out[chrid] = ''.join(chrseq)
-    # TODO: add check for the validation of input fasta files
+    ## Validate genomic fasta sequence: Count that only genomic BP are part of the sequence
+    for k,v in out.items():
+        if len(v) != sum([v.count(c) for c in NUCBP]):
+            raise ValueError("Incorrect sequence for chromosome: {}. Genomic sequence can have only the following characters: {}".format(k, NUCBP))
     return out
 # END
 
@@ -152,92 +157,132 @@ class bedAnno():
         self.start = int(start)
         self.end = int(end)
         self.genome = genome
-        # if genome in ['R', 'Q']: self.genome = genome
-        # else: print("Incorrect genome for position {}:{}-{}. Setting marker to line".format(self.start, self.start, self.end))
         self.v = v
-        self.mcol='black'
-        self.msize=1
-        self.mtype='.'
-        self.text=''
-        self.tcol='black'
-        self.tsize=matplotlib.rcParamsDefault['font.size']
-        self.tfont='Arial'
-        self.tpos='0.05'
+        self.mt='.'
+        self.mc='black'
+        self.ms=8
+        self.tt=''
+        self.tc='black'
+        self.ts=matplotlib.rcParamsDefault['font.size']
+        self.tf='Arial'
+        self.tp='0.05'
         self.logger = logging.getLogger("bedAnno")
 
-# Define marker type
-    def setmarker(self, marker):
+        # Add tags
+    def addtags(self, tags):
         import matplotlib
         import sys
-        marker = marker.split(":")
-        if marker[0][:2] != 'm=' or marker[1][:2] != 'c=' or marker[2][:2] != 's=':
-            raise ValueError("Incomplete information {} for marker at {}:{}-{}. Require: type, color, and color.".format(':'.join(marker), self.chr, self.start, self.end))
-        # Set marker type
-        m = marker[0].split("=")
-        if m[1] not in MARKERS.keys():
-            self.logger.error("Unrecongised marker used for position {}:{}-{}. Plotsr accepts markers defined in matplotlib (https://matplotlib.org/stable/api/markers_api.html) with some modifications.".format(self.start, self.start, self.end))
-            for k, v in MARKERS.items():
-                print("{} : {}".format(k, v))
-            sys.exit()
-        self.mtype = m[1] if m[1][0] != 'i' else int(m[1][1:])
-        # Set marker color
-        m = marker[1].split("=")
-        try:
-            if m[1][0] == '#': matplotlib.colors.to_rgb(m[1])
-            else: matplotlib.colors.to_hex(m[1])
-        except ValueError:
-            self.logger.error("Error in using colour: {} for position {}:{}-{}. Use correct hexadecimal colours or named colours define in matplotlib (https://matplotlib.org/stable/gallery/color/named_colors.html)".format(m[1], self.chr, self.start, self.end))
-            sys.exit()
-        self.mcol = m[1]
-        # Set marker size
-        m = marker[2].split("=")
-        try: self.msize = int(m[1])
-        except ValueError:
-            self.logger.error("Non-integer size ({}) for marker at {}:{}-{}".format(m[1], self.start, self.start, self.end))
-            sys.exit()
-        # Set line marker when marker length > 1
-        if self.end - self.start > 1:
-            self.logger.warning("Range selected for position {}:{}-{}. Setting marker to line".format(self.start, self.start, self.end))
-            self.mtype = "|" if self.v else "_"
+        for i in tags.split(";"):
+            n, v = i.split(":")
+            if hasattr(self, n):
+                if n in ['mc', 'tc']:
+                    try:
+                        if v[0] == '#': matplotlib.colors.to_rgb(v)
+                        else: matplotlib.colors.to_hex(v)
+                    except ValueError:
+                        self.logger.error("Error in using colour: {} for track {}. Use correct hexadecimal colours or named colours define in matplotlib (https://matplotlib.org/stable/gallery/color/named_colors.html)".format(v, self.n))
+                        sys.exit()
+                    setattr(self, n, v)
+                elif n in ['ms', 'ts', 'tp']:
+                    try: float(v)
+                    except ValueError:
+                        self.logger.error("Non-numerical value {} for {} in track{}".format(v, n, self.n))
+                        sys.exit()
+                    setattr(self, n, float(v))
+                elif n in ['tf']:
+                    if v not in FONT_NAMES:
+                        with open("plotsr_available_font_names.txt", 'w') as fout:
+                            fout.write("\n".join(FONT_NAMES))
+                        raise ValueError("Font {} in track {} is not available. Check plotsr_available_font_names.txt for list of available system markers".format(v, self.n))
+                        sys.exit()
+                    setattr(self, n, v)
+                elif n in ['mt']:
+                    if v not in MARKERS.keys():
+                        self.logger.error("Unrecongised marker used for position {}:{}-{}. Plotsr accepts markers defined in matplotlib (https://matplotlib.org/stable/api/markers_api.html) with some modifications.".format(self.start, self.start, self.end))
+                        for k, v in MARKERS.items():
+                            print("{} : {}".format(k, v))
+                        sys.exit()
+                    setattr(self, n, v)
+                elif n in ['tt']:
+                    setattr(self, n, v)
+            else:
+                raise ValueError("{} is not a valid tag".format(n))
         return
-
-    # Define text type
-    def settext(self, text):
-        import warnings
-        import matplotlib
-        import sys
-        text=text.split(":")
-        if text[0][:2] != 't=' or text[1][:2] != 'c=' or text[2][:2] != 's=' or text[3][:2] != 'f=' or text[4][:2] != 'p=':
-            raise ValueError("Incomplete information {} for text at {}:{}-{}. Require: text, color, size, and font_name.".format(':'.join(text), self.chr, self.start, self.end))
-        # Set text
-        t = text[0].split("=")
-        self.text = t[1]
-        # Set text color
-        t = text[1].split("=")
-        try:
-            if t[1][0] == '#': matplotlib.colors.to_rgb(t[1])
-            else: matplotlib.colors.to_hex(t[1])
-        except ValueError:
-            warnings.warn("Error in using colour: {} for position {}:{}-{}. Use correct hexadecimal colours or named colours define in matplotlib (https://matplotlib.org/stable/gallery/color/named_colors.html)".format(t[1], self.chr, self.start, self.end))
-            sys.exit()
-        self.tcol = t[1]
-        # Set text size
-        t = text[2].split("=")
-        try: self.tsize = int(t[1])
-        except ValueError:
-            raise ValueError("Non-integer size ({}) for marker at {}:{}-{}".format(t[1], self.chr, self.start, self.end))
-        # Set text font
-        t = text[3].split("=")
-        if t[1] in FONT_NAMES: self.tfont = t[1]
-        else:
-            with open("plotsr_available_font_names.txt", 'w') as fout:
-                fout.write("\n".join(FONT_NAMES))
-            raise ValueError("Font ({}) for marker at {}:{}-{} is not available. Check plotsr_available_font_names.txt for list of available system markers".format(t[1], self.chr, self.start, self.end))
-            sys.exit()
-        # Set text position:
-        t = text[4].split("=")
-        self.tpos=float(t[1])
-        return
+    #END
+#
+# # Define marker type
+#     def setmarker(self, marker):
+#         import matplotlib
+#         import sys
+#         marker = marker.split(":")
+#         if marker[0][:2] != 'm=' or marker[1][:2] != 'c=' or marker[2][:2] != 's=':
+#             raise ValueError("Incomplete information {} for marker at {}:{}-{}. Require: type, color, and color.".format(':'.join(marker), self.chr, self.start, self.end))
+#         # Set marker type
+#         m = marker[0].split("=")
+#         if m[1] not in MARKERS.keys():
+#             self.logger.error("Unrecongised marker used for position {}:{}-{}. Plotsr accepts markers defined in matplotlib (https://matplotlib.org/stable/api/markers_api.html) with some modifications.".format(self.start, self.start, self.end))
+#             for k, v in MARKERS.items():
+#                 print("{} : {}".format(k, v))
+#             sys.exit()
+#         self.mtype = m[1] if m[1][0] != 'i' else int(m[1][1:])
+#         # Set marker color
+#         m = marker[1].split("=")
+#         try:
+#             if m[1][0] == '#': matplotlib.colors.to_rgb(m[1])
+#             else: matplotlib.colors.to_hex(m[1])
+#         except ValueError:
+#             self.logger.error("Error in using colour: {} for position {}:{}-{}. Use correct hexadecimal colours or named colours define in matplotlib (https://matplotlib.org/stable/gallery/color/named_colors.html)".format(m[1], self.chr, self.start, self.end))
+#             sys.exit()
+#         self.mcol = m[1]
+#         # Set marker size
+#         m = marker[2].split("=")
+#         try: self.msize = int(m[1])
+#         except ValueError:
+#             self.logger.error("Non-integer size ({}) for marker at {}:{}-{}".format(m[1], self.start, self.start, self.end))
+#             sys.exit()
+#         # Set line marker when marker length > 1
+#         if self.end - self.start > 1:
+#             self.logger.warning("Range selected for position {}:{}-{}. Setting marker to line".format(self.start, self.start, self.end))
+#             self.mtype = "|" if self.v else "_"
+#         return
+#
+#     # Define text type
+#     def settext(self, text):
+#         import warnings
+#         import matplotlib
+#         import sys
+#         text=text.split(":")
+#         if text[0][:2] != 't=' or text[1][:2] != 'c=' or text[2][:2] != 's=' or text[3][:2] != 'f=' or text[4][:2] != 'p=':
+#             raise ValueError("Incomplete information {} for text at {}:{}-{}. Require: text, color, size, and font_name.".format(':'.join(text), self.chr, self.start, self.end))
+#         # Set text
+#         t = text[0].split("=")
+#         self.text = t[1]
+#         # Set text color
+#         t = text[1].split("=")
+#         try:
+#             if t[1][0] == '#': matplotlib.colors.to_rgb(t[1])
+#             else: matplotlib.colors.to_hex(t[1])
+#         except ValueError:
+#             warnings.warn("Error in using colour: {} for position {}:{}-{}. Use correct hexadecimal colours or named colours define in matplotlib (https://matplotlib.org/stable/gallery/color/named_colors.html)".format(t[1], self.chr, self.start, self.end))
+#             sys.exit()
+#         self.tcol = t[1]
+#         # Set text size
+#         t = text[2].split("=")
+#         try: self.tsize = int(t[1])
+#         except ValueError:
+#             raise ValueError("Non-integer size ({}) for marker at {}:{}-{}".format(t[1], self.chr, self.start, self.end))
+#         # Set text font
+#         t = text[3].split("=")
+#         if t[1] in FONT_NAMES: self.tfont = t[1]
+#         else:
+#             with open("plotsr_available_font_names.txt", 'w') as fout:
+#                 fout.write("\n".join(FONT_NAMES))
+#             raise ValueError("Font ({}) for marker at {}:{}-{} is not available. Check plotsr_available_font_names.txt for list of available system markers".format(t[1], self.chr, self.start, self.end))
+#             sys.exit()
+#         # Set text position:
+#         t = text[4].split("=")
+#         self.tpos=float(t[1])
+#         return
 # END
 
 
@@ -248,12 +293,11 @@ def readannobed(path, v, chrlengths):
     with open(path, 'r') as fin:
         for line in fin:
             if line[0] == '#':
-                logger.warning("Skipping line\n{}".format(line.strip()))
+                logger.debug("Skipping line\n{}".format(line.strip()))
                 continue
             line = line.strip().split("\t")
-            if len(line) not in [5, 6]:
-                raise ValueError("Incomplete data in BED file line:\n{}\nMarker information (type:col:size) is necessary. Text annotation (text:col:size:font) is optional".format('\t'.join(line)))
-                sys.exit()
+            if len(line) < 4:
+                raise ImportError("Incomplete data in BED file line:\n{}\nGenome coordinate (chromosome, start,end) and genome name are required columns, while tags is an optional column".format('\t'.join(line)))
             found = False
             for i in chrlengths:
                 if i[0] == line[3]:
@@ -262,9 +306,10 @@ def readannobed(path, v, chrlengths):
             if not found:
                 raise ValueError("Incorrect marker information. Chromosome: {} is not present in genome {}.".format(line[0], line[3]))
             anno = bedAnno(line[0], line[1], line[2], line[3], v)
-            anno.setmarker(line[4])
-            if len(line) == 6:
-                anno.settext(line[5])
+            if len(line) == 5:
+                anno.addtags(line[4])
+            # if len(line) == 6:
+            #     anno.settext(line[5])
             mdata.append(anno)
     return mdata
 # END
@@ -355,6 +400,7 @@ class track():
     # Add tags
     def addtags(self, tags):
         import matplotlib
+        import sys
         for i in tags.split(";"):
             n, v = i.split(":")
             if hasattr(self, n):
@@ -387,44 +433,36 @@ class track():
     # Read input bed file and get histogram with binwidths==self.bw
     def readbed(self, chrlengths):
         from collections import deque, defaultdict
-        import pandas as pd
         import sys
         import numpy as np
-        bed = deque()
+        bw = int(self.bw)
         # Read the BED file
-        chrs = list(chrlengths[0][1].keys())
+        chrpos = {k:np.zeros(v, dtype=np.int0) for k, v in chrlengths[0][1].items()}
         with open(self.f, 'r') as fin:
+        # with open('snps.sample.bed', 'r') as fin: # TODO: Delete line
             for line in fin:
                 line = line.strip().split()
                 if len(line) < 3:
                     self.logger.error("Incomplete information in BED file at line: {}".format("\t".join(line)))
                     sys.exit()
-                if line[0] not in chrs:
+                if line[0] not in chrpos.keys():
                     self.logger.error("Chromosome in BED is not present in FASTA at line: {}".format("\t".join(line)))
                     sys.exit()
                 try:
-                    bed.append([line[0], int(line[1]), int(line[2])])
+                    chrpos[line[0]][int(line[1]):int(line[2])] = 1
                 except ValueError:
                     self.logger.error("Invalid values for line: {}".format("\t".join(line)))
                     sys.exit()
-        bed = pd.DataFrame(bed)
         # Create bins
         bins = {}
         for k,v in chrlengths[0][1].items():
-            s = np.array(range(0, v, int(self.bw)))
+            s = np.array(range(0, v, bw))
             e = np.concatenate((s[1:], [v]))
             bins[k] = np.array(list(zip(s, e)))
         bincnt = defaultdict(deque)
         for k, v in bins.items():
             for r in v:
-                # TODO: Parallelise it or improve performance using cython or change algo
-                # TODO: Fix range value count
-                garb = bed.loc[(bed[0]==k) & (bed[1]>=r[0]) & (bed[2]<r[1])]
-                if garb.shape[0] == 0:
-                    bincnt[k].append(((r[0]+r[1])/2, 0))
-                    continue
-                garbr = mergeRanges(np.array(list(zip(garb[1], garb[2]))))
-                bincnt[k].append(((r[0]+r[1])/2, (garbr[:,1] - garbr[:,0]).sum()/int(self.bw)))
+                bincnt[k].append(((r[0]+r[1])/2, np.sum(chrpos[k][r[0]:r[1]])/bw))
         self.bincnt = bincnt
         return
     # END
@@ -474,17 +512,16 @@ def validalign2fasta(als, genf):
     :param genf: path to file containing "genome_IDs:path_to_genome_fasta"
     :return: genome length dict.
     """
-    from collections import deque, OrderedDict
-    import sys
+    from collections import deque
     import numpy as np
     import os
+    from matplotlib.pyplot import get_cmap
     out = deque()
     errmess1 = 'Chromosome ID: {} in structural annotation file: {} not present in genome fasta: {}. Exiting.'
     errmess2 = 'For chromosome ID: {}, length in genome fasta: {} is less than the maximum coordinate in the structural annotation file: {}. Exiting.'
     tags = {'lc': {}}
     taglist = set(tags.keys())
-    CHRCOLS = plt.get_cmap('Dark2')
-    gencol = deque()
+    CHRCOLS = get_cmap('Dark2')
     with open(genf, 'r') as fin:
         i = 0
         for line in fin:
@@ -516,17 +553,15 @@ def validalign2fasta(als, genf):
                         raise ImportError(errmess1.format(c, als[i][0], os.path.basename(line[1])))
                     if np.max(np.max(df.loc[df['achr'] == c, ['astart', 'aend']])) > glen[c]:
                         raise ImportError(errmess2.format(c, os.path.basename(fin), als[i][0]))
-
+            out.append((line[1], glen))
+            tags['lc'][line[1]] = CHRCOLS(i)
             # Reads tags
-            print(line)
             if len(line) > 2:
                 tg = line[2].split(';')
                 for t in tg:
                     t = t.split(':')
-                    print(t)
                     if t[0] in taglist:
                         tags[t[0]][line[1]] = t[1]
-            out.append((line[1], glen))
             i += 1
     return out, tags
 # END
@@ -548,6 +583,8 @@ def filterinput(args, df, chrid):
     df.sort_values(['bchr', 'bstart', 'bend'], inplace=True)
     df.sort_values(['achr', 'astart', 'aend'], inplace=True)
     return df
+# END
+
 
 def selectchrs(als, chrids, clens. chrs):
     """
@@ -704,18 +741,18 @@ def drawax(ax, chrgrps, chrlengths, V, S):
 # END
 
 
-def pltchrom(ax, chrs, chrgrps, chrlengths, v, S):
+def pltchrom(ax, chrs, chrgrps, chrlengths, v, S, chrtags):
     import warnings
     import numpy as np
     chrlabs = [False]*len(chrlengths)
     max_l = np.max([chrlengths[i][1][v[i]] for v in chrgrps.values() for i in range(len(v))])
-    CHRCOLS = plt.get_cmap('Dark2')                 # TODO: READ COLORS FROM CONFIG FILE
+    # CHRCOLS = plt.get_cmap('Dark2')
     if len(chrlengths) > 8:
         warnings.warn("More than 8 chromosomes are being analysed. This could result in different chromosomes having same color. Provide colors manually in config.")
     # Set chromosome direction
     # pltchr = ax.axhline if not V else ax.axvline
     pltchr = ax.hlines if not V else ax.vlines
-    # Define indents # TODO: Check how the indents would change when plotting tracks
+    # Define indents
     step = S/(len(chrlengths)-1)
     chrlabels = []
     if not v:
@@ -729,11 +766,13 @@ def pltchrom(ax, chrs, chrgrps, chrlengths, v, S):
             offset = i if not v else -i
             if not chrlabs[s]:
                 # pltchr(indents[s]-offset, 0, chrlengths[s][1][chrgrps[chrs[i]][s]]/max_l, color=CHRCOLS(s), linewidth=3, label=chrlengths[s][0])
-                chrlabels.append(pltchr(indents[s]-offset, 0, chrlengths[s][1][chrgrps[chrs[i]][s]], color=CHRCOLS(s), linewidth=3, label=chrlengths[s][0]))
+                chrlabels.append(pltchr(indents[s]-offset, 0, chrlengths[s][1][chrgrps[chrs[i]][s]],
+                                        color=chrtags['lc'][chrlengths[s][0]],
+                                        linewidth=3, label=chrlengths[s][0]))
                 chrlabs[s] = True
             else:
                 # pltchr(indents[s]-offset, 0, chrlengths[s][1][chrgrps[chrs[i]][s]]/max_l, color=CHRCOLS(s), linewidth=3)
-                pltchr(indents[s]-offset, 0, chrlengths[s][1][chrgrps[chrs[i]][s]], color=CHRCOLS(s), linewidth=3)
+                pltchr(indents[s]-offset, 0, chrlengths[s][1][chrgrps[chrs[i]][s]], color=chrtags['lc'][chrlengths[s][0]], linewidth=3)
     return ax, indents, chrlabels
 # END
 
@@ -886,3 +925,4 @@ def drawtracks(ax, tracks, s, chrgrps, chrlengths, v):
                 ax.plot(xpos, chrpos, color=tracks[i].lc, lw=tracks[i].lw)
                 ax.text(x0 + diff/2, chrlengths[0][1][chrs[j]] + margin,tracks[i].n, color=tracks[i].nc, fontsize=tracks[i].ns, fontfamily=tracks[i].nf, ha='center', va='bottom', rotation='vertical')
     return ax
+# END
