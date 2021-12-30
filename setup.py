@@ -1,5 +1,5 @@
 from setuptools import setup, Extension
-from plotsr._version import __version__
+from plotsr import __version__
 
 setup(
     name="plotsr",
