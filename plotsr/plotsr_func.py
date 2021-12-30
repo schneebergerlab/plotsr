@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import matplotlib.font_manager
-
 ## Constants
 MARKERS = {".": "point",
            ",": "pixel",
@@ -47,10 +46,6 @@ FONT_NAMES = []
 for fn in matplotlib.font_manager.findSystemFonts():
     try: FONT_NAMES.append(matplotlib.font_manager.get_font(fn).family_name)
     except RuntimeError: pass
-
-for fn in FONT_NAMES:
-    if re.findall('Comic', f, re.IGNORECASE) != []:
-        print(fn)
 
 
 """
