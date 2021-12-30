@@ -9,7 +9,6 @@ Description: Plotting multi genome structural annotations
 from __init__ import __version__
 import argparse
 
-
 if __name__ == '__main__':
     from matplotlib.rcsetup import non_interactive_bk as bklist
     parser = argparse.ArgumentParser("Plotting structural rearrangements between genomes", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -103,7 +102,7 @@ if __name__ == '__main__':
     if S < 0.1 or S > 0.85:
         sys.exit('Out of range value for S. Please provide a value in the range 0.1-0.85')
 
-    from plotsr.func import VARS, readfasta
+    from plotsr.func import *
     from collections import deque, OrderedDict
 
     ## Set matplotlib backend
