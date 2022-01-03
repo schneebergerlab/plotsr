@@ -48,6 +48,7 @@ samtools index kyo_an1.bam
     --sr sha_kyosyri.out \
     --sr kyo_an1syri.out \
     --genomes genomes.txt \
+    --tracks tracks.txt \
     --chr Chr1 \
     -S 0.85 \
     -o png \

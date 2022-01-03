@@ -361,7 +361,8 @@ class track():
         import numpy as np
         bw = int(self.bw)
         # Read the BED file
-        chrpos = {k:np.zeros(v, dtype=np.int0) for k, v in chrlengths[0][1].items()}
+        chrpos = {k: np.zeros(v, dtype=np.int0) for k, v in chrlengths[0][1].items()}
+        skipchrs = []
         with open(self.f, 'r') as fin:
         # with open('snps.sample.bed', 'r') as fin: # TODO: Delete line
             for line in fin:
@@ -370,13 +371,13 @@ class track():
                     self.logger.error("Incomplete information in BED file at line: {}".format("\t".join(line)))
                     sys.exit()
                 if line[0] not in chrpos.keys():
-                    self.logger.error("Chromosome in BED is not present in FASTA at line: {}".format("\t".join(line)))
-                    sys.exit()
+                    if line[0] not in skipchrs:
+                        self.logger.warning("Chromosome in BED is not present in FASTA or not selected for plotting. Skipping it. BED line: {}".format("\t".join(line)))
+                        skipchrs.append(line[0])
                 try:
                     chrpos[line[0]][int(line[1]):int(line[2])] = 1
                 except ValueError:
-                    self.logger.error("Invalid values for line: {}".format("\t".join(line)))
-                    sys.exit()
+                    self.logger.warning("Invalid values for line: {}. Skipping it.".format("\t".join(line)))
         # Create bins
         bins = {}
         for k,v in chrlengths[0][1].items():

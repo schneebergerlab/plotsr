@@ -239,7 +239,6 @@ if __name__ == '__main__':
     plt.legend(handles=svlabels, loc='lower left', bbox_to_anchor=bbox_to_anchor, ncol=1, mode='expand', borderaxespad=0., frameon=False, title='Annotation')._legend_box.align = "left"
 
     # Plot markers
-    print(B)
     if B is not None:
         ax = drawmarkers(ax, B, V, chrlengths, indents, chrs, chrgrps)
 
