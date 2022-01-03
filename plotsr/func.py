@@ -811,6 +811,8 @@ def drawtracks(ax, tracks, s, chrgrps, chrlengths, v):
     from matplotlib.patches import Rectangle
     import numpy as np
     th = (1 - s - 2*0.1 - 0.05)/len(tracks)
+    if th < 0.01:
+        raise RuntimeError("Decrease the value of the -S to plot tracks. Exiting.")
     cl = len(chrgrps.keys())
     chrs = list(chrgrps.keys())
     margin = np.max([chrlengths[i][1][v[i]] for v in chrgrps.values() for i in range(len(v))])/500

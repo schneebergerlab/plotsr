@@ -83,12 +83,9 @@ samtools index st1_st2.bam
 
 ## Run plotsr
 /biodata/dep_mercier/grp_schneeberger/projects/SynSearch/scripts/python/plotsr/plotsr/plotsr.py \
-    --sr col_lersyri.out \
-    --sr ler_cvisyri.out \
-    --sr cvi_erisyri.out \
-    --sr eri_shasyri.out \
-    --sr sha_kyosyri.out \
-    --sr kyo_an1syri.out \
+    --sr he1_he2syri.out \
+    --sr he2_st1syri.out \
+    --sr st1_st2syri.out \
     --genomes genomes.txt \
     --tracks tracks.txt \
     --chr Chr1 \

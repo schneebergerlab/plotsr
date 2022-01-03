@@ -28,7 +28,7 @@ if __name__ == '__main__':
     parser.add_argument('-f', help='font size', type=int, default=6)
     parser.add_argument('-H', help='height of the plot', type=int)
     parser.add_argument('-W', help='width of the plot', type=int)
-    parser.add_argument('-S', help='Space between homologous chromosome (0.1-0.85). Adjust this to make more space for annotation marker/text.', default=0.7, type=float)
+    parser.add_argument('-S', help='Space between homologous chromosome (0.1-0.75). Adjust this to make more space for annotation marker/text.', default=0.7, type=float)
     parser.add_argument('-o', help='output file format (pdf, png, svg)', default="pdf", choices=['pdf', 'png', 'svg'])
     parser.add_argument('-d', help='DPI for the final image', default="300", type=int)
     parser.add_argument('-b', help='Matplotlib backend to use', default="agg", type=str, choices=bklist)
@@ -99,7 +99,7 @@ if __name__ == '__main__':
     S = args.S              # Space between homologous chromosomes
     B = None if args.markers is None else args.markers.name              # Annotation bed file
     TRACKS = None if args.tracks is None else args.tracks.name
-    if S < 0.1 or S > 0.85:
+    if S < 0.1 or S > 0.75:
         sys.exit('Out of range value for S. Please provide a value in the range 0.1-0.85')
 
     from func import *
