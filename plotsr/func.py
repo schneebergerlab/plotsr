@@ -368,19 +368,20 @@ class track():
             for line in fin:
                 line = line.strip().split()
                 if len(line) < 3:
-                    self.logger.error("Incomplete information in BED file at line: {}".format("\t".join(line)))
-                    sys.exit()
+                    self.logger.warning("Incomplete information in BED file at line: {}. Skipping it.".format("\t".join(line)))
+                    continue
                 if line[0] not in chrpos.keys():
                     if line[0] not in skipchrs:
                         self.logger.warning("Chromosome in BED is not present in FASTA or not selected for plotting. Skipping it. BED line: {}".format("\t".join(line)))
                         skipchrs.append(line[0])
+                        continue
                 try:
                     chrpos[line[0]][int(line[1]):int(line[2])] = 1
                 except ValueError:
                     self.logger.warning("Invalid values for line: {}. Skipping it.".format("\t".join(line)))
         # Create bins
         bins = {}
-        for k,v in chrlengths[0][1].items():
+        for k, v in chrlengths[0][1].items():
             s = np.array(range(0, v, bw))
             e = np.concatenate((s[1:], [v]))
             bins[k] = np.array(list(zip(s, e)))
