@@ -516,6 +516,7 @@ def createribbon(df):
     """
     import numpy as np
     from pandas import DataFrame
+    from collections import deque
     df.sort_values(['bchr', 'bstart', 'bend'], inplace=True)
     df['b'] = list(range(df.shape[0]))
     df.sort_values(['achr', 'astart', 'aend'], inplace=True)

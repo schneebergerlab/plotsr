@@ -164,7 +164,6 @@ if __name__ == '__main__':
     chrlengths, chrtags= validalign2fasta(alignments, args.genomes.name)
     # chrlengths, chrtags = validalign2fasta(alignments, 'genomes.txt') # TODO: Delete this line
     ## Remove chromosomes that are not homologous to selected reference chromosomes
-    print(chrlengths)
     if args.chr is not None:
         for i in range(len(chrlengths)):
             ks = list(chrlengths[i][1].keys())
