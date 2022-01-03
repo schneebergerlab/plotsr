@@ -82,3 +82,20 @@ samtools index st1_st2.bam
 /srv/biodata/dep_mercier/grp_schneeberger/projects/SynSearch/scripts/python/syri/syri/bin/syri -c st1_st2.bam -r St1_haplotype_genome.filtered.fasta -q St2_haplotype_genome.filtered.fasta -k -F B --prefix st1_st2 --nc 4 &
 
 ## Run plotsr
+/biodata/dep_mercier/grp_schneeberger/projects/SynSearch/scripts/python/plotsr/plotsr/plotsr.py \
+    --sr col_lersyri.out \
+    --sr ler_cvisyri.out \
+    --sr cvi_erisyri.out \
+    --sr eri_shasyri.out \
+    --sr sha_kyosyri.out \
+    --sr kyo_an1syri.out \
+    --genomes genomes.txt \
+    --tracks tracks.txt \
+    --chr Chr1 \
+    -S 0.85 \
+    -o png \
+    -v \
+    -W 6 \
+    -H 10 \
+    -f 10 \
+    -R

@@ -374,7 +374,7 @@ class track():
                     if line[0] not in skipchrs:
                         self.logger.warning("Chromosome in BED is not present in FASTA or not selected for plotting. Skipping it. BED line: {}".format("\t".join(line)))
                         skipchrs.append(line[0])
-                        continue
+                    continue
                 try:
                     chrpos[line[0]][int(line[1]):int(line[2])] = 1
                 except ValueError:
