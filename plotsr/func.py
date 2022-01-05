@@ -38,7 +38,7 @@ MARKERS = {".": "point",
            "i10": "caretup (centered at base)",
            "i11": "caretdown"}
 VARS = ['SYN', 'INV', 'TRANS', 'INVTR', 'DUP', 'INVDP']
-COLORS = ['#DEDEDE', '#FFA500', '#9ACD32', '#9ACD32', '#00BBFF', '#00BBFF', '#83AAFF', '#FF6A33']
+COLORS = ['#DEDEDE', '#FFA500', '#9ACD32', '#00BBFF']
 
 FONT_NAMES = []
 for fn in matplotlib.font_manager.findSystemFonts():
@@ -161,6 +161,8 @@ class bedAnno():
         self.tf='Arial'
         self.tp='0.05'
         self.logger = logging.getLogger("bedAnno")
+        if self.start >= self.end:
+            raise ValueError("Incorrect coordinates for marker position {}:{}:{}-{}. Start position must be less than end position. Skipping this marker.".format(self.genome, self.chr, self.start, self.end))
 
     # Add tags
     def addtags(self, tags):
@@ -227,7 +229,11 @@ def readannobed(path, v, chrlengths):
             if not found:
                 logger.warning("Incorrect marker information. Chromosome: {} is not present in genome {}. Skipping it".format(line[0], line[3]))
                 continue
-            anno = bedAnno(line[0], line[1], line[2], line[3], v)
+            try:
+                anno = bedAnno(line[0], line[1], line[2], line[3], v)
+            except ValueError as e:
+                print(e)
+                continue
             if len(line) == 5:
                 anno.addtags(line[4])
             # if len(line) == 6:
@@ -330,8 +336,10 @@ class track():
                 if n in ['nc', 'lc', 'bc']:
                     try:
                         # print(n, v)
-                        if v[0] == '#': matplotlib.colors.to_rgb(v)
-                        else: matplotlib.colors.to_hex(v)
+                        if v[0] == '#':
+                            matplotlib.colors.to_rgb(v)
+                        else:
+                            matplotlib.colors.to_hex(v)
                     except ValueError:
                         self.logger.error("Error in using colour: {} for track {}. Use correct hexadecimal colours or named colours define in matplotlib (https://matplotlib.org/stable/gallery/color/named_colors.html)".format(v, self.n))
                         # continue
@@ -364,7 +372,7 @@ class track():
         chrpos = {k: np.zeros(v, dtype=np.int0) for k, v in chrlengths[0][1].items()}
         skipchrs = []
         with open(self.f, 'r') as fin:
-        # with open('snps.sample.bed', 'r') as fin: # TODO: Delete line
+            # with open('snps.sample.bed', 'r') as fin: # TODO: Delete line
             for line in fin:
                 line = line.strip().split()
                 if len(line) < 3:
@@ -381,10 +389,15 @@ class track():
                     self.logger.warning("Invalid values for line: {}. Skipping it.".format("\t".join(line)))
         # Create bins
         bins = {}
+        # if maxl != -1:
         for k, v in chrlengths[0][1].items():
             s = np.array(range(0, v, bw))
             e = np.concatenate((s[1:], [v]))
             bins[k] = np.array(list(zip(s, e)))
+        # else:
+        #     s = np.array(range(minl, maxl, bw))
+        #     e = np.concatenate((s[1:], [maxl]))
+        #     bins[k] = np.array(list(zip(s, e)))
         bincnt = defaultdict(deque)
         for k, v in bins.items():
             for r in v:
@@ -447,7 +460,21 @@ def validalign2fasta(als, genf):
     errmess2 = 'For chromosome ID: {}, length in genome fasta: {} is less than the maximum coordinate in the structural annotation file: {}. Exiting.'
     tags = {'lc': {}}
     taglist = set(tags.keys())
-    CHRCOLS = get_cmap('Dark2')
+    # Count number of genomes
+    count = 0
+    with open(genf, 'r') as fin:
+        i = 0
+        for line in fin:
+            if line[0] =='#':
+                continue
+            count += 1
+    if count <= 10:
+        CHRCOLS = [matplotlib.colors.to_hex(get_cmap('tab10')(i)) for i in range(count)]
+    else:
+        CHRCOLS = [matplotlib.colors.to_hex(get_cmap('gist_rainbow')(int(255/count) * i)) for i in range(0, count)]
+        if count % 2 != 0:
+            m = CHRCOLS[int((count/2) + 1)]
+        CHRCOLS = [j for i in range(int(count/2)) for j in [CHRCOLS[i]] + [CHRCOLS[int(i +count/2)]]] + [m]
     with open(genf, 'r') as fin:
         i = 0
         for line in fin:
@@ -463,7 +490,10 @@ def validalign2fasta(als, genf):
                 raise ImportError("Error in reading fasta: {}\n{}".format(line[1], e))
             # Check cases when the genome is the query-genome
             if i > 0:
-                df = als[i-1][1]
+                try:
+                    df = als[i-1][1]
+                except IndexError:
+                    raise ImportError("Cannot read data for genome: {}. Make sure that structural annotation data for all genomes is provided in correct order. Exiting.".format(line[0]))
                 chrs = np.unique(df['bchr'])
                 for c in chrs:
                     if c not in list(glen.keys()):
@@ -472,7 +502,10 @@ def validalign2fasta(als, genf):
                         raise ImportError(errmess2.format(c, os.path.basename(fin), als[i-1][0]))
             # Check cases when the genome is the reference-genome
             if i < len(als):
-                df = als[i][1]
+                try:
+                    df = als[i][1]
+                except IndexError:
+                    raise ImportError("Cannot read data for genome: {}. Make sure that structural annotation data for all genomes is provided in correct order. Exiting.".format(line[0]))
                 chrs = np.unique(df['achr'])
                 for c in chrs:
                     if c not in list(glen.keys()):
@@ -480,7 +513,7 @@ def validalign2fasta(als, genf):
                     if np.max(np.max(df.loc[df['achr'] == c, ['astart', 'aend']])) > glen[c]:
                         raise ImportError(errmess2.format(c, os.path.basename(fin), als[i][0]))
             out.append((line[1], glen))
-            tags['lc'][line[1]] = CHRCOLS(i)
+            tags['lc'][line[1]] = CHRCOLS[i]
             # Reads tags
             if len(line) > 2:
                 tg = line[2].split(';')
@@ -510,6 +543,108 @@ def filterinput(args, df, chrid):
     df.sort_values(['achr', 'astart', 'aend'], inplace=True)
     return df
 # END
+
+
+def selectregion(reg, chrlengths, al):
+    import pandas as pd
+    import copy
+    alignments = copy.deepcopy(al)
+    genids = [i[0] for i in chrlengths]
+    if len(reg) != 3:
+        raise ValueError("Incorrect values parsed to --reg. Provide values in the following format: GenomeID:ChromosomeID:Start-End. GenomeID and ChromosomeID cannot have ':' character.")
+    # reg = ['cvi', 'LR699761.1', '12000000-13500000'] #TODO: Delete this line
+    reg = reg[:2] + list(map(int, reg[2].split("-")))
+    # Check that the region is in the given genomes
+    if reg[0] not in genids:
+        raise ValueError("Genome ID in --reg do not match with any genome ID provided with --genomes. Exiting.")
+    if reg[1] not in chrlengths[genids.index(reg[0])][1].keys():
+        raise ValueError("Chromosome ID in --reg do not match with any chromosome ID for genome {}. Exiting.".format(reg[0]))
+    l = chrlengths[genids.index(reg[0])][1][reg[1]]
+    if any([reg[2] < 1, reg[2] > l, reg[3] < 1, reg[3] > l, reg[2] > reg[3]]):
+        raise ValueError("Incorrect chromosome coordinates provided for --reg. Exiting.")
+    # Select alignments that are within the selected region in the focal genome. For other genomes, maximal syntenic region coordinate would be used as boundaries.
+    ind = genids.index(reg[0])
+    newal = [0]*len(alignments)
+    # Alignments for genomes after the focal genome
+    c, s, e = reg[1:]
+    for i in range(0, ind).__reversed__():
+        df = alignments[i][1].copy()
+        syncrd = df.loc[(df['bchr'] == c) & (df['bstart'] <= e) & (df['bend'] >= s) & (df['type'] == 'SYN')].copy()
+
+        if min(syncrd['bstart']) < s:
+            lower = syncrd['bstart'] < s
+            a = (syncrd['bend'][lower] - s)/(syncrd['bend'][lower] - syncrd['bstart'][lower])
+            syncrd.loc[lower, 'astart'] = (syncrd['aend'][lower] - (syncrd['aend'][lower] - syncrd['astart'][lower])*a).astype(int)
+            syncrd.loc[lower, 'bstart'] = s
+
+        if max(syncrd['bend']) > e:
+            higher = syncrd['bend'] > e
+            a = (e-syncrd['bstart'][higher])/(syncrd['bend'][higher] - syncrd['bstart'][higher])
+            syncrd.loc[higher, 'aend'] = (syncrd['astart'][higher] + (syncrd['aend'][higher] - syncrd['astart'][higher])*a).astype(int)
+            syncrd.loc[higher, 'bend'] = e
+        bc = syncrd['achr'].tolist()[0]
+        bs = min(syncrd['astart'])
+        be = max(syncrd['aend'])
+        srcrd = df.loc[(df['achr'] == bc) &
+                       (df['astart'] >= bs) &
+                       (df['aend'] <= be) &
+                       (df['bchr'] == c) &
+                       (df['bstart'] >= s) &
+                       (df['bend'] <= e) &
+                       (df['type'] != 'SYN')].reset_index(drop=True).copy()
+        garb = pd.concat([syncrd, srcrd])
+        garb.sort_values(['achr', 'astart', 'aend'], inplace=True)
+        garb.reset_index(inplace=True, drop=True)
+        newal[i] = garb.copy()
+        # print(newal)
+        c, s, e = bc, bs, be
+    # Alignments for genome after the focal genome
+    c, s, e = reg[1:]
+    for i in range(ind, len(alignments)):
+        df = alignments[i][1].copy()
+        syncrd = df.loc[(df['achr'] == c) & (df['astart'] <= e) & (df['aend'] >= s) & (df['type'] == 'SYN')].copy()
+        # Alter alignments with coordinate less than the start position
+        if min(syncrd['astart']) < s:
+            lower = syncrd['astart'] < s
+            a = (syncrd['aend'][lower] - s)/(syncrd['aend'][lower] - syncrd['astart'][lower])
+            syncrd.loc[lower, 'bstart'] = (syncrd['bend'][lower] - (syncrd['bend'][lower] - syncrd['bstart'][lower])*a).astype(int)
+            syncrd.loc[lower, 'astart'] = s
+        # Alter alignments with coordinate more than the end position
+        if max(syncrd['aend']) > e:
+            higher = syncrd['aend'] > e
+            a = (e - syncrd['astart'][higher])/(syncrd['aend'][higher] - syncrd['astart'][higher])
+            syncrd.loc[higher, 'bend'] = (syncrd['bstart'][higher] + (syncrd['bend'][higher] - syncrd['bstart'][higher])*a).astype(int)
+            syncrd.loc[higher, 'aend'] = e
+        bc = syncrd['bchr'].tolist()[0]
+        bs = min(syncrd['bstart'])
+        be = max(syncrd['bend'])
+        srcrd = df.loc[(df['achr'] == c) &
+                       (df['astart'] >= s) &
+                       (df['aend'] <= e) &
+                       (df['bchr'] == bc) &
+                       (df['bstart'] >= bs) &
+                       (df['bend'] <= be) &
+                       (df['type'] != 'SYN')].reset_index(drop=True).copy()
+        garb = pd.concat([syncrd, srcrd])
+        garb.sort_values(['achr', 'astart', 'aend'], inplace=True)
+        garb.reset_index(inplace=False, drop=True)
+        newal[i] = garb
+        c, s, e = bc, bs, be
+    # Update alignments, chrs and chrgrps
+    for i in range(len(alignments)):
+        alignments[i][1] = newal[i].copy()
+    chrs = [k for k in chrids[0][1].keys() if k in alignments[0][1]['achr'].unique()]
+    chrgrps = OrderedDict()
+    for c in chrs:
+        cg = deque([c])
+        cur = c
+        for i in range(len(chrids)):
+            n = chrids[i][1][cur]
+            cg.append(n)
+            cur = n
+        chrgrps[c] = cg
+    return alignments, chrs, chrgrps
+
 
 
 def createribbon(df):
@@ -592,7 +727,9 @@ def createribbon(df):
 Draw and plot
 ################################################################################
 """
-def drawax(ax, chrgrps, chrlengths, V, S):
+
+
+def drawax(ax, chrgrps, chrlengths, v, s, minl=0, maxl=-1):
     import numpy as np
     nchr = len(chrgrps)
     # qchrs = [chrid_dict[k] for k in chrs]
@@ -600,24 +737,25 @@ def drawax(ax, chrgrps, chrlengths, V, S):
     bottom_limit = -0.1
     upper_limit = 0.1
     ticklabels = list(chrgrps.keys())
-    max_l = np.max([chrlengths[i][1][v[i]] for v in chrgrps.values() for i in range(len(v))])
-    if not V:
-        tick_pos = S/2 + 0.1
+    if maxl == -1:
+        maxl = np.max([chrlengths[i][1][c[i]] for c in chrgrps.values() for i in range(len(c))])
+    if not v:
+        tick_pos = s/2 + 0.1
         ax.set_ylim(bottom_limit, nchr+upper_limit)
         ax.set_yticks([tick_pos+i for i in range(nchr)])
         ax.set_yticklabels(ticklabels[::-1])
         ax.tick_params(axis='y', right=False, left=False)
-        ax.set_xlim(0, max_l)
+        ax.set_xlim(minl, maxl)
         ax.xaxis.grid(True, which='both', linestyle='--')
         ax.ticklabel_format(axis='x', useOffset=False, style='plain')
         xticks = ax.get_xticks()
-        if max_l >= 1000000000:
+        if maxl >= 1000000000:
             xticksl = xticks/1000000000
             ax.set_xlabel('Chromosome position (in Gbp)')
-        elif max_l >= 1000000:
+        elif maxl >= 1000000:
             xticksl = xticks/1000000
             ax.set_xlabel('Chromosome position (in Mbp)')
-        elif max_l >= 1000:
+        elif maxl >= 1000:
             xticksl = xticks/1000
             ax.set_xlabel('Chromosome position (in Kbp)')
         ax.set_xticks(xticks[:-1])
@@ -625,21 +763,21 @@ def drawax(ax, chrgrps, chrlengths, V, S):
         ax.set_ylabel('Reference Chromosome ID')
         ax.set_axisbelow(True)
     else:
-        tick_pos = 1 - 0.1 - S/2
+        tick_pos = 1 - 0.1 - s/2
         ax.set_xlim(bottom_limit, nchr+upper_limit)
         ax.set_xticks([tick_pos+i for i in range(nchr)])
         ax.set_xticklabels(ticklabels)
         ax.tick_params(axis='x', top=False, bottom=False)
-        ax.set_ylim(0, max_l)
+        ax.set_ylim(minl, maxl)
         ax.ticklabel_format(axis='y', useOffset=False, style='plain')
         yticks = ax.get_yticks()
-        if max_l >= 1000000000:
+        if maxl >= 1000000000:
             yticksl = yticks/1000000000
             ax.set_ylabel('Chromosome position (in Gbp)')
-        elif max_l >= 1000000:
+        elif maxl >= 1000000:
             yticksl = yticks/1000000
             ax.set_ylabel('Chromosome position (in Mbp)')
-        elif max_l >= 1000:
+        elif maxl >= 1000:
             yticksl = yticks/1000
             ax.set_ylabel('Chromosome position (in Kbp)')
         ax.set_yticks(yticks[:-1])
@@ -647,18 +785,17 @@ def drawax(ax, chrgrps, chrlengths, V, S):
         ax.set_xlabel('Reference Chromosome ID')
         ax.yaxis.grid(True, which='both', linestyle='--')
         ax.set_axisbelow(True)
-    return ax, max_l
+    return ax, maxl
 # END
 
 
-def pltchrom(ax, chrs, chrgrps, chrlengths, v, S, chrtags):
+def pltchrom(ax, chrs, chrgrps, chrlengths, v, S, chrtags, minl=0, maxl=-1):
     import warnings
     import numpy as np
     chrlabs = [False]*len(chrlengths)
-    max_l = np.max([chrlengths[i][1][v[i]] for v in chrgrps.values() for i in range(len(v))])
-    # CHRCOLS = plt.get_cmap('Dark2')
-    if len(chrlengths) > 8:
-        warnings.warn("More than 8 chromosomes are being analysed. This could result in different chromosomes having same color. Provide colors manually in config.")
+    # maxl = np.max([chrlengths[i][1][v[i]] for v in chrgrps.values() for i in range(len(v))])
+    # if len(chrlengths) > 8:
+    #     warnings.warn("More than 8 chromosomes are being analysed. This could result in different chromosomes having same color. Provide colors manually in config.")
     # Set chromosome direction
     # pltchr = ax.axhline if not V else ax.axvline
     pltchr = ax.hlines if not v else ax.vlines
@@ -674,67 +811,74 @@ def pltchrom(ax, chrs, chrgrps, chrlengths, v, S, chrtags):
     for s in range(len(chrlengths)):
         for i in range(len(chrs)):
             offset = i if not v else -i
+            if maxl == -1:
+                maxcoord = chrlengths[s][1][chrgrps[chrs[i]][s]]
+            else:
+                maxcoord = maxl
             if not chrlabs[s]:
-                # pltchr(indents[s]-offset, 0, chrlengths[s][1][chrgrps[chrs[i]][s]]/max_l, color=CHRCOLS(s), linewidth=3, label=chrlengths[s][0])
-                chrlabels.append(pltchr(indents[s]-offset, 0, chrlengths[s][1][chrgrps[chrs[i]][s]],
+                chrlabels.append(pltchr(indents[s]-offset, minl, maxcoord,
                                         color=chrtags['lc'][chrlengths[s][0]],
                                         linewidth=3, label=chrlengths[s][0]))
                 chrlabs[s] = True
             else:
-                # pltchr(indents[s]-offset, 0, chrlengths[s][1][chrgrps[chrs[i]][s]]/max_l, color=CHRCOLS(s), linewidth=3)
-                pltchr(indents[s]-offset, 0, chrlengths[s][1][chrgrps[chrs[i]][s]], color=chrtags['lc'][chrlengths[s][0]], linewidth=3)
+                pltchr(indents[s]-offset, minl, maxcoord, color=chrtags['lc'][chrlengths[s][0]], linewidth=3)
     return ax, indents, chrlabels
 # END
 
 
-def pltsv(ax, alignments, chrs, V, chrgrps, indents):
+def pltsv(ax, alignments, chrs, v, chrgrps, indents):
     adSynLab = False
     adInvLab = False
     adTraLab = False
     adDupLab = False
 
     alpha = 0.8 # TODO: Set alpha as a parameter
+    svlabels = deque()
     for s in range(len(alignments)):
         df = alignments[s][1]
         for i in range(len(chrs)):
-            offset = i if not V else -i
+            offset = i if not v else -i
             # Plot syntenic regions
             for row in df.loc[(df['achr'] == chrgrps[chrs[i]][s]) & (df['type'] == 'SYN')].itertuples(index=False):
                 if not adSynLab:
-                    p = bezierpath(row[1], row[2], row[4], row[5], indents[s]-offset, indents[s+1]-offset, V, col=COLORS[0], alpha=alpha, label='Syntenic')
+                    p = bezierpath(row[1], row[2], row[4], row[5], indents[s]-offset, indents[s+1]-offset, v, col=COLORS[0], alpha=alpha, label='Syntenic')
                     adSynLab = True
                     syn = ax.add_patch(p)
+                    svlabels.append(syn)
                 else:
-                    p = bezierpath(row[1], row[2], row[4], row[5], indents[s]-offset, indents[s+1]-offset, V, col=COLORS[0], alpha=alpha)
+                    p = bezierpath(row[1], row[2], row[4], row[5], indents[s]-offset, indents[s+1]-offset, v, col=COLORS[0], alpha=alpha)
                     ax.add_patch(p)
             # Plot Inversions
             for row in df.loc[(df['achr'] == chrgrps[chrs[i]][s]) & (df['type'] == 'INV')].itertuples(index=False):
                 if not adInvLab:
-                    p = bezierpath(row[1], row[2], row[4], row[5], indents[s]-offset, indents[s+1]-offset, V, col=COLORS[1], alpha=alpha, label='Inversion', lw=0.1)
+                    p = bezierpath(row[1], row[2], row[4], row[5], indents[s]-offset, indents[s+1]-offset, v, col=COLORS[1], alpha=alpha, label='Inversion', lw=0.1)
                     adInvLab=True
                     inv = ax.add_patch(p)
+                    svlabels.append(inv)
                 else:
-                    p = bezierpath(row[1], row[2], row[4], row[5], indents[s]-offset, indents[s+1]-offset, V, col=COLORS[1], alpha=alpha, lw=0.1)
+                    p = bezierpath(row[1], row[2], row[4], row[5], indents[s]-offset, indents[s+1]-offset, v, col=COLORS[1], alpha=alpha, lw=0.1)
                     ax.add_patch(p)
             # Plot Translocations
             for row in df.loc[(df['achr'] == chrgrps[chrs[i]][s]) & (df['type'].isin(['TRANS', 'INVTR']))].itertuples(index=False):
                 if not adTraLab:
-                    p = bezierpath(row[1], row[2], row[4], row[5], indents[s]-offset, indents[s+1]-offset, V, col=COLORS[2], alpha=alpha, label='Translocation', lw=0.1)
+                    p = bezierpath(row[1], row[2], row[4], row[5], indents[s]-offset, indents[s+1]-offset, v, col=COLORS[2], alpha=alpha, label='Translocation', lw=0.1)
                     adTraLab = True
                     tra = ax.add_patch(p)
+                    svlabels.append(tra)
                 else:
-                    p = bezierpath(row[1], row[2], row[4], row[5], indents[s]-offset, indents[s+1]-offset, V, col=COLORS[2], alpha=alpha, lw=0.1)
+                    p = bezierpath(row[1], row[2], row[4], row[5], indents[s]-offset, indents[s+1]-offset, v, col=COLORS[2], alpha=alpha, lw=0.1)
                     ax.add_patch(p)
             # Plot Duplications
             for row in df.loc[(df['achr'] == chrgrps[chrs[i]][s]) & (df['type'].isin(['DUP', 'INVDP']))].itertuples(index=False):
                 if not adDupLab:
-                    p = bezierpath(row[1], row[2], row[4], row[5], indents[s]-offset, indents[s+1]-offset, V, col=COLORS[4], alpha=alpha, label='Duplication', lw=0.1)
+                    p = bezierpath(row[1], row[2], row[4], row[5], indents[s]-offset, indents[s+1]-offset, v, col=COLORS[3], alpha=alpha, label='Duplication', lw=0.1)
                     adDupLab=True
                     dup = ax.add_patch(p)
+                    svlabels.append(dup)
                 else:
-                    p = bezierpath(row[1], row[2], row[4], row[5], indents[s]-offset, indents[s+1]-offset, V, col=COLORS[4], alpha=alpha, lw=0.1)
+                    p = bezierpath(row[1], row[2], row[4], row[5], indents[s]-offset, indents[s+1]-offset, v, col=COLORS[3], alpha=alpha, lw=0.1)
                     ax.add_patch(p)
-    return ax, [syn, inv, tra, dup]
+    return ax, svlabels
 # END
 
 
@@ -789,12 +933,23 @@ def bezierpath(rs, re, qs, qe, ry, qy, v, col, alpha, label='', lw=0):
 # END
 
 
-def drawmarkers(ax, b, v, chrlengths, indents, chrs, chrgrps):
+def drawmarkers(ax, b, v, chrlengths, indents, chrs, chrgrps, minl=0, maxl=-1):
+    import logging
+    logger = logging.getLogger('drawmarkers')
     mdata = readannobed(b, v, chrlengths)
     for m in mdata:
         ind = [i for i in range(len(chrlengths)) if chrlengths[i][0] == m.genome][0]
         indent = indents[ind]
-        offset = chrs.index([k for k, v in chrgrps.items() if v[ind] == m.chr][0])
+        chrid = [k for k, c in chrgrps.items() if c[ind] == m.chr]
+        if chrid != []:
+            offset = chrs.index(chrid[0])
+        else:
+            logger.warning("Cannot draw marker at {}:{}-{} on genome {} because the chromosome is not selected for plotting. Skipping it.".format(m.chr, m.start, m.end, m.genome))
+            continue
+        if maxl != -1:
+            if m.start < minl or m.end > maxl:
+                logger.warning("Cannot draw marker at {}:{}-{} on genome {} because the marker position is out of the selected range. Skipping it.".format(m.chr, m.start, m.end, m.genome))
+                continue
         if not v:
             ax.plot(m.start, indent-offset, marker=m.mt, color=m.mc, markersize=m.ms)
             if m.tt != '':
@@ -807,20 +962,29 @@ def drawmarkers(ax, b, v, chrlengths, indents, chrs, chrgrps):
 # END
 
 
-def drawtracks(ax, tracks, s, chrgrps, chrlengths, v):
+def drawtracks(ax, tracks, s, chrgrps, chrlengths, v, minl, maxl):
     from matplotlib.patches import Rectangle
     import numpy as np
     th = (1 - s - 2*0.1 - 0.05)/len(tracks)
     if th < 0.01:
-        raise RuntimeError("Decrease the value of the -S to plot tracks. Exiting.")
+        raise RuntimeError("Decrease the value of -S to plot tracks correctly. Exiting.")
     cl = len(chrgrps.keys())
     chrs = list(chrgrps.keys())
-    margin = np.max([chrlengths[i][1][v[i]] for v in chrgrps.values() for i in range(len(v))])/500
+    # Define space between track and track label
+    # TODO: read margin spacing from base config
+    if maxl == -1:
+        margin = np.max([chrlengths[i][1][v[i]] for v in chrgrps.values() for i in range(len(v))])/500
+    else:
+        margin = maxl/500
     for i in range(len(tracks)):
         bedbin = tracks[i].bincnt
         for j in range(cl):
-            chrpos = [k[0] for k in bedbin[chrs[j]]]
-            tpos = [k[1] for k in bedbin[chrs[j]]]
+            if maxl != -1:
+                chrpos = [k[0] for k in bedbin[chrs[j]] if minl <= k[0] <= maxl]
+                tpos = [k[1] for k in bedbin[chrs[j]] if minl <= k[0] <= maxl]
+            else:
+                chrpos = [k[0] for k in bedbin[chrs[j]]]
+                tpos = [k[1] for k in bedbin[chrs[j]]]
             tposmax = max(tpos)
             diff = 0.7*th
             if not v:
@@ -829,12 +993,18 @@ def drawtracks(ax, tracks, s, chrgrps, chrlengths, v):
                 # TODO: parameterise colour
                 ax.add_patch(Rectangle((0, y0), chrlengths[0][1][chrs[j]], diff,  linewidth=0, facecolor=tracks[i].bc, alpha=tracks[i].ba))
                 ax.plot(chrpos, ypos, color=tracks[i].lc, lw=tracks[i].lw)
-                ax.text(chrlengths[0][1][chrs[j]] + margin, y0 + diff/2, tracks[i].n, color=tracks[i].nc, fontsize=tracks[i].ns, fontfamily=tracks[i].nf, ha='left', va='center', rotation='horizontal')
+                if maxl == -1:
+                    ax.text(chrlengths[0][1][chrs[j]] + margin, y0 + diff/2, tracks[i].n, color=tracks[i].nc, fontsize=tracks[i].ns, fontfamily=tracks[i].nf, ha='left', va='center', rotation='horizontal')
+                else:
+                    ax.text(maxl + margin, y0 + diff/2, tracks[i].n, color=tracks[i].nc, fontsize=tracks[i].ns, fontfamily=tracks[i].nf, ha='left', va='center', rotation='horizontal')
             else:
                 x0 = j + (i+1)*th - diff
                 xpos = [x0 + diff - (t*diff/tposmax) for t in tpos]
                 ax.add_patch(Rectangle((x0, 0), diff, chrlengths[0][1][chrs[j]], linewidth=0, facecolor=tracks[i].bc, alpha=tracks[i].ba))
                 ax.plot(xpos, chrpos, color=tracks[i].lc, lw=tracks[i].lw)
-                ax.text(x0 + diff/2, chrlengths[0][1][chrs[j]] + margin,tracks[i].n, color=tracks[i].nc, fontsize=tracks[i].ns, fontfamily=tracks[i].nf, ha='center', va='bottom', rotation='vertical')
+                if maxl == -1:
+                    ax.text(x0 + diff/2, chrlengths[0][1][chrs[j]] + margin,tracks[i].n, color=tracks[i].nc, fontsize=tracks[i].ns, fontfamily=tracks[i].nf, ha='center', va='bottom', rotation='vertical')
+                else:
+                    ax.text(x0 + diff/2, maxl + margin, tracks[i].n, color=tracks[i].nc, fontsize=tracks[i].ns, fontfamily=tracks[i].nf, ha='center', va='bottom', rotation='vertical')
     return ax
 # END

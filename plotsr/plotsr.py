@@ -19,6 +19,7 @@ if __name__ == '__main__':
     parser.add_argument('--tracks', help='File listing paths and details for all tracks to be plotted', type=argparse.FileType('r'))
     # parser.add_argument('-B', help='Annotation bed file for marking specific positions on genome', type=argparse.FileType('r'))
     parser.add_argument('--chr', help='Select specific chromosomes on reference for plotting.', type=str, action='append')
+    parser.add_argument('--reg', help='Plots a specific region. Use as: GenomeID:ChromosomeID:Start-End', type=str)
     parser.add_argument('--nosyn', help='Do not plot syntenic regions', default=False, action='store_true')
     parser.add_argument('--noinv', help='Do not plot inversions', default=False, action='store_true')
     parser.add_argument('--notr', help='Do not plot translocations regions', default=False, action='store_true')
@@ -88,6 +89,14 @@ if __name__ == '__main__':
     except TypeError:
         pass
 
+    # Check if both --chr and --reg are defined
+    if args.chr is not None and args.reg is not None:
+        logger.error("Both --chr and --reg are provided. Only one parameter can be provided at a time. Exiting.")
+        sys.exit()
+    # Check if both -R and --reg are defined
+    if args.reg is not None and args.R:
+        logger.warning("-R is not compatible with --reg and will not be used.")
+
     # Set Figure height and width. Change later based on chromosome number and size
     FS = args.f             # Font size
     H = args.H              # Height
@@ -99,8 +108,10 @@ if __name__ == '__main__':
     S = args.S              # Space between homologous chromosomes
     B = None if args.markers is None else args.markers.name              # Annotation bed file
     TRACKS = None if args.tracks is None else args.tracks.name
+    REG = args.reg.strip().split(":")
+
     if S < 0.1 or S > 0.75:
-        sys.exit('Out of range value for S. Please provide a value in the range 0.1-0.85')
+        sys.exit('Out of range value for S. Please provide a value in the range 0.1-0.75')
 
     from func import *
     from collections import deque, OrderedDict
@@ -108,13 +119,13 @@ if __name__ == '__main__':
 
     ## Set matplotlib backend
     import matplotlib
-    try:
+    try :
         # matplotlib.use(args.b)
-        matplotlib.use('Qt5Agg')
-    except:
+        matplotlib.use('Qt5Agg')    # TODO: Delete this line
+    except :
         sys.exit('Matplotlib backend cannot be selected')
 
-    # fins = ['col_lersyri.out', 'ler_cvisyri.out', 'cvi_colsyri.out'] #TODO: Delete this line
+    # fins = ['col_lersyri.out', 'ler_cvisyri.out', 'cvi_erisyri.out', 'eri_shasyri.out', 'sha_kyosyri.out', 'kyo_an1syri.out'] #TODO: Delete this line
     # Read alignment coords
     alignments = deque()
     chrids = deque()
@@ -122,8 +133,8 @@ if __name__ == '__main__':
         for f in args.sr:
             fin = f.name
             al, cid = readsyriout(fin)
-        # for fin in fins: #TODO: Delete this line
-        #     al, cid = readsyriout(fin) #TODO: Delete this line
+        for fin in fins: #TODO: Delete this line
+            al, cid = readsyriout(fin) #TODO: Delete this line
             alignments.append([os.path.basename(fin), al])
             chrids.append((os.path.basename(fin), cid))
     elif len(args.bp) > 0:
@@ -161,8 +172,10 @@ if __name__ == '__main__':
             alignments[i][1] = alignments[i][1].loc[alignments[i][1]['achr'].isin([h[i] for h in homchrs])]
 
     # Check chromsome IDs and sizes
-    chrlengths, chrtags= validalign2fasta(alignments, args.genomes.name)
+    chrlengths, chrtags = validalign2fasta(alignments, args.genomes.name)
     # chrlengths, chrtags = validalign2fasta(alignments, 'genomes.txt') # TODO: Delete this line
+
+
     ## Remove chromosomes that are not homologous to selected reference chromosomes
     if args.chr is not None:
         for i in range(len(chrlengths)):
@@ -171,19 +184,21 @@ if __name__ == '__main__':
             for k in ks:
                 if k not in homs:
                     chrlengths[i][1].pop(k)
+        # Update groups of homologous chromosomes
+        chrs = [k for k in chrids[0][1].keys() if k in alignments[0][1]['achr'].unique()]
+        chrgrps = OrderedDict()
+        for c in chrs:
+            cg = deque([c])
+            cur = c
+            for i in range(len(chrids)):
+                n = chrids[i][1][cur]
+                cg.append(n)
+                cur = n
+            chrgrps[c] = cg
 
-    # Update groups of homologous chromosomes
-    chrs = [k for k in chrids[0][1].keys() if k in alignments[0][1]['achr'].unique()]
-    chrgrps = OrderedDict()
-    for c in chrs:
-        cg = deque([c])
-        cur = c
-        for i in range(len(chrids)):
-            n = chrids[i][1][cur]
-            cg.append(n)
-            cur = n
-        chrgrps[c] = cg
-
+    if args.reg is not None:
+        # REG = ['cvi', 'LR699761.1', '12000000-13500000'] #TODO: Delete this line
+        alignments2, chrs, chrgrps = selectregion(REG, chrlengths, alignments)
 
     # Combine Ribbon is selected than combine rows
     if R:
@@ -199,8 +214,6 @@ if __name__ == '__main__':
         df.loc[invindex, 'bend'] = df.loc[invindex, 'bstart'] - df.loc[invindex, 'bend']
         df.loc[invindex, 'bstart'] = df.loc[invindex, 'bstart'] - df.loc[invindex, 'bend']
         alignments[i][1] = df.copy()
-
-
 
 
     from matplotlib import pyplot as plt
@@ -220,33 +233,54 @@ if __name__ == '__main__':
         sys.exit("Error in initiliazing figure. Try using a different backend." + '\n' + e.with_traceback())
     ax = fig.add_subplot(111, frameon=False)
 
+    allal = pd.concat([alignments[i][1] for i in range(len(alignments))])
+    if not args.reg:
+        minl, maxl = 0, -1
+    else:
+        minl = min(allal[['astart', 'bstart']].apply(min))
+        maxl = max(allal[['aend', 'bend']].apply(max))
+    labelcnt = 0
+    if 'SYN' in allal['type'].array: labelcnt += 1
+    if 'INV' in allal['type'].array: labelcnt += 1
+    if 'TRA' in allal['type'].array or 'INVTR' in allal['type'].array: labelcnt += 1
+    if 'DUP' in allal['type'].array or 'INVDP' in allal['type'].array: labelcnt += 1
+
     ## Draw Axes
-    ax, max_l = drawax(ax, chrgrps, chrlengths, V, S)
+    ax, max_l = drawax(ax, chrgrps, chrlengths, V, S, minl=minl, maxl=maxl)
 
     ## Draw Chromosomes
-    ax, indents, chrlabels = pltchrom(ax, chrs, chrgrps, chrlengths, V, S, chrtags)
+    ax, indents, chrlabels = pltchrom(ax, chrs, chrgrps, chrlengths, V, S, chrtags, minl=minl, maxl=maxl)
 
-    # Get Chromosome legend
+    from math import ceil
+
+    #TODO: set reading from config
+    ncol = ceil(len(chrlengths)/len(svlabels))
+
+    # Get Genome legend
+    # TODO: Define two columns for legend
     bbox_to_anchor = [0, 1.01, 0.5, 0.3] if not V else [0, 1.1, 0.5, 0.3] # TODO: READ from base.cfg
-    l1 = plt.legend(handles=chrlabels, loc='lower left', bbox_to_anchor=bbox_to_anchor, ncol=1, mode='expand', borderaxespad=0., frameon=False, title='Genome')
+    l1 = plt.legend(handles=chrlabels, loc='lower left', bbox_to_anchor=bbox_to_anchor, ncol=ncol, mode=None, borderaxespad=0., frameon=False, title='Genomes')
     l1._legend_box.align = "left"
-    plt.gca().add_artist(l1)
+
 
     # Plot structural annotations
     # TODO: Parameterise: colors, alpha,
     ax, svlabels = pltsv(ax, alignments, chrs, V, chrgrps, indents)
+
+
+    plt.gca().add_artist(l1)
     bbox_to_anchor[0] += 0.5
-    plt.legend(handles=svlabels, loc='lower left', bbox_to_anchor=bbox_to_anchor, ncol=1, mode='expand', borderaxespad=0., frameon=False, title='Annotation')._legend_box.align = "left"
+    plt.legend(handles=svlabels, loc='lower left', bbox_to_anchor=bbox_to_anchor, ncol=1, mode='expand', borderaxespad=0., frameon=False, title='Annotations')._legend_box.align = "left"
 
     # Plot markers
     if B is not None:
-        ax = drawmarkers(ax, B, V, chrlengths, indents, chrs, chrgrps)
+        ax = drawmarkers(ax, B, V, chrlengths, indents, chrs, chrgrps, minl=minl, maxl=maxl)
 
     # Draw tracks
     if args.tracks is not None:
-        tracks = readtrack(args.tracks.name, chrlengths)
+        tracks = readtrack(args.tracks.name, chrlengths, chrgrps)
         # tracks = readtrack(f, chrlengths) #TODO: delete this
-        ax = drawtracks(ax, tracks, S, chrgrps, chrlengths, V)
+        ax = drawtracks(ax, tracks, S, chrgrps, chrlengths, V, minl=minl, maxl=maxl)
 
     # Save the plot
     try:

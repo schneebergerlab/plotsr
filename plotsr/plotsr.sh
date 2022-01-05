@@ -49,12 +49,10 @@ samtools index kyo_an1.bam
     --sr kyo_an1syri.out \
     --genomes genomes.txt \
     --tracks tracks.txt \
-    --chr Chr1 \
-    -S 0.85 \
-    -o png \
-    -v \
-    -W 6 \
-    -H 10 \
+    -S 0.65 \
+    -o pdf \
+    -W 10 \
+    -H 12 \
     -f 10 \
     -R
 

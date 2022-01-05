@@ -1,0 +1,2 @@
+matplotlib~=3.3.4
+setuptools~=58.0.4

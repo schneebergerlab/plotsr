@@ -7,7 +7,7 @@
 ##tf = background colour
 ##tp = background colour
 #chr	start	end genome_id	tags
-Chr1	10000000	10000001	col-0	mt:.;mc:red;ms:12;tt:red marker;tp:0.05;ts:6
+Chr2	12000000	12000001	col-0	mt:.;mc:red;ms:12;tt:red marker;tp:0.05;ts:6
 LR699771.1	5000000	5000001	ler	mt:^;mc:black;ms:6;tt:black marker;tc:black;ts:6;tf:Arial;tp:0.05
 LR699762.1	12000000	12000010	cvi	mt:,;mc:#78AB46;ms:12
 Chr5	15000000	15000001	col-0a	mt:8;mc:#78AB46;ms:8;tt:triangle;tc:black;ts:6;tf:Arial;tp:-0.1
