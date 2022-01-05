@@ -19,7 +19,7 @@ if __name__ == '__main__':
     parser.add_argument('--tracks', help='File listing paths and details for all tracks to be plotted', type=argparse.FileType('r'))
     # parser.add_argument('-B', help='Annotation bed file for marking specific positions on genome', type=argparse.FileType('r'))
     parser.add_argument('--chr', help='Select specific chromosomes on reference for plotting.', type=str, action='append')
-    parser.add_argument('--reg', help='Plots a specific region. Use as: GenomeID:ChromosomeID:Start-End', type=str)
+    parser.add_argument('--reg', help='Plots a specific region. Use as: GenomeID:ChromosomeID:Start-End. Not compatible with --chr and -R.', type=str)
     parser.add_argument('--nosyn', help='Do not plot syntenic regions', default=False, action='store_true')
     parser.add_argument('--noinv', help='Do not plot inversions', default=False, action='store_true')
     parser.add_argument('--notr', help='Do not plot translocations regions', default=False, action='store_true')
@@ -30,7 +30,7 @@ if __name__ == '__main__':
     parser.add_argument('-H', help='height of the plot', type=int)
     parser.add_argument('-W', help='width of the plot', type=int)
     parser.add_argument('-S', help='Space between homologous chromosome (0.1-0.75). Adjust this to make more space for annotation marker/text.', default=0.7, type=float)
-    parser.add_argument('-o', help='output file format (pdf, png, svg)', default="pdf", choices=['pdf', 'png', 'svg'])
+    parser.add_argument('-o', help='Output file name. Acceptable format: pdf, png, svg', default="plotsr.pdf")
     parser.add_argument('-d', help='DPI for the final image', default="300", type=int)
     parser.add_argument('-b', help='Matplotlib backend to use', default="agg", type=str, choices=bklist)
     parser.add_argument('-v', help='Plot vertical chromosome', default=False, action='store_true')
@@ -42,6 +42,12 @@ if __name__ == '__main__':
     ## Define logger
     import logging
     import logging.config
+    import sys
+    from pandas import concat as pdconcat
+    from func import *
+    from collections import deque, OrderedDict
+    import os
+    from math import ceil
     logging.config.dictConfig({
         'version': 1,
         'disable_existing_loggers': False,
@@ -78,7 +84,6 @@ if __name__ == '__main__':
     logger = logging.getLogger("Plotsr")
 
     ## Validate input
-    import sys
     if len(args.sr) == 0 and len(args.bp) == 0:
         logger.error("No structural annotations provided. Use --sr or -bp to provide path to input files")
         sys.exit()
@@ -94,34 +99,39 @@ if __name__ == '__main__':
         logger.error("Both --chr and --reg are provided. Only one parameter can be provided at a time. Exiting.")
         sys.exit()
     # Check if both -R and --reg are defined
-    if args.reg is not None and args.R:
-        logger.warning("-R is not compatible with --reg and will not be used.")
+    # if args.reg is not None and args.R:
+    #     logger.warning("-R is not compatible with --reg and will not be used.")
 
     # Set Figure height and width. Change later based on chromosome number and size
     FS = args.f             # Font size
     H = args.H              # Height
     W = args.W              # Width
-    O = args.o              # Output file format
+    O = args.o              # Output file name
     D = args.d              # Output file DPI
     R = args.R              # Create ribbons
     V = args.v              # Vertical chromosomes
     S = args.S              # Space between homologous chromosomes
     B = None if args.markers is None else args.markers.name              # Annotation bed file
     TRACKS = None if args.tracks is None else args.tracks.name
-    REG = args.reg.strip().split(":")
+    REG = None if args.reg is None else args.reg.strip().split(":")
 
     if S < 0.1 or S > 0.75:
         sys.exit('Out of range value for S. Please provide a value in the range 0.1-0.75')
 
-    from func import *
-    from collections import deque, OrderedDict
-    import os
+    ## Check output file extension
+    if len(O.split('.')) == 1:
+        logger.warning("Output filename has no extension. Plot would be saved as a pdf")
+        O = O + ".pdf"
+    elif O.split('.')[-1] not in ['pdf', 'png', 'svg']:
+        logger.warning("Output file extension is not in {'pdf','png', 'svg'}. Plot would be saved as a pdf")
+        O = O.rsplit(".", 1)[0] + ".pdf"
+
 
     ## Set matplotlib backend
     import matplotlib
     try :
-        # matplotlib.use(args.b)
-        matplotlib.use('Qt5Agg')    # TODO: Delete this line
+        matplotlib.use(args.b)
+        # matplotlib.use('Qt5Agg')    # TODO: Delete this line
     except :
         sys.exit('Matplotlib backend cannot be selected')
 
@@ -133,9 +143,9 @@ if __name__ == '__main__':
         for f in args.sr:
             fin = f.name
             al, cid = readsyriout(fin)
-        for fin in fins: #TODO: Delete this line
-            al, cid = readsyriout(fin) #TODO: Delete this line
-            alignments.append([os.path.basename(fin), al])
+        # for fin in fins: #TODO: Delete this line
+        #     al, cid = readsyriout(fin) #TODO: Delete this line
+            alignments.append([os.path.basename(fin) , al])
             chrids.append((os.path.basename(fin), cid))
     elif len(args.bp) > 0:
         for f in args.bp:
@@ -198,7 +208,7 @@ if __name__ == '__main__':
 
     if args.reg is not None:
         # REG = ['cvi', 'LR699761.1', '12000000-13500000'] #TODO: Delete this line
-        alignments2, chrs, chrgrps = selectregion(REG, chrlengths, alignments)
+        alignments, chrs, chrgrps = selectregion(REG, chrlengths, alignments, chrids)
 
     # Combine Ribbon is selected than combine rows
     if R:
@@ -233,7 +243,7 @@ if __name__ == '__main__':
         sys.exit("Error in initiliazing figure. Try using a different backend." + '\n' + e.with_traceback())
     ax = fig.add_subplot(111, frameon=False)
 
-    allal = pd.concat([alignments[i][1] for i in range(len(alignments))])
+    allal = pdconcat([alignments[i][1] for i in range(len(alignments))])
     if not args.reg:
         minl, maxl = 0, -1
     else:
@@ -251,10 +261,8 @@ if __name__ == '__main__':
     ## Draw Chromosomes
     ax, indents, chrlabels = pltchrom(ax, chrs, chrgrps, chrlengths, V, S, chrtags, minl=minl, maxl=maxl)
 
-    from math import ceil
-
     #TODO: set reading from config
-    ncol = ceil(len(chrlengths)/len(svlabels))
+    ncol = ceil(len(chrlengths)/labelcnt)
 
     # Get Genome legend
     # TODO: Define two columns for legend
@@ -278,12 +286,12 @@ if __name__ == '__main__':
 
     # Draw tracks
     if args.tracks is not None:
-        tracks = readtrack(args.tracks.name, chrlengths, chrgrps)
+        tracks = readtrack(args.tracks.name, chrlengths)
         # tracks = readtrack(f, chrlengths) #TODO: delete this
         ax = drawtracks(ax, tracks, S, chrgrps, chrlengths, V, minl=minl, maxl=maxl)
 
     # Save the plot
     try:
-        fig.savefig('syri.'+O, dpi=D, bbox_inches='tight', pad_inches=0.01)
+        fig.savefig(O, dpi=D, bbox_inches='tight', pad_inches=0.01)
     except Exception as e:
         sys.exit('Error in saving the figure. Try using a different backend.' + '\n' + e.with_traceback())

@@ -545,9 +545,10 @@ def filterinput(args, df, chrid):
 # END
 
 
-def selectregion(reg, chrlengths, al):
+def selectregion(reg, chrlengths, al, chrids):
     import pandas as pd
     import copy
+    from collections import OrderedDict, deque
     alignments = copy.deepcopy(al)
     genids = [i[0] for i in chrlengths]
     if len(reg) != 3:
@@ -827,6 +828,7 @@ def pltchrom(ax, chrs, chrgrps, chrlengths, v, S, chrtags, minl=0, maxl=-1):
 
 
 def pltsv(ax, alignments, chrs, v, chrgrps, indents):
+    from collections import deque
     adSynLab = False
     adInvLab = False
     adTraLab = False

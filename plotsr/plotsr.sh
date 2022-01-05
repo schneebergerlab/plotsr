@@ -49,6 +49,25 @@ samtools index kyo_an1.bam
     --sr kyo_an1syri.out \
     --genomes genomes.txt \
     --tracks tracks.txt \
+    --markers test_markers.bed \
+    -S 0.65 \
+    -o ampril_horizon.pdf \
+    -W 10 \
+    -H 12 \
+    -f 10 \
+    -R
+
+/biodata/dep_mercier/grp_schneeberger/projects/SynSearch/scripts/python/plotsr/plotsr/plotsr.py \
+    --sr col_lersyri.out \
+    --sr ler_cvisyri.out \
+    --sr cvi_erisyri.out \
+    --sr eri_shasyri.out \
+    --sr sha_kyosyri.out \
+    --sr kyo_an1syri.out \
+    --genomes genomes.txt \
+    --tracks tracks.txt \
+    --markers test_markers.bed \
+    --reg cvi:LR699761.1:12000000-13500000 \
     -S 0.65 \
     -o pdf \
     -W 10 \
