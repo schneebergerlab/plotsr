@@ -8,6 +8,6 @@
 ##ba = background alpha
 #file	name	tags
 TAIR10_GFF3_genes.bed	Genes	bw:100000;nc:black;ns:8;nf:Arial;lc:black;lw:1;bc:lightgrey;ba:0.5
-TAIR10_GFF3_transposons.bed	TEs	bw:100000;nc:black;ns:8;nf:Arial;lc:black;lw:1;bc:lightgrey;ba:0.5
+#TAIR10_GFF3_transposons.bed	TEs	bw:100000;nc:black;ns:8;nf:Arial;lc:black;lw:1;bc:lightgrey;ba:0.5
 1001genomes.snps.sorted.bed	SNPs	bw:100000;nc:black;ns:8;nf:Arial;lc:navy;lw:1;bc:aqua;ba:0.5
-1001genomes.indels.sorted.bed	Indels	bw:100000;nc:black;ns:8;nf:Arial;lc:navy;lw:1;bc:aqua;ba:0.5
+#1001genomes.indels.sorted.bed	Indels	bw:100000;nc:black;ns:8;nf:Arial;lc:navy;lw:1;bc:aqua;ba:0.5
