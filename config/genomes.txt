@@ -1,6 +1,11 @@
-##lc = line colour
-#file   name    tags
-./data/TAIR10_Filtered.fasta col-0  lc:#1b9e77
-./data/ler.filtered.fa  ler lc:#d95f02
-./data/cvi.filtered.fa  cvi lc:#7570b3
-./TAIR10_Filtered.fasta col-0a  lc:#e7298a
+##lc	=	line colour
+##lw	 =	line width
+#file	name	tags
+TAIR10_Filtered.fasta	col-0	lw:1
+ler.filtered.fa	ler	lw:1
+cvi.filtered.fa	cvi	lw:1
+eri.filtered.fa	eri	lw:1
+sha.filtered.fa	sha	lw:2
+kyo.filtered.fa	kyo	lw:2
+an1.filtered.fa	an1	lw:2
+c24.filtered.fa	c24	lw:2

@@ -424,6 +424,7 @@ def readtrack(f, chrlengths):
                 # logger.warning("Skipping line\n{}".format(line.strip()))
                 continue
             line = line.strip().split("\t")
+            if len(line) == 0: continue
             if len(line) < 2:
                 raise ValueError("Incomplete data in track file line:\n{}\nFile path and name are necessary columns, tags is optional columns".format('\t'.join(line)))
                 sys.exit()
@@ -458,7 +459,7 @@ def validalign2fasta(als, genf):
     out = deque()
     errmess1 = 'Chromosome ID: {} in structural annotation file: {} not present in genome fasta: {}. Exiting.'
     errmess2 = 'For chromosome ID: {}, length in genome fasta: {} is less than the maximum coordinate in the structural annotation file: {}. Exiting.'
-    tags = {'lc': {}}
+    tags = {'lc': {}, 'lw': {}}
     taglist = set(tags.keys())
     # Count number of genomes
     count = 0
@@ -513,8 +514,12 @@ def validalign2fasta(als, genf):
                     if np.max(np.max(df.loc[df['achr'] == c, ['astart', 'aend']])) > glen[c]:
                         raise ImportError(errmess2.format(c, os.path.basename(fin), als[i][0]))
             out.append((line[1], glen))
+
+            # TODO: create a class for genome
+            # Set default tag values
             tags['lc'][line[1]] = CHRCOLS[i]
-            # Reads tags
+            tags['lw'][line[1]] = 1
+            # Update tag values
             if len(line) > 2:
                 tg = line[2].split(';')
                 for t in tg:
@@ -819,7 +824,7 @@ def pltchrom(ax, chrs, chrgrps, chrlengths, v, S, chrtags, minl=0, maxl=-1):
             if not chrlabs[s]:
                 chrlabels.append(pltchr(indents[s]-offset, minl, maxcoord,
                                         color=chrtags['lc'][chrlengths[s][0]],
-                                        linewidth=3, label=chrlengths[s][0]))
+                                        linewidth=chrtags['lw'][chrlengths[s][0]], label=chrlengths[s][0]))
                 chrlabs[s] = True
             else:
                 pltchr(indents[s]-offset, minl, maxcoord, color=chrtags['lc'][chrlengths[s][0]], linewidth=3)

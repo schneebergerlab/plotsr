@@ -1,13 +1,21 @@
 # Analysing Col genomes
-## Get input genomes
-cd /srv/netscratch/dep_mercier/grp_schneeberger/projects/SynSearch/results/plotsr_align/
-cp /srv/netscratch/dep_mercier/grp_schneeberger/projects/SynSearch/data/Arabidopsis-thaliana/TAIR10_Filtered.fasta .
-cp /srv/netscratch/dep_mercier/grp_schneeberger/projects/SynSearch/data/Arabidopsis-thaliana/ampril/v2/ler.filtered.fa .
-cp /srv/netscratch/dep_mercier/grp_schneeberger/projects/SynSearch/data/Arabidopsis-thaliana/ampril/v2/cvi.filtered.fa .
-cp /srv/netscratch/dep_mercier/grp_schneeberger/projects/SynSearch/data/Arabidopsis-thaliana/ampril/v2/eri.filtered.fa .
-cp /srv/netscratch/dep_mercier/grp_schneeberger/projects/SynSearch/data/Arabidopsis-thaliana/ampril/v2/sha.filtered.fa .
-cp /srv/netscratch/dep_mercier/grp_schneeberger/projects/SynSearch/data/Arabidopsis-thaliana/ampril/v2/kyo.filtered.fa .
-cp /srv/netscratch/dep_mercier/grp_schneeberger/projects/SynSearch/data/Arabidopsis-thaliana/ampril/v2/an1.filtered.fa .
+## Get input assemblies from 1001genome page
+### Select chromosomes
+hometools getchr --chrs chr1 chr2 chr3 chr4 chr5 -o an1.filtered.fa An-1.chr.all.v2.0.fasta.gz &
+hometools getchr --chrs chr1 chr2 chr3 chr4 chr5 -o c24.filtered.fa C24.chr.all.v2.0.fasta.gz &
+hometools getchr --chrs chr1 chr2 chr3 chr4 chr5 -o cvi.filtered.fa Cvi.chr.all.v2.0.fasta.gz &
+hometools getchr --chrs chr1 chr2 chr3 chr4 chr5 -o eri.filtered.fa Eri.chr.all.v2.0.fasta.gz &
+hometools getchr --chrs chr1 chr2 chr3 chr4 chr5 -o kyo.filtered.fa Kyo.chr.all.v2.0.fasta.gz &
+hometools getchr --chrs chr1 chr2 chr3 chr4 chr5 -o ler.filtered.fa Ler.chr.all.v2.0.fasta.gz &
+hometools getchr --chrs chr1 chr2 chr3 chr4 chr5 -o sha.filtered.fa Sha.chr.all.v2.0.fasta.gz &
+
+sed -i 's/>chr/>Chr/g' an1.filtered.fa
+sed -i 's/>chr/>Chr/g' c24.filtered.fa
+sed -i 's/>chr/>Chr/g' cvi.filtered.fa
+sed -i 's/>chr/>Chr/g' eri.filtered.fa
+sed -i 's/>chr/>Chr/g' kyo.filtered.fa
+sed -i 's/>chr/>Chr/g' ler.filtered.fa
+sed -i 's/>chr/>Chr/g' sha.filtered.fa
 
 
 ## Run align genomes
@@ -23,21 +31,41 @@ minimap2 -ax asm5 -t 4 --eqx sha.filtered.fa kyo.filtered.fa  \
  | samtools sort -O BAM - > sha_kyo.bam &
 minimap2 -ax asm5 -t 4 --eqx kyo.filtered.fa an1.filtered.fa  \
  | samtools sort -O BAM - > kyo_an1.bam &
+minimap2 -ax asm5 -t 4 --eqx an1.filtered.fa c24.filtered.fa  \
+ | samtools sort -O BAM - > an1_c24.bam &
 samtools index col_ler.bam
 samtools index ler_cvi.bam
 samtools index cvi_eri.bam
 samtools index eri_sha.bam
 samtools index sha_kyo.bam
 samtools index kyo_an1.bam
+samtools index an1_c24.bam
 
 ## Run syri
 ### Run with syri3.8
-/srv/biodata/dep_mercier/grp_schneeberger/projects/SynSearch/scripts/python/syri/syri/bin/syri -c col_ler.bam -r TAIR10_Filtered.fasta -q ler.filtered.fa -k -F B --prefix col_ler &
-/srv/biodata/dep_mercier/grp_schneeberger/projects/SynSearch/scripts/python/syri/syri/bin/syri -c ler_cvi.bam -r ler.filtered.fa -q cvi.filtered.fa -k -F B --prefix ler_cvi &
-/srv/biodata/dep_mercier/grp_schneeberger/projects/SynSearch/scripts/python/syri/syri/bin/syri -c cvi_eri.bam -r cvi.filtered.fa -q eri.filtered.fa -k -F B --prefix cvi_eri &
-/srv/biodata/dep_mercier/grp_schneeberger/projects/SynSearch/scripts/python/syri/syri/bin/syri -c eri_sha.bam -r eri.filtered.fa -q sha.filtered.fa -k -F B --prefix eri_sha &
-/srv/biodata/dep_mercier/grp_schneeberger/projects/SynSearch/scripts/python/syri/syri/bin/syri -c sha_kyo.bam -r sha.filtered.fa -q kyo.filtered.fa -k -F B --prefix sha_kyo &
-/srv/biodata/dep_mercier/grp_schneeberger/projects/SynSearch/scripts/python/syri/syri/bin/syri -c kyo_an1.bam -r kyo.filtered.fa -q an1.filtered.fa -k -F B --prefix kyo_an1 &
+/srv/biodata/dep_mercier/grp_schneeberger/projects/SynSearch/scripts/python/syri/syri/bin/syri -c col_ler.bam -r TAIR10_Filtered.fasta -q ler.filtered.fa -F B --prefix col_ler &
+/srv/biodata/dep_mercier/grp_schneeberger/projects/SynSearch/scripts/python/syri/syri/bin/syri -c ler_cvi.bam -r ler.filtered.fa -q cvi.filtered.fa -F B --prefix ler_cvi &
+/srv/biodata/dep_mercier/grp_schneeberger/projects/SynSearch/scripts/python/syri/syri/bin/syri -c cvi_eri.bam -r cvi.filtered.fa -q eri.filtered.fa -F B --prefix cvi_eri &
+/srv/biodata/dep_mercier/grp_schneeberger/projects/SynSearch/scripts/python/syri/syri/bin/syri -c eri_sha.bam -r eri.filtered.fa -q sha.filtered.fa -F B --prefix eri_sha &
+/srv/biodata/dep_mercier/grp_schneeberger/projects/SynSearch/scripts/python/syri/syri/bin/syri -c sha_kyo.bam -r sha.filtered.fa -q kyo.filtered.fa -F B --prefix sha_kyo &
+/srv/biodata/dep_mercier/grp_schneeberger/projects/SynSearch/scripts/python/syri/syri/bin/syri -c kyo_an1.bam -r kyo.filtered.fa -q an1.filtered.fa -F B --prefix kyo_an1 &
+/srv/biodata/dep_mercier/grp_schneeberger/projects/SynSearch/scripts/python/syri/syri/bin/syri -c an1_c24.bam -r an1.filtered.fa -q c24.filtered.fa -F B --prefix an1_c24 &
+
+## Get tracks
+## SNPs and Indels
+### Downloaded 1001 genome VCF from https://1001genomes.org/data/GMI-MPI/releases/v3.1/
+### Split VCF into SNPs and indels
+vcftools --gzvcf 1001genomes_snp-short-indel_only_ACGTN.vcf.gz --remove-indels --recode --recode-INFO-all --stdout | gzip > 1001genomes.snps.vcf.gz &
+vcftools --gzvcf 1001genomes_snp-short-indel_only_ACGTN.vcf.gz --keep-only-indels  --recode --recode-INFO-all --stdout | gzip >  1001genomes.indels.vcf.gz &
+
+zcat 1001genomes.snps.vcf.gz | vcf2bed --do-not-sort < /dev/stdin | cut -f1,2,3,6,7 | sed 's/^/Chr/g' > 1001genomes.snps.sorted.bed
+zcat 1001genomes.indels.vcf.gz | vcf2bed < /dev/stdin | cut -f1,2,3,6,7 | sed 's/^/Chr/g' > 1001genomes.indels.sorted.bed &
+
+### Genes and TE
+cat /srv/biodata/dep_mercier/grp_schneeberger/data/Athal/TAIR10/TAIR10_geneCoords.txt | awk '{print $1"\t"$2-1"\t"$3}'> TAIR10_GFF3_genes.bed
+cut -f1,4,5 /srv/biodata/dep_mercier/grp_schneeberger/data/Athal/TAIR10/TAIR10_GFF3_genes_transposons_onlyTE.gff | awk '{print $1"\t"$2-1"\t"$3}'> TAIR10_GFF3_transposons.bed
+/srv/biodata/dep_mercier/grp_schneeberger/data/Athal/TAIR10/TAIR10_GFF3_genes_transposons.gff
+
 
 ## Run plotsr
 /biodata/dep_mercier/grp_schneeberger/projects/SynSearch/scripts/python/plotsr/plotsr/plotsr.py \
@@ -47,10 +75,11 @@ samtools index kyo_an1.bam
     --sr eri_shasyri.out \
     --sr sha_kyosyri.out \
     --sr kyo_an1syri.out \
+    --sr an1_c24syri.out \
     --genomes genomes.txt \
     --tracks tracks.txt \
-    --markers test_markers.bed \
-    -S 0.65 \
+    --markers markers.bed \
+    -S 0.4 \
     -o ampril_horizon.pdf \
     -W 10 \
     -H 12 \
@@ -67,9 +96,9 @@ samtools index kyo_an1.bam
     --genomes genomes.txt \
     --tracks tracks.txt \
     --markers test_markers.bed \
-    --reg cvi:LR699761.1:12000000-13500000 \
+    --reg col-0:Chr5:10000000-17000000 \
     -S 0.65 \
-    -o pdf \
+    -o ampril_col0_chr_10000000_17000000.pdf \
     -W 10 \
     -H 12 \
     -f 10 \
