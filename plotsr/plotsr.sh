@@ -78,7 +78,7 @@ cut -f1,4,5 /srv/biodata/dep_mercier/grp_schneeberger/data/Athal/TAIR10/TAIR10_G
     --genomes genomes.txt \
     --tracks tracks.txt \
     --markers markers.bed \
-    -S 0.5 \
+    -S 0.6 \
     -o ampril_horizon.pdf \
     -W 10 \
     -H 12 \

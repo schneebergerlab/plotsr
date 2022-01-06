@@ -825,13 +825,11 @@ def pltchrom(ax, chrs, chrgrps, chrlengths, v, S, chrtags, minl=0, maxl=-1):
             else:
                 maxcoord = maxl
             if not chrlabs[s]:
-                print('lw', chrtags['lw'][chrlengths[s][0]])
                 chrlabels.append(pltchr(indents[s]-offset, minl, maxcoord,
                                         color=chrtags['lc'][chrlengths[s][0]],
                                         linewidth=chrtags['lw'][chrlengths[s][0]], label=chrlengths[s][0]))
                 chrlabs[s] = True
             else:
-                print('lw', chrtags['lw'][chrlengths[s][0]])
                 pltchr(indents[s]-offset, minl, maxcoord, color=chrtags['lc'][chrlengths[s][0]], linewidth=chrtags['lw'][chrlengths[s][0]])
     return ax, indents, chrlabels
 # END
