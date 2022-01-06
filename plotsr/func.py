@@ -975,7 +975,8 @@ def drawmarkers(ax, b, v, chrlengths, indents, chrs, chrgrps, minl=0, maxl=-1):
 def drawtracks(ax, tracks, s, chrgrps, chrlengths, v, minl, maxl):
     from matplotlib.patches import Rectangle
     import numpy as np
-    th = (1 - s - 2*0.1 - 0.05)/len(tracks)
+    # TODO: Read gap values from base.cfg
+    th = (1 - s - 2*0.1)/len(tracks)
     if th < 0.01:
         raise RuntimeError("Decrease the value of -S to plot tracks correctly. Exiting.")
     cl = len(chrgrps.keys())
