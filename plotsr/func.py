@@ -525,7 +525,10 @@ def validalign2fasta(als, genf):
                 for t in tg:
                     t = t.split(':')
                     if t[0] in taglist:
-                        tags[t[0]][line[1]] = t[1]
+                        if t[0] in ['lw']:
+                            tags[t[0]][line[1]] = float(t[1])
+                        else:
+                            tags[t[0]][line[1]] = t[1]
             i += 1
     return out, tags
 # END
@@ -827,7 +830,7 @@ def pltchrom(ax, chrs, chrgrps, chrlengths, v, S, chrtags, minl=0, maxl=-1):
                                         linewidth=chrtags['lw'][chrlengths[s][0]], label=chrlengths[s][0]))
                 chrlabs[s] = True
             else:
-                pltchr(indents[s]-offset, minl, maxcoord, color=chrtags['lc'][chrlengths[s][0]], linewidth=3)
+                pltchr(indents[s]-offset, minl, maxcoord, color=chrtags['lc'][chrlengths[s][0]], linewidth=chrtags['lw'][chrlengths[s][0]])
     return ax, indents, chrlabels
 # END
 

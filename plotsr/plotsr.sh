@@ -64,7 +64,6 @@ zcat 1001genomes.indels.vcf.gz | vcf2bed < /dev/stdin | cut -f1,2,3,6,7 | sed 's
 ### Genes and TE
 cat /srv/biodata/dep_mercier/grp_schneeberger/data/Athal/TAIR10/TAIR10_geneCoords.txt | awk '{print $1"\t"$2-1"\t"$3}'> TAIR10_GFF3_genes.bed
 cut -f1,4,5 /srv/biodata/dep_mercier/grp_schneeberger/data/Athal/TAIR10/TAIR10_GFF3_genes_transposons_onlyTE.gff | awk '{print $1"\t"$2-1"\t"$3}'> TAIR10_GFF3_transposons.bed
-/srv/biodata/dep_mercier/grp_schneeberger/data/Athal/TAIR10/TAIR10_GFF3_genes_transposons.gff
 
 
 ## Run plotsr
@@ -79,12 +78,13 @@ cut -f1,4,5 /srv/biodata/dep_mercier/grp_schneeberger/data/Athal/TAIR10/TAIR10_G
     --genomes genomes.txt \
     --tracks tracks.txt \
     --markers markers.bed \
-    -S 0.4 \
+    -S 0.5 \
     -o ampril_horizon.pdf \
     -W 10 \
     -H 12 \
-    -f 10 \
+    -f 8 \
     -R
+/srv/biodata/dep_mercier/grp_schneeberger/data/Athal/TAIR10/TAIR10_GFF3_genes_transposons.gff
 
 /biodata/dep_mercier/grp_schneeberger/projects/SynSearch/scripts/python/plotsr/plotsr/plotsr.py \
     --sr col_lersyri.out \
