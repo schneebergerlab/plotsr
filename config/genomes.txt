@@ -2,10 +2,10 @@
 ##lw	 =	line width
 #file	name	tags
 TAIR10_Filtered.fasta	col-0	lw:1
-ler.filtered.fa	ler	lw:2
-cvi.filtered.fa	cvi	lw:2
+ler.filtered.fa	ler	lw:1
+cvi.filtered.fa	cvi	lw:1
 eri.filtered.fa	eri	lw:2
 sha.filtered.fa	sha	lw:2
-kyo.filtered.fa	kyo	lw:2
-an1.filtered.fa	an1	lw:2
-c24.filtered.fa	c24	lw:2
+kyo.filtered.fa	kyo	lw:3
+an1.filtered.fa	an1	lw:3
+c24.filtered.fa	c24	lw:4
