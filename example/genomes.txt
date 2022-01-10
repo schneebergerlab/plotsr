@@ -4,8 +4,3 @@
 TAIR10_Filtered.fasta	col-0	lw:1.5
 ler.filtered.fa	ler	lw:1.5
 cvi.filtered.fa	cvi	lw:1.5
-eri.filtered.fa	eri	lw:1.5
-sha.filtered.fa	sha	lw:1.5
-kyo.filtered.fa	kyo	lw:1.5
-an1.filtered.fa	an1	lw:1.5
-c24.filtered.fa	c24	lw:1.5
