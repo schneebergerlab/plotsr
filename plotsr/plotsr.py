@@ -216,7 +216,7 @@ if __name__ == '__main__':
             alignments[i][1] = createribbon(alignments[i][1])
 
     # invert coord for inverted query genome
-
+    # TODO: Decide whether to invert or not based on input. Check that for INV start > end
     for i in range(len(alignments)):
         df = alignments[i][1].copy()
         invindex = ['INV' in i for i in df['type']]
@@ -265,8 +265,7 @@ if __name__ == '__main__':
     ncol = ceil(len(chrlengths)/labelcnt)
 
     # Get Genome legend
-    # TODO: Define two columns for legend
-    bbox_to_anchor = [0, 1.01, 0.5, 0.3] if not V else [0, 1.1, 0.5, 0.3] # TODO: READ from base.cfg
+    bbox_to_anchor = [0, 1.01, 0.5, 0.3] if not V else [0, 1.1, 0.5, 0.3]       # TODO: READ from base.cfg
     l1 = plt.legend(handles=chrlabels, loc='lower left', bbox_to_anchor=bbox_to_anchor, ncol=ncol, mode=None, borderaxespad=0., frameon=False, title='Genomes')
     l1._legend_box.align = "left"
 
@@ -286,6 +285,7 @@ if __name__ == '__main__':
 
     # Draw tracks
     if args.tracks is not None:
+        # TODO: READ BED as well as Histogram tracks
         tracks = readtrack(args.tracks.name, chrlengths)
         # tracks = readtrack(f, chrlengths) #TODO: delete this
         ax = drawtracks(ax, tracks, S, chrgrps, chrlengths, V, minl=minl, maxl=maxl)

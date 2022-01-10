@@ -93,11 +93,46 @@ cut -f1,4,5 /srv/biodata/dep_mercier/grp_schneeberger/data/Athal/TAIR10/TAIR10_G
     --sr kyo_an1syri.out \
     --sr an1_c24syri.out \
     --genomes genomes.txt \
+    --tracks tracks.txt \
+    --markers markers.bed \
+    -S 0.65 \
+    -o ampril_horizon.png \
+    -W 10 \
+    -H 14 \
+    -f 8
+
+/biodata/dep_mercier/grp_schneeberger/projects/SynSearch/scripts/python/plotsr/plotsr/plotsr.py \
+    --sr col_lersyri.out \
+    --sr ler_cvisyri.out \
+    --sr cvi_erisyri.out \
+    --sr eri_shasyri.out \
+    --sr sha_kyosyri.out \
+    --sr kyo_an1syri.out \
+    --sr an1_c24syri.out \
+    --genomes genomes.txt \
     --tracks tracks_zoom.txt \
     --markers markers.bed \
-    --reg col-0:Chr3:6000000-10000000 \
+    --reg col-0:Chr3:6600000-10000000 \
     -S 0.65 \
-    -o ampril_col0_chr3_6000000_10000000.pdf \
+    -o ampril_col0_chr3_6600000_10000000.pdf \
+    -W 10 \
+    -H 6 \
+    -f 8
+
+/biodata/dep_mercier/grp_schneeberger/projects/SynSearch/scripts/python/plotsr/plotsr/plotsr.py \
+    --sr col_lersyri.out \
+    --sr ler_cvisyri.out \
+    --sr cvi_erisyri.out \
+    --sr eri_shasyri.out \
+    --sr sha_kyosyri.out \
+    --sr kyo_an1syri.out \
+    --sr an1_c24syri.out \
+    --genomes genomes.txt \
+    --tracks tracks_zoom.txt \
+    --markers markers.bed \
+    --reg col-0:Chr3:6600000-10000000 \
+    -S 0.65 \
+    -o ampril_col0_chr3_6600000_10000000.png \
     -W 10 \
     -H 6 \
     -f 8

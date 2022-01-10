@@ -197,7 +197,10 @@ class bedAnno():
                         for k, v in MARKERS.items():
                             print("{} : {}".format(k, v))
                         sys.exit()
-                    setattr(self, n, v)
+                    if v[0] == 'i':
+                        setattr(self, n, int(v[1:]))
+                    else:
+                        setattr(self, n, v)
                 elif n in ['tt']:
                     setattr(self, n, v)
             else:
@@ -315,10 +318,11 @@ class track():
         import logging
         self.f = f
         self.n = n
+        self.ft = 'bed'
+        self.bw = 100000
         self.nc = 'black'
         self.ns = matplotlib.rcParams['font.size']
         self.nf = 'Arial'
-        self.bw = 100000
         self.lc = 'black'
         self.lw = 1
         self.bc = 'lightgrey'
@@ -333,6 +337,7 @@ class track():
         for i in tags.split(";"):
             n, v = i.split(":")
             if hasattr(self, n):
+                ## Colour parameters
                 if n in ['nc', 'lc', 'bc']:
                     try:
                         # print(n, v)
@@ -345,17 +350,24 @@ class track():
                         # continue
                         sys.exit()
                     setattr(self, n, v)
+                ## Numerical parameters
                 elif n in ['ns', 'bw', 'lw', 'ba']:
                     try: float(v)
                     except ValueError:
                         self.logger.error("Non-numerical value {} for {} in track{}".format(v, n, self.n))
                         sys.exit()
                     setattr(self, n, float(v))
+                ## Font parameters
                 elif n in ['nf']:
                     if v not in FONT_NAMES:
                         with open("plotsr_available_font_names.txt", 'w') as fout:
                             fout.write("\n".join(FONT_NAMES))
                         raise ValueError("Font {} in track {} is not available. Check plotsr_available_font_names.txt for list of available system markers".format(v, self.n))
+                    setattr(self, n, v)
+                ## Input type parameters
+                elif n == 'ft':
+                    if v not in ['bed', 'bedgraph']:
+                        raise ValueError("Unknown filetype specified for track {}. Please provide input in bed or bedgraph. Use bed for providing genome coordinate ranges or bedgraph for providing histogram.".format(v, self.n))
                     setattr(self, n, v)
             else:
                 raise ValueError("{} is not a valid tag".format(n))
@@ -363,9 +375,8 @@ class track():
     #END
 
     # Read input bed file and get histogram with binwidths==self.bw
-    def readbed(self, chrlengths):
+    def _readbed(self, chrlengths):
         from collections import deque, defaultdict
-        import sys
         import numpy as np
         bw = int(self.bw)
         # Read the BED file
@@ -389,20 +400,66 @@ class track():
                     self.logger.warning("Invalid values for line: {}. Skipping it.".format("\t".join(line)))
         # Create bins
         bins = {}
-        # if maxl != -1:
         for k, v in chrlengths[0][1].items():
             s = np.array(range(0, v, bw))
             e = np.concatenate((s[1:], [v]))
             bins[k] = np.array(list(zip(s, e)))
-        # else:
-        #     s = np.array(range(minl, maxl, bw))
-        #     e = np.concatenate((s[1:], [maxl]))
-        #     bins[k] = np.array(list(zip(s, e)))
         bincnt = defaultdict(deque)
         for k, v in bins.items():
             for r in v:
                 bincnt[k].append(((r[0]+r[1])/2, np.sum(chrpos[k][r[0]:r[1]])/bw))
         self.bincnt = bincnt
+        return
+    # END
+
+    ## Read input bedgraph file
+    def _readbedgraph(self, chrlengths):
+        from collections import deque, defaultdict
+        import numpy as np
+        bw = int(self.bw)
+        chrpos = {k: np.zeros(v, dtype=np.int0) for k, v in chrlengths[0][1].items()}
+        skipchrs = []
+        with open(self.f, 'r') as fin:
+            for line in fin:
+                if line[0] == '#': continue
+                line = line.strip().split()
+                if line[0] == 'track': continue
+                if len(line) < 4:
+                    self.logger.warning("Incomplete information in bedgraph file at line: {}. Skipping it.".format("\t".join(line)))
+                    continue
+                if line[0] not in chrpos.keys():
+                    if line[0] not in skipchrs:
+                        self.logger.warning("Chromosome in BED is not present in FASTA or not selected for plotting. Skipping it. BED line: {}".format("\t".join(line)))
+                        skipchrs.append(line[0])
+                    continue
+                try:
+                    chrpos[line[0]][int(line[1]):int(line[2])] += int(line[3])
+                except ValueError:
+                    self.logger.warning("Invalid values for line: {}. Skipping it.".format("\t".join(line)))
+        ## Create bins
+        bins = {}
+        for k, v in chrlengths[0][1].items():
+            s = np.array(range(0, v, bw))
+            e = np.concatenate((s[1:], [v]))
+            bins[k] = np.array(list(zip(s, e)))
+        bincnt = defaultdict(deque)
+        maxv = 0
+        for k, v in bins.items():
+            for r in v:
+                if np.sum(chrpos[k][r[0]:r[1]]) > maxv:
+                    maxv = np.sum(chrpos[k][r[0]:r[1]])
+        for k, v in bins.items():
+            for r in v:
+                bincnt[k].append(((r[0]+r[1])/2, np.sum(chrpos[k][r[0]:r[1]])/maxv))
+        self.bincnt = bincnt
+        return
+    # END
+
+    def readdata(self, chrlengths):
+        if self.ft == 'bed':
+            self._readbed(chrlengths)
+        elif self.ft == 'bedgraph':
+            self._readbedgraph(chrlengths)
         return
     # END
 # END
@@ -433,7 +490,8 @@ def readtrack(f, chrlengths):
             if len(line) == 3:
                 t.addtags(line[2])
             # Reads BED
-            t.readbed(chrlengths)
+            t.readdata(chrlengths)
+            # print(t.bincnt)
             tdata.append(t)
     return tdata
 # END
@@ -989,6 +1047,7 @@ def drawtracks(ax, tracks, s, chrgrps, chrlengths, v, minl, maxl):
         margin = maxl/500
     for i in range(len(tracks)):
         bedbin = tracks[i].bincnt
+        # print(bedbin)
         for j in range(cl):
             if maxl != -1:
                 chrpos = [k[0] for k in bedbin[chrs[j]] if minl <= k[0] <= maxl]
@@ -1003,7 +1062,8 @@ def drawtracks(ax, tracks, s, chrgrps, chrlengths, v, minl, maxl):
                 ypos = [(t*diff/tposmax)+y0 for t in tpos]
                 # TODO: parameterise colour
                 ax.add_patch(Rectangle((0, y0), chrlengths[0][1][chrs[j]], diff,  linewidth=0, facecolor=tracks[i].bc, alpha=tracks[i].ba))
-                ax.plot(chrpos, ypos, color=tracks[i].lc, lw=tracks[i].lw)
+                # ax.plot(chrpos, ypos, color=tracks[i].lc, lw=tracks[i].lw)
+                ax.fill_between(chrpos, ypos, y0, color=tracks[i].lc, lw=tracks[i].lw)
                 if maxl == -1:
                     ax.text(chrlengths[0][1][chrs[j]] + margin, y0 + diff/2, tracks[i].n, color=tracks[i].nc, fontsize=tracks[i].ns, fontfamily=tracks[i].nf, ha='left', va='center', rotation='horizontal')
                 else:
@@ -1012,7 +1072,8 @@ def drawtracks(ax, tracks, s, chrgrps, chrlengths, v, minl, maxl):
                 x0 = j + (i+1)*th - diff
                 xpos = [x0 + diff - (t*diff/tposmax) for t in tpos]
                 ax.add_patch(Rectangle((x0, 0), diff, chrlengths[0][1][chrs[j]], linewidth=0, facecolor=tracks[i].bc, alpha=tracks[i].ba))
-                ax.plot(xpos, chrpos, color=tracks[i].lc, lw=tracks[i].lw)
+                # ax.plot(xpos, chrpos, color=tracks[i].lc, lw=tracks[i].lw)
+                ax.fill_betweenx(chrpos, xpos, x0+diff, color=tracks[i].lc, lw=tracks[i].lw)
                 if maxl == -1:
                     ax.text(x0 + diff/2, chrlengths[0][1][chrs[j]] + margin,tracks[i].n, color=tracks[i].nc, fontsize=tracks[i].ns, fontfamily=tracks[i].nf, ha='center', va='bottom', rotation='vertical')
                 else:
