@@ -85,6 +85,69 @@ def mergeRanges(ranges):
 DEFINE READERS/PARSERS
 ################################################################################
 """
+
+def readbasecfg(f, v):
+    import logging
+    import matplotlib
+    logger = logging.getLogger('readbasecfg')
+    cfg = {}
+    ## Set alignment parameters
+    cfg['syncol'] = '#DEDEDE'
+    cfg['invcol'] = '#FFA500'
+    cfg['tracol'] = '#9ACD32'
+    cfg['dupcol'] = '#00BBFF'
+    cfg['alpha'] = 0.8
+    ## Set chromosome margins
+    cfg['chrmar'] = 0.1
+    ## Set legend properties
+    cfg['genlegcol'] = -1
+    cfg['bbox'] = [0, 1.01, 0.5, 0.3] if not v else [0, 1.1, 0.5, 0.3]
+    cfg['bboxmar'] = 0.5
+
+    if f == '':
+        return cfg
+    with open(f, 'r') as fin:
+        cfgk = set(cfg.keys())
+        for line in fin:
+            if line[:2] == '##':
+                continue
+            line = line.strip().split()
+            if len(line) == 0:
+                continue
+            line = line[0].split(':')
+            if line[0] not in cfgk:
+                logger.error(f"{line[0]} is not a valid config parameter. Using default value.")
+                continue
+            if line[0] in ['syncol', 'invcol', 'tracol', 'dupcol']:
+                try:
+                    if line[1] == '#': matplotlib.colors.to_rgb(line[1])
+                    else: matplotlib.colors.to_hex(line[1])
+                except ValueError:
+                    logger.error(f"Error in using colour: {line[1]} for {line[0]}. Use correct hexadecimal colours or named colours defined in matplotlib (https://matplotlib.org/stable/gallery/color/named_colors.html). Using default value.")
+                    continue
+                cfg[line[0]] = line[1]
+            elif line[0] in ['alpha', 'chrmar', 'bboxmar', 'genlegcol']:
+                try:
+                    float(line[1])
+                except ValueError:
+                    logger.error(f"Non-numerical value {line[1]} provided for {line[0]}. Using default value.")
+                    continue
+                cfg[line[0]] = float(line[1])
+            elif line[0] == 'bbox':
+                line[1] = line[1].split(',')
+                if len(line[1]) != 4:
+                    logger.error(f"BBOX requires four values ({len(line[1])} provided: {line[1]}). Using default values.")
+                    continue
+                try:
+                    cfg['bbox'] = [float(i) for i in line[1]]
+                except ValueError:
+                    logger.error(f"Non-numerical values {line[1]} provided for {line[0]}. Using default value.")
+                    continue
+                cfg['bboxmar'] = [float(i) for i in line[1]]
+    return cfg
+# END
+
+
 def readfasta(f):
     from gzip import open as gzopen
     from gzip import BadGzipFile
@@ -250,14 +313,22 @@ def readsyriout(f):
     from pandas import DataFrame
     import numpy as np
     from collections import deque, OrderedDict
+    import logging
     # Reads syri.out. Select: achr, astart, aend, bchr, bstart, bend, srtype
+    logger = logging.getLogger("readsyriout")
     syri_regs = deque()
+    skipvartype = []
     with open(f, 'r') as fin:
         for line in fin:
             l = line.strip().split()
             # TODO: DECIDE WHETHER TO HAVE STATIC VARS OR FLEXIBLE ANNOTATION
             if l[10] in VARS:
                 syri_regs.append(l)
+            else:
+                if l[10] not in skipvartype:
+                    skipvartype.append(l[10])
+                    logger.warning(f"{l[10]} is not a valid annotation for alignments in file {f}. Alignments should belong to the following classes {VARS}. Skipping alignment.")
+
     try:
         df = DataFrame(list(syri_regs))[[0, 1, 2, 5, 6, 7, 10]]
     except KeyError:
@@ -284,12 +355,18 @@ def readbedout(f):
     from collections import deque, OrderedDict
     # BEDPE format: achr, astart, aend, bchr, bstart, bend, srtype
     bed_regs = deque()
+    skipvartype = []
     with open(f, 'r') as fin:
         for line in fin:
             l = line.strip().split()
             # TODO: DECIDE WHETHER TO HAVE STATIC VARS OR FLEXIBLE ANNOTATION
             if l[6] in VARS:
                 bed_regs.append(l)
+            else:
+                if l[10] not in skipvartype:
+                    skipvartype.append(l[10])
+                    logger.warning(f"{l[10]} is not a valid annotation for alignments in file {f}. Alignments should belong to the following classes {VARS}. Skipping alignment.")
+
     df = DataFrame(list(bed_regs))
     try:
         df[[0, 3, 6]] = df[[0, 3, 6]].astype(str)
@@ -537,7 +614,7 @@ def validalign2fasta(als, genf):
     with open(genf, 'r') as fin:
         i = 0
         for line in fin:
-            if line[0] =='#':
+            if line[0] == '#':
                 continue
             line = line.strip().split("\t")
             if len(line) < 2:
@@ -796,7 +873,7 @@ Draw and plot
 """
 
 
-def drawax(ax, chrgrps, chrlengths, v, s, minl=0, maxl=-1):
+def drawax(ax, chrgrps, chrlengths, v, s, cfg, minl=0, maxl=-1):
     import numpy as np
     nchr = len(chrgrps)
     # qchrs = [chrid_dict[k] for k in chrs]
@@ -807,7 +884,7 @@ def drawax(ax, chrgrps, chrlengths, v, s, minl=0, maxl=-1):
     if maxl == -1:
         maxl = np.max([chrlengths[i][1][c[i]] for c in chrgrps.values() for i in range(len(c))])
     if not v:
-        tick_pos = s/2 + 0.1
+        tick_pos = s/2 + cfg['chrmar']
         ax.set_ylim(bottom_limit, nchr+upper_limit)
         ax.set_yticks([tick_pos+i for i in range(nchr)])
         ax.set_yticklabels(ticklabels[::-1])
@@ -825,12 +902,15 @@ def drawax(ax, chrgrps, chrlengths, v, s, minl=0, maxl=-1):
         elif maxl >= 1000:
             xticksl = xticks/1000
             ax.set_xlabel('Chromosome position (in Kbp)')
+        else:
+            xticksl = xticks
+            ax.set_xlabel('Chromosome position')
         ax.set_xticks(xticks[:-1])
         ax.set_xticklabels(xticksl[:-1])
         ax.set_ylabel('Reference Chromosome ID')
         ax.set_axisbelow(True)
     else:
-        tick_pos = 1 - 0.1 - s/2
+        tick_pos = 1 - cfg['chrmar'] - s/2
         ax.set_xlim(bottom_limit, nchr+upper_limit)
         ax.set_xticks([tick_pos+i for i in range(nchr)])
         ax.set_xticklabels(ticklabels)
@@ -847,6 +927,9 @@ def drawax(ax, chrgrps, chrlengths, v, s, minl=0, maxl=-1):
         elif maxl >= 1000:
             yticksl = yticks/1000
             ax.set_ylabel('Chromosome position (in Kbp)')
+        else:
+            yticksl = yticks
+            ax.set_ylabel('Chromosome position')
         ax.set_yticks(yticks[:-1])
         ax.set_yticklabels(yticksl[:-1])
         ax.set_xlabel('Reference Chromosome ID')
@@ -856,24 +939,19 @@ def drawax(ax, chrgrps, chrlengths, v, s, minl=0, maxl=-1):
 # END
 
 
-def pltchrom(ax, chrs, chrgrps, chrlengths, v, S, chrtags, minl=0, maxl=-1):
-    import warnings
-    import numpy as np
+def pltchrom(ax, chrs, chrgrps, chrlengths, v, S, chrtags, cfg, minl=0, maxl=-1):
     chrlabs = [False]*len(chrlengths)
-    # maxl = np.max([chrlengths[i][1][v[i]] for v in chrgrps.values() for i in range(len(v))])
-    # if len(chrlengths) > 8:
-    #     warnings.warn("More than 8 chromosomes are being analysed. This could result in different chromosomes having same color. Provide colors manually in config.")
     # Set chromosome direction
-    # pltchr = ax.axhline if not V else ax.axvline
     pltchr = ax.hlines if not v else ax.vlines
     # Define indents
     step = S/(len(chrlengths)-1)
     chrlabels = []
     if not v:
-        rend = len(chrs)-1+S+0.1
+        # TODO: Read margin from base.cfg
+        rend = len(chrs)-1+S+cfg['chrmar']
         indents = [rend - (i*step) for i in range(len(chrlengths))]
     elif v:
-        rend = 1-S-0.1
+        rend = 1-S-cfg['chrmar']
         indents = [rend + (i*step) for i in range(len(chrlengths))]
     for s in range(len(chrlengths)):
         for i in range(len(chrs)):
@@ -893,14 +971,14 @@ def pltchrom(ax, chrs, chrgrps, chrlengths, v, S, chrtags, minl=0, maxl=-1):
 # END
 
 
-def pltsv(ax, alignments, chrs, v, chrgrps, indents):
+def pltsv(ax, alignments, chrs, v, chrgrps, indents, cfg):
     from collections import deque
-    adSynLab = False
-    adInvLab = False
-    adTraLab = False
-    adDupLab = False
+    adsynlab = False
+    adinvlab = False
+    adtralab = False
+    adduplab = False
 
-    alpha = 0.8 # TODO: Set alpha as a parameter
+    alpha = cfg['alpha'] # TODO: Set alpha as a parameter
     svlabels = deque()
     for s in range(len(alignments)):
         df = alignments[s][1]
@@ -908,43 +986,43 @@ def pltsv(ax, alignments, chrs, v, chrgrps, indents):
             offset = i if not v else -i
             # Plot syntenic regions
             for row in df.loc[(df['achr'] == chrgrps[chrs[i]][s]) & (df['type'] == 'SYN')].itertuples(index=False):
-                if not adSynLab:
-                    p = bezierpath(row[1], row[2], row[4], row[5], indents[s]-offset, indents[s+1]-offset, v, col=COLORS[0], alpha=alpha, label='Syntenic')
-                    adSynLab = True
+                if not adsynlab:
+                    p = bezierpath(row[1], row[2], row[4], row[5], indents[s]-offset, indents[s+1]-offset, v, col=cfg['syncol'], alpha=alpha, label='Syntenic')
+                    adsynlab = True
                     syn = ax.add_patch(p)
                     svlabels.append(syn)
                 else:
-                    p = bezierpath(row[1], row[2], row[4], row[5], indents[s]-offset, indents[s+1]-offset, v, col=COLORS[0], alpha=alpha)
+                    p = bezierpath(row[1], row[2], row[4], row[5], indents[s]-offset, indents[s+1]-offset, v, col=cfg['syncol'], alpha=alpha)
                     ax.add_patch(p)
             # Plot Inversions
             for row in df.loc[(df['achr'] == chrgrps[chrs[i]][s]) & (df['type'] == 'INV')].itertuples(index=False):
-                if not adInvLab:
-                    p = bezierpath(row[1], row[2], row[4], row[5], indents[s]-offset, indents[s+1]-offset, v, col=COLORS[1], alpha=alpha, label='Inversion', lw=0.1)
-                    adInvLab=True
+                if not adinvlab:
+                    p = bezierpath(row[1], row[2], row[4], row[5], indents[s]-offset, indents[s+1]-offset, v, col=cfg['invcol'], alpha=alpha, label='Inversion', lw=0.1)
+                    adinvlab = True
                     inv = ax.add_patch(p)
                     svlabels.append(inv)
                 else:
-                    p = bezierpath(row[1], row[2], row[4], row[5], indents[s]-offset, indents[s+1]-offset, v, col=COLORS[1], alpha=alpha, lw=0.1)
+                    p = bezierpath(row[1], row[2], row[4], row[5], indents[s]-offset, indents[s+1]-offset, v, col=cfg['invcol'], alpha=alpha, lw=0.1)
                     ax.add_patch(p)
             # Plot Translocations
             for row in df.loc[(df['achr'] == chrgrps[chrs[i]][s]) & (df['type'].isin(['TRANS', 'INVTR']))].itertuples(index=False):
-                if not adTraLab:
-                    p = bezierpath(row[1], row[2], row[4], row[5], indents[s]-offset, indents[s+1]-offset, v, col=COLORS[2], alpha=alpha, label='Translocation', lw=0.1)
-                    adTraLab = True
+                if not adtralab:
+                    p = bezierpath(row[1], row[2], row[4], row[5], indents[s]-offset, indents[s+1]-offset, v, col=cfg['tracol'], alpha=alpha, label='Translocation', lw=0.1)
+                    adtralab = True
                     tra = ax.add_patch(p)
                     svlabels.append(tra)
                 else:
-                    p = bezierpath(row[1], row[2], row[4], row[5], indents[s]-offset, indents[s+1]-offset, v, col=COLORS[2], alpha=alpha, lw=0.1)
+                    p = bezierpath(row[1], row[2], row[4], row[5], indents[s]-offset, indents[s+1]-offset, v, col=cfg['tracol'], alpha=alpha, lw=0.1)
                     ax.add_patch(p)
             # Plot Duplications
             for row in df.loc[(df['achr'] == chrgrps[chrs[i]][s]) & (df['type'].isin(['DUP', 'INVDP']))].itertuples(index=False):
-                if not adDupLab:
-                    p = bezierpath(row[1], row[2], row[4], row[5], indents[s]-offset, indents[s+1]-offset, v, col=COLORS[3], alpha=alpha, label='Duplication', lw=0.1)
-                    adDupLab=True
+                if not adduplab:
+                    p = bezierpath(row[1], row[2], row[4], row[5], indents[s]-offset, indents[s+1]-offset, v, col=cfg['dupcol'], alpha=alpha, label='Duplication', lw=0.1)
+                    adduplab=True
                     dup = ax.add_patch(p)
                     svlabels.append(dup)
                 else:
-                    p = bezierpath(row[1], row[2], row[4], row[5], indents[s]-offset, indents[s+1]-offset, v, col=COLORS[3], alpha=alpha, lw=0.1)
+                    p = bezierpath(row[1], row[2], row[4], row[5], indents[s]-offset, indents[s+1]-offset, v, col=cfg['dupcol'], alpha=alpha, lw=0.1)
                     ax.add_patch(p)
     return ax, svlabels
 # END
@@ -1030,11 +1108,11 @@ def drawmarkers(ax, b, v, chrlengths, indents, chrs, chrgrps, minl=0, maxl=-1):
 # END
 
 
-def drawtracks(ax, tracks, s, chrgrps, chrlengths, v, minl, maxl):
+def drawtracks(ax, tracks, s, chrgrps, chrlengths, v, cfg, minl, maxl):
     from matplotlib.patches import Rectangle
     import numpy as np
     # TODO: Read gap values from base.cfg
-    th = (1 - s - 2*0.1)/len(tracks)
+    th = (1 - s - 2*cfg['chrmar'])/len(tracks)
     if th < 0.01:
         raise RuntimeError("Decrease the value of -S to plot tracks correctly. Exiting.")
     cl = len(chrgrps.keys())
@@ -1075,7 +1153,7 @@ def drawtracks(ax, tracks, s, chrgrps, chrlengths, v, minl, maxl):
                 # ax.plot(xpos, chrpos, color=tracks[i].lc, lw=tracks[i].lw)
                 ax.fill_betweenx(chrpos, xpos, x0+diff, color=tracks[i].lc, lw=tracks[i].lw)
                 if maxl == -1:
-                    ax.text(x0 + diff/2, chrlengths[0][1][chrs[j]] + margin,tracks[i].n, color=tracks[i].nc, fontsize=tracks[i].ns, fontfamily=tracks[i].nf, ha='center', va='bottom', rotation='vertical')
+                    ax.text(x0 + diff/2, chrlengths[0][1][chrs[j]] + margin, tracks[i].n, color=tracks[i].nc, fontsize=tracks[i].ns, fontfamily=tracks[i].nf, ha='center', va='bottom', rotation='vertical')
                 else:
                     ax.text(x0 + diff/2, maxl + margin, tracks[i].n, color=tracks[i].nc, fontsize=tracks[i].ns, fontfamily=tracks[i].nf, ha='center', va='bottom', rotation='vertical')
     return ax

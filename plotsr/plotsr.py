@@ -20,6 +20,7 @@ if __name__ == '__main__':
     # parser.add_argument('-B', help='Annotation bed file for marking specific positions on genome', type=argparse.FileType('r'))
     parser.add_argument('--chr', help='Select specific chromosomes on reference for plotting.', type=str, action='append')
     parser.add_argument('--reg', help='Plots a specific region. Use as: GenomeID:ChromosomeID:Start-End. Not compatible with --chr and -R.', type=str)
+    parser.add_argument('--cfg', help='Path to config file containing parameters to adjust plot.', type=argparse.FileType('r'))
     parser.add_argument('--nosyn', help='Do not plot syntenic regions', default=False, action='store_true')
     parser.add_argument('--noinv', help='Do not plot inversions', default=False, action='store_true')
     parser.add_argument('--notr', help='Do not plot translocations regions', default=False, action='store_true')
@@ -39,10 +40,11 @@ if __name__ == '__main__':
 
     # args = parser.parse_args([]) # TODO: Delete this line
     args = parser.parse_args()
+
     ## Define logger
+    import sys
     import logging
     import logging.config
-    import sys
     from pandas import concat as pdconcat
     from func import *
     from collections import deque, OrderedDict
@@ -83,6 +85,7 @@ if __name__ == '__main__':
     })
     logger = logging.getLogger("Plotsr")
 
+
     ## Validate input
     if len(args.sr) == 0 and len(args.bp) == 0:
         logger.error("No structural annotations provided. Use --sr or -bp to provide path to input files")
@@ -115,6 +118,9 @@ if __name__ == '__main__':
     TRACKS = None if args.tracks is None else args.tracks.name
     REG = None if args.reg is None else args.reg.strip().split(":")
 
+    ## Get config
+    cfg = readbasecfg('', V) if args.cfg is None else readbasecfg(args.cfg.name, V)
+    print(cfg)
     if S < 0.1 or S > 0.75:
         sys.exit('Out of range value for S. Please provide a value in the range 0.1-0.75')
 
@@ -125,7 +131,6 @@ if __name__ == '__main__':
     elif O.split('.')[-1] not in ['pdf', 'png', 'svg']:
         logger.warning("Output file extension is not in {'pdf','png', 'svg'}. Plot would be saved as a pdf")
         O = O.rsplit(".", 1)[0] + ".pdf"
-
 
     ## Set matplotlib backend
     import matplotlib
@@ -216,10 +221,15 @@ if __name__ == '__main__':
             alignments[i][1] = createribbon(alignments[i][1])
 
     # invert coord for inverted query genome
-    # TODO: Decide whether to invert or not based on input. Check that for INV start > end
     for i in range(len(alignments)):
         df = alignments[i][1].copy()
         invindex = ['INV' in i for i in df['type']]
+        g = set(df.loc[invindex, 'bstart'] < df.loc[invindex, 'bend'])
+        if len(g) == 2:
+            logger.error(f"Inconsistent coordinates in input file {alignments[i][0]}. For INV, INVTR, INVDUP annotations, either bstart < bend for all annotations or bstart > bend for all annotations. Mixing is not permitted.")
+            sys.exit()
+        elif False in g:
+            continue
         df.loc[invindex, 'bstart'] = df.loc[invindex, 'bstart'] + df.loc[invindex, 'bend']
         df.loc[invindex, 'bend'] = df.loc[invindex, 'bstart'] - df.loc[invindex, 'bend']
         df.loc[invindex, 'bstart'] = df.loc[invindex, 'bstart'] - df.loc[invindex, 'bend']
@@ -233,14 +243,15 @@ if __name__ == '__main__':
             H = len(chrs)
             W = 3
             fig = plt.figure(figsize=[W, H])
-        if H is not None and W is None:
+        elif H is not None and W is None:
             fig = plt.figure(figsize=[H, H])
-        if H is None and W is not None:
+        elif H is None and W is not None:
             fig = plt.figure(figsize=[W, W])
-        if H is not None and W is not None:
+        else:
             fig = plt.figure(figsize=[W, H])
     except Exception as e:
-        sys.exit("Error in initiliazing figure. Try using a different backend." + '\n' + e.with_traceback())
+        logger.error("Error in initiliazing figure. Try using a different backend." + '\n' + e.with_traceback())
+        sys.exit()
     ax = fig.add_subplot(111, frameon=False)
 
     allal = pdconcat([alignments[i][1] for i in range(len(alignments))])
@@ -250,33 +261,36 @@ if __name__ == '__main__':
         minl = min(allal[['astart', 'bstart']].apply(min))
         maxl = max(allal[['aend', 'bend']].apply(max))
     labelcnt = 0
-    if 'SYN' in allal['type'].array: labelcnt += 1
-    if 'INV' in allal['type'].array: labelcnt += 1
-    if 'TRA' in allal['type'].array or 'INVTR' in allal['type'].array: labelcnt += 1
-    if 'DUP' in allal['type'].array or 'INVDP' in allal['type'].array: labelcnt += 1
+    if 'SYN' in allal['type'].array:
+        labelcnt += 1
+    if 'INV' in allal['type'].array:
+        labelcnt += 1
+    if 'TRA' in allal['type'].array or 'INVTR' in allal['type'].array:
+        labelcnt += 1
+    if 'DUP' in allal['type'].array or 'INVDP' in allal['type'].array:
+        labelcnt += 1
 
     ## Draw Axes
-    ax, max_l = drawax(ax, chrgrps, chrlengths, V, S, minl=minl, maxl=maxl)
+    ax, max_l = drawax(ax, chrgrps, chrlengths, V, S, cfg, minl=minl, maxl=maxl)
 
     ## Draw Chromosomes
-    ax, indents, chrlabels = pltchrom(ax, chrs, chrgrps, chrlengths, V, S, chrtags, minl=minl, maxl=maxl)
+    ax, indents, chrlabels = pltchrom(ax, chrs, chrgrps, chrlengths, V, S, chrtags, cfg, minl=minl, maxl=maxl)
 
     #TODO: set reading from config
     ncol = ceil(len(chrlengths)/labelcnt)
 
     # Get Genome legend
-    bbox_to_anchor = [0, 1.01, 0.5, 0.3] if not V else [0, 1.1, 0.5, 0.3]       # TODO: READ from base.cfg
+    bbox_to_anchor = cfg['bbox']
+    # bbox_to_anchor = [0, 1.01, 0.5, 0.3] if not V else [0, 1.1, 0.5, 0.3]       # TODO: READ from base.cfg
     l1 = plt.legend(handles=chrlabels, loc='lower left', bbox_to_anchor=bbox_to_anchor, ncol=ncol, mode=None, borderaxespad=0., frameon=False, title='Genomes')
     l1._legend_box.align = "left"
 
-
     # Plot structural annotations
     # TODO: Parameterise: colors, alpha,
-    ax, svlabels = pltsv(ax, alignments, chrs, V, chrgrps, indents)
-
+    ax, svlabels = pltsv(ax, alignments, chrs, V, chrgrps, indents, cfg)
 
     plt.gca().add_artist(l1)
-    bbox_to_anchor[0] += 0.5
+    bbox_to_anchor[0] += cfg['bboxmar']
     plt.legend(handles=svlabels, loc='lower left', bbox_to_anchor=bbox_to_anchor, ncol=1, mode='expand', borderaxespad=0., frameon=False, title='Annotations')._legend_box.align = "left"
 
     # Plot markers
@@ -285,10 +299,9 @@ if __name__ == '__main__':
 
     # Draw tracks
     if args.tracks is not None:
-        # TODO: READ BED as well as Histogram tracks
         tracks = readtrack(args.tracks.name, chrlengths)
         # tracks = readtrack(f, chrlengths) #TODO: delete this
-        ax = drawtracks(ax, tracks, S, chrgrps, chrlengths, V, minl=minl, maxl=maxl)
+        ax = drawtracks(ax, tracks, S, chrgrps, chrlengths, V, cfg, minl=minl, maxl=maxl)
 
     # Save the plot
     try:
