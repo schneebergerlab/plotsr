@@ -285,7 +285,7 @@ def readannobed(path, v, chrlengths):
                 continue
             line = line.strip().split("\t")
             if len(line) < 4:
-                logger.warning("Incomplete data in BED file line:\n{}\nGenome coordinate (chromosome, start,end) and genome name are required columns, while tags is an optional column".format('\t'.join(line)))
+                logger.warning("Incomplete example in BED file line:\n{}\nGenome coordinate (chromosome, start,end) and genome name are required columns, while tags is an optional column".format('\t'.join(line)))
                 continue
             found = False
             for i in chrlengths:
@@ -559,7 +559,7 @@ def readtrack(f, chrlengths):
             line = line.strip().split("\t")
             if len(line) == 0: continue
             if len(line) < 2:
-                raise ValueError("Incomplete data in track file line:\n{}\nFile path and name are necessary columns, tags is optional columns".format('\t'.join(line)))
+                raise ValueError("Incomplete example in track file line:\n{}\nFile path and name are necessary columns, tags is optional columns".format('\t'.join(line)))
                 sys.exit()
             t = track(line[0], line[1])
             # Read tags
@@ -628,7 +628,7 @@ def validalign2fasta(als, genf):
                 try:
                     df = als[i-1][1]
                 except IndexError:
-                    raise ImportError("Cannot read data for genome: {}. Make sure that structural annotation data for all genomes is provided in correct order. Exiting.".format(line[0]))
+                    raise ImportError("Cannot read example for genome: {}. Make sure that structural annotation example for all genomes is provided in correct order. Exiting.".format(line[0]))
                 chrs = np.unique(df['bchr'])
                 for c in chrs:
                     if c not in list(glen.keys()):
@@ -640,7 +640,7 @@ def validalign2fasta(als, genf):
                 try:
                     df = als[i][1]
                 except IndexError:
-                    raise ImportError("Cannot read data for genome: {}. Make sure that structural annotation data for all genomes is provided in correct order. Exiting.".format(line[0]))
+                    raise ImportError("Cannot read example for genome: {}. Make sure that structural annotation example for all genomes is provided in correct order. Exiting.".format(line[0]))
                 chrs = np.unique(df['achr'])
                 for c in chrs:
                     if c not in list(glen.keys()):
