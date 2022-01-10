@@ -120,7 +120,6 @@ if __name__ == '__main__':
 
     ## Get config
     cfg = readbasecfg('', V) if args.cfg is None else readbasecfg(args.cfg.name, V)
-    print(cfg)
     if S < 0.1 or S > 0.75:
         sys.exit('Out of range value for S. Please provide a value in the range 0.1-0.75')
 
@@ -276,17 +275,17 @@ if __name__ == '__main__':
     ## Draw Chromosomes
     ax, indents, chrlabels = pltchrom(ax, chrs, chrgrps, chrlengths, V, S, chrtags, cfg, minl=minl, maxl=maxl)
 
-    #TODO: set reading from config
-    ncol = ceil(len(chrlengths)/labelcnt)
+    if cfg['genlegcol'] < 1:
+        ncol = ceil(len(chrlengths)/labelcnt)
+    else:
+        ncol = int(cfg['genlegcol'])
 
     # Get Genome legend
     bbox_to_anchor = cfg['bbox']
-    # bbox_to_anchor = [0, 1.01, 0.5, 0.3] if not V else [0, 1.1, 0.5, 0.3]       # TODO: READ from base.cfg
     l1 = plt.legend(handles=chrlabels, loc='lower left', bbox_to_anchor=bbox_to_anchor, ncol=ncol, mode=None, borderaxespad=0., frameon=False, title='Genomes')
     l1._legend_box.align = "left"
 
     # Plot structural annotations
-    # TODO: Parameterise: colors, alpha,
     ax, svlabels = pltsv(ax, alignments, chrs, V, chrgrps, indents, cfg)
 
     plt.gca().add_artist(l1)

@@ -117,7 +117,8 @@ cut -f1,4,5 /srv/biodata/dep_mercier/grp_schneeberger/data/Athal/TAIR10/TAIR10_G
     -o ampril_col0_chr3_6600000_10000000.pdf \
     -W 10 \
     -H 6 \
-    -f 8
+    -f 8 \
+    --cfg /biodata/dep_mercier/grp_schneeberger/projects/SynSearch/scripts/python/plotsr/config/base.cfg
 
 /biodata/dep_mercier/grp_schneeberger/projects/SynSearch/scripts/python/plotsr/plotsr/plotsr.py \
     --sr col_lersyri.out \
@@ -135,7 +136,9 @@ cut -f1,4,5 /srv/biodata/dep_mercier/grp_schneeberger/data/Athal/TAIR10/TAIR10_G
     -o ampril_col0_chr3_6600000_10000000.png \
     -W 10 \
     -H 6 \
-    -f 8
+    -f 8 \
+    --cfg /biodata/dep_mercier/grp_schneeberger/projects/SynSearch/scripts/python/plotsr/config/base.cfg
+
 
 
 # Analysing potato genomes

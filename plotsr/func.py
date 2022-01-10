@@ -460,7 +460,6 @@ class track():
         chrpos = {k: np.zeros(v, dtype=np.int0) for k, v in chrlengths[0][1].items()}
         skipchrs = []
         with open(self.f, 'r') as fin:
-            # with open('snps.sample.bed', 'r') as fin: # TODO: Delete line
             for line in fin:
                 line = line.strip().split()
                 if len(line) < 3:
