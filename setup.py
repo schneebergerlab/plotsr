@@ -10,11 +10,6 @@ setup(
     url='https://github.com/schneebergerlab/plotsr',
     license='MIT License',
     packages=["plotsr"],
-    install_requires=[
-        'matplotlib  ==3.3.4',
-        'numpy ==1.21.2',
-        'pandas ==1.2.4',
-    ],
     py_modules=["plotsr.func", "plotsr.main"],
     scripts=['bin/plotsr'],
     long_description=open('README.rst').read(),

@@ -1,0 +1,30 @@
+# Conda package metadata for NEMO_Nowcast
+
+package:
+  name: plotsr
+  version: "0.1"
+
+source:
+  git_rev: v0.1
+  git_url: https://github.com/schneebergerlab/plotsr
+
+requirements:
+  build:
+    - python  3.8
+    - setuptools
+
+  run:
+    - python  3.8
+    - numpy   >=1.21
+    - matplotlib  >=3.3
+    - pandas  >=1.1
+
+about:
+  home: https://github.com/schneebergerlab/plotsr
+  license: MIT License
+  license_file: LICENSE
+  summary: Package to plot structural annotations between multiple genomes
+
+extra:
+  maintainers:
+    - Manish Goel <goel@mpipz.mpg.de>

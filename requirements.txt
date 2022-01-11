@@ -1,4 +1,0 @@
-matplotlib~=3.3.4
-setuptools~=58.0.4
-numpy~=1.21.2
-pandas~=1.2.4
