@@ -281,16 +281,18 @@ if __name__ == '__main__':
         ncol = int(cfg['genlegcol'])
 
     # Get Genome legend
-    bbox_to_anchor = cfg['bbox']
-    l1 = plt.legend(handles=chrlabels, loc='lower left', bbox_to_anchor=bbox_to_anchor, ncol=ncol, mode=None, borderaxespad=0., frameon=False, title='Genomes')
-    l1._legend_box.align = "left"
+    if cfg['legend']:
+        bbox_to_anchor = cfg['bbox']
+        l1 = plt.legend(handles=chrlabels, loc='lower left', bbox_to_anchor=bbox_to_anchor, ncol=ncol, mode=None, borderaxespad=0., frameon=False, title='Genomes')
+        l1._legend_box.align = "left"
+        plt.gca().add_artist(l1)
 
     # Plot structural annotations
     ax, svlabels = pltsv(ax, alignments, chrs, V, chrgrps, indents, cfg)
 
-    plt.gca().add_artist(l1)
-    bbox_to_anchor[0] += cfg['bboxmar']
-    plt.legend(handles=svlabels, loc='lower left', bbox_to_anchor=bbox_to_anchor, ncol=1, mode='expand', borderaxespad=0., frameon=False, title='Annotations')._legend_box.align = "left"
+    if cfg['legend']:
+        bbox_to_anchor[0] += cfg['bboxmar']
+        plt.legend(handles=svlabels, loc='lower left', bbox_to_anchor=bbox_to_anchor, ncol=1, mode='expand', borderaxespad=0., frameon=False, title='Annotations')._legend_box.align = "left"
 
     # Plot markers
     if B is not None:

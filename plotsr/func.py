@@ -100,6 +100,7 @@ def readbasecfg(f, v):
     ## Set chromosome margins
     cfg['chrmar'] = 0.1
     ## Set legend properties
+    cfg['legend'] = True
     cfg['genlegcol'] = -1
     cfg['bbox'] = [0, 1.01, 0.5, 0.3] if not v else [0, 1.1, 0.5, 0.3]
     cfg['bboxmar'] = 0.5
@@ -144,6 +145,11 @@ def readbasecfg(f, v):
                     logger.error(f"Non-numerical values {line[1]} provided for {line[0]}. Using default value.")
                     continue
                 cfg['bboxmar'] = [float(i) for i in line[1]]
+            elif line[0] == 'legend':
+                if line[1] not in  ['T', 'F']:
+                    logger.warning(f"Invalid value {line[1]} for legend in base.cfg. Valid values: T/F")
+                    continue
+                if cfg['legend'] = line[1] == 'T'
     return cfg
 # END
 
