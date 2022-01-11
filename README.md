@@ -57,8 +57,36 @@ syri -c col_ler.bam -r TAIR10.filtered.fa -q ler.filtered.fa -F B --prefix col_l
 # Running syri for finding structural rearrangements between Ler and Cvi
 syri -c ler_cvi.bam -r ler.filtered.fa -q cvi.filtered.fa -F B --prefix ler_cvi &
 ```
-This will generate col_lersyri.out and ler_cvisyri.out files that contain the structural annotations between genomes.
+This will generate col_lersyri.out and ler_cvisyri.out files that contain the structural annotations between genomes and will be the input to plotsr.
 
+If other methods are used for finding structural annotations, then their output can be parsed to plotsr using the BEDPE format which should have the following coloumns:
+```
+Reference chromosome name
+Reference start position
+Reference end position
+Query chromosome name
+Query start position
+Query end position
+Annotation type
+```
+Values for annotation type should one of the following: SYN, INV, TRA, INVTR, DUP, INVDP. Here:
+
+| <!-- --> |  <!-- -->   |
+|----|--------|
+| SYN | Syntenic |
+| INV | Inversion |
+| TRA | Translocation |
+| INVTR | Inverted translocation |
+| DUP | Duplication |
+| INVDP | Inverted duplication |
+
+
+
+```
+SYN = Syntenic
+
+``` 
+   
 #### Step 3: Running plotsr
 Plotsr can be run using the following command: 
 ```
