@@ -81,12 +81,6 @@ Values for annotation type should one of the following: SYN, INV, TRA, INVTR, DU
 | INVDP | Inverted duplication |
 
 
-
-```
-SYN = Syntenic
-
-``` 
-   
 #### Step 3: Running plotsr
 Plotsr can be run using the following command: 
 ```
