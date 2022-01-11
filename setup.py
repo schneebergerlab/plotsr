@@ -7,6 +7,6 @@ setup(
     packages=["plotsr"],
     py_modules=["plotsr.func", "plotsr.plotsr"],
     license='MIT License',
-#    scripts=['plotsr/plotsr.py',],
+#    scripts=['plotsr/plotsr',],
     long_description=open('README.md').read(),
 )
