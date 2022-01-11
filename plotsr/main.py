@@ -5,11 +5,20 @@ Author: Manish Goel
 Date: 30.12.2021
 Description: Plotting multi genome structural annotations 
 """
-
-from __init__  import __version__
+import sys
+import logging
+import logging.config
+from pandas import concat as pdconcat
+from plotsr.func import *
+from collections import deque, OrderedDict
+import os
+from math import ceil
+import matplotlib
 import argparse
 
-if __name__ == '__main__':
+from plotsr import __version__
+
+def plotsr(cmd):
     from matplotlib.rcsetup import non_interactive_bk as bklist
     parser = argparse.ArgumentParser("Plotting structural rearrangements between genomes", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--sr', help='Structural annotation mappings (syri.out) identified by SyRI', action='append', type=argparse.FileType('r'))
@@ -39,17 +48,10 @@ if __name__ == '__main__':
     parser.add_argument('--version', action='version', version='{version}'.format(version=__version__))
 
     # args = parser.parse_args([]) # TODO: Delete this line
-    args = parser.parse_args()
+    args = parser.parse_args(cmd)
 
-    ## Define logger
-    import sys
-    import logging
-    import logging.config
-    from pandas import concat as pdconcat
-    from func import *
-    from collections import deque, OrderedDict
-    import os
-    from math import ceil
+
+## Define logger
     logging.config.dictConfig({
         'version': 1,
         'disable_existing_loggers': False,
@@ -84,7 +86,6 @@ if __name__ == '__main__':
         },
     })
     logger = logging.getLogger("Plotsr")
-
 
     ## Validate input
     if len(args.sr) == 0 and len(args.bp) == 0:
@@ -132,7 +133,7 @@ if __name__ == '__main__':
         O = O.rsplit(".", 1)[0] + ".pdf"
 
     ## Set matplotlib backend
-    import matplotlib
+
     try :
         matplotlib.use(args.b)
         # matplotlib.use('Qt5Agg')    # TODO: Delete this line
@@ -235,7 +236,8 @@ if __name__ == '__main__':
         alignments[i][1] = df.copy()
 
 
-    from matplotlib import pyplot as plt
+    # from matplotlib import pyplot as plt
+    plt = matplotlib.pyplot
     plt.rcParams['font.size'] = FS
     try:
         if H is None and W is None:

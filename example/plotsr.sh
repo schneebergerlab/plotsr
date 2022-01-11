@@ -130,7 +130,8 @@ zcat 1001genomes.indels.vcf.gz | vcf2bed < /dev/stdin | cut -f1,2,3,6,7 | sed 's
     -f 8 \
     --cfg /biodata/dep_mercier/grp_schneeberger/projects/SynSearch/scripts/python/plotsr/config/base.cfg
 
-/biodata/dep_mercier/grp_schneeberger/projects/SynSearch/scripts/python/plotsr/plotsr/plotsr.py \
+/biodata/dep_mercier/grp_schneeberger/projects/SynSearch/scripts/python/plotsr/plotsr/plotsr \
+plotsr \
     --sr col_lersyri.out \
     --sr ler_cvisyri.out \
     --sr cvi_erisyri.out \
@@ -147,7 +148,7 @@ zcat 1001genomes.indels.vcf.gz | vcf2bed < /dev/stdin | cut -f1,2,3,6,7 | sed 's
     -W 10 \
     -H 6 \
     -f 8 \
-    --cfg /biodata/dep_mercier/grp_schneeberger/projects/SynSearch/scripts/python/plotsr/config/base.cfg
+    --cfg base.cfg
 
 
 

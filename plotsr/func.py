@@ -149,7 +149,7 @@ def readbasecfg(f, v):
                 if line[1] not in  ['T', 'F']:
                     logger.warning(f"Invalid value {line[1]} for legend in base.cfg. Valid values: T/F")
                     continue
-                if cfg['legend'] = line[1] == 'T'
+                cfg['legend'] = line[1] == 'T'
     return cfg
 # END
 
