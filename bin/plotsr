@@ -1,7 +1,7 @@
 # from ../plotsr  import __version__
 # __version__ = "0.1"
 
-from plotsr.main import plotsr
+from plotsr.main import main
 import sys
 if __name__ == '__main__':
-    plotsr(sys.argv[1:])
+    main(sys.argv[1:])

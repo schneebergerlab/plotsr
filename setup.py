@@ -10,7 +10,9 @@ setup(
     url='https://github.com/schneebergerlab/plotsr',
     license='MIT License',
     packages=["plotsr"],
-    py_modules=["plotsr.func", "plotsr.main"],
+    py_modules=["plotsr.main",
+                "plotsr.plotsr",
+                "plotsr.func"],
     scripts=['bin/plotsr'],
     long_description=open('README.rst').read(),
 )

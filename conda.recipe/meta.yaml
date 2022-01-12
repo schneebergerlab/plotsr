@@ -5,19 +5,18 @@ package:
   version: "0.1"
 
 source:
-  git_rev: v0.1
-  git_url: https://github.com/schneebergerlab/plotsr
+  path: ../
 
 requirements:
   build:
-    - python  3.8
+    - python
     - setuptools
 
   run:
-    - python  3.8
+    - python
     - numpy   >=1.21
     - matplotlib  >=3.3
-    - pandas  >=1.1
+    - pandas  >=1.2.4
 
 about:
   home: https://github.com/schneebergerlab/plotsr
