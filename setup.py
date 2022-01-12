@@ -9,6 +9,7 @@ setup(
     author_email='mnshgl0110@gmail.com',
     url='https://github.com/schneebergerlab/plotsr',
     license='MIT License',
+    license_files=('LICENSE',),
     packages=["plotsr"],
     py_modules=["plotsr.main",
                 "plotsr.plotsr",
