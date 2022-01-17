@@ -104,7 +104,7 @@ TAIR10.filetered.fa	col-0	lw:1.5
 ler.filtered.fa	ler	lw:1.5
 cvi.filtered.fa	cvi	lw:1.5
 ```
-Currently, following tags are available for tracks.
+Currently, following tags are available for genomes.
 ```
 lw = line width
 lc = line colour
