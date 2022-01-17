@@ -99,6 +99,7 @@ def readbasecfg(f, v):
     cfg['alpha'] = 0.8
     ## Set chromosome margins
     cfg['chrmar'] = 0.1
+    cfg['exmar'] = 0.1
     ## Set legend properties
     cfg['legend'] = True
     cfg['genlegcol'] = -1
@@ -127,7 +128,7 @@ def readbasecfg(f, v):
                     logger.error(f"Error in using colour: {line[1]} for {line[0]}. Use correct hexadecimal colours or named colours defined in matplotlib (https://matplotlib.org/stable/gallery/color/named_colors.html). Using default value.")
                     continue
                 cfg[line[0]] = line[1]
-            elif line[0] in ['alpha', 'chrmar', 'bboxmar', 'genlegcol']:
+            elif line[0] in ['alpha', 'chrmar', 'exmar', 'bboxmar', 'genlegcol']:
                 try:
                     float(line[1])
                 except ValueError:
@@ -221,14 +222,14 @@ class bedAnno():
         self.end = int(end)
         self.genome = genome
         self.v = v
-        self.mt='.'
-        self.mc='black'
-        self.ms=8
-        self.tt=''
-        self.tc='black'
-        self.ts=matplotlib.rcParams['font.size']
-        self.tf='Arial'
-        self.tp='0.05'
+        self.mt = '.'
+        self.mc = 'black'
+        self.ms = 8
+        self.tt = ''
+        self.tc = 'black'
+        self.ts = matplotlib.rcParams['font.size']
+        self.tf = 'Arial'
+        self.tp = '0.05'
         self.logger = logging.getLogger("bedAnno")
         if self.start >= self.end:
             raise ValueError("Incorrect coordinates for marker position {}:{}:{}-{}. Start position must be less than end position. Skipping this marker.".format(self.genome, self.chr, self.start, self.end))
@@ -701,7 +702,6 @@ def selectregion(reg, chrlengths, al, chrids):
     genids = [i[0] for i in chrlengths]
     if len(reg) != 3:
         raise ValueError("Incorrect values parsed to --reg. Provide values in the following format: GenomeID:ChromosomeID:Start-End. GenomeID and ChromosomeID cannot have ':' character.")
-    # reg = ['cvi', 'LR699761.1', '12000000-13500000'] #TODO: Delete this line
     reg = reg[:2] + list(map(int, reg[2].split("-")))
     # Check that the region is in the given genomes
     if reg[0] not in genids:
@@ -883,8 +883,8 @@ def drawax(ax, chrgrps, chrlengths, v, s, cfg, minl=0, maxl=-1):
     nchr = len(chrgrps)
     # qchrs = [chrid_dict[k] for k in chrs]
     # tick_pos = 1 - (S/2)
-    bottom_limit = -0.1
-    upper_limit = 0.1
+    bottom_limit = -cfg['exmar']
+    upper_limit = cfg['exmar']
     ticklabels = list(chrgrps.keys())
     if maxl == -1:
         maxl = np.max([chrlengths[i][1][c[i]] for c in chrgrps.values() for i in range(len(c))])

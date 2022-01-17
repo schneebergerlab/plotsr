@@ -4,18 +4,22 @@ Plotsr generates high-quality visualisation of synteny and structural rearrangem
 ![Example](./example/ampril_col0_chr3_6600000_10000000.png)
 
 ## Installation:
-Pre-requisites:
+The easiest method to install plotsr is using anaconda:
+```
+conda install -c bioconda plotsr 
+```
+For manual installation the pre-requisites are:
 1. Python >= 3.8
-2. Python libraries: can be installed in a conda environment using:
+2. Python libraries. These can be installed in a conda environment using:
 ```
-conda install numpy=1.20.2 pandas=1.2.4 matplotlib=3.3.4
+conda install numpy=1.20.2 pandas=1.2.4 matplotlib=3.3.4 setuptools
 ```
-
-Download plotsr:
+Then download plotsr and compile:
 ```
 git clone https://github.com/schneebergerlab/plotsr.git
+cd plotsr
+python setup.py install
 ```
-
 
 ## Inputs requirements
 #### Minimal requirements
