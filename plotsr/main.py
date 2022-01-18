@@ -7,7 +7,6 @@ Description: Plotting multi genome structural annotations
 """
 
 import argparse
-
 from plotsr import __version__
 from matplotlib.rcsetup import non_interactive_bk as bklist
 from plotsr.plotsr import plotsr

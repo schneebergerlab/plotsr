@@ -10,51 +10,17 @@ import matplotlib
 
 def plotsr(args):
     ## Define logger
-    logging.config.dictConfig({
-        'version': 1,
-        'disable_existing_loggers': False,
-        'formatters': {
-            'log_file': {
-                'format': "%(asctime)s - %(name)s - %(levelname)s - %(funcName)s:%(lineno)d - %(message)s",
-            },
-            'stdout': {
-                'format': "%(name)s - %(levelname)s - %(message)s",
-            },
-        },
-        'handlers': {
-            'stdout': {
-                'class': 'logging.StreamHandler',
-                'formatter': 'stdout',
-                'level': 'WARNING',
-            },
-            # 'log_file': {
-            #     'class': 'logging.FileHandler',
-            #     'filename': args.log_fin.name,
-            #     'mode': 'a',
-            #     'formatter': 'log_file',
-            #     'level': args.log,
-            # },
-        },
-        'loggers': {
-            '': {
-                'level': args.log,
-                'handlers': ['stdout'],
-                # 'handlers': ['stdout', 'log_file'],
-            },
-        },
-    })
+    setlogconfig(args.log)
     logger = logging.getLogger("Plotsr")
 
     ## Validate input
-    if len(args.sr) == 0 and len(args.bp) == 0:
+    if args.sr is None and args.bp is None:
         logger.error("No structural annotations provided. Use --sr or -bp to provide path to input files")
         sys.exit()
-    try:
-        if len(args.sr) > 0 and len(args.bp) > 0:
-            logger.error("Both --sr and --bp cannot be used. Use single file type for all input structural annotations files. User converter to reformat BEDPE/syri.out files")
-            sys.exit()
-    except TypeError:
-        pass
+
+    if args.sr is not None and args.bp is not None:
+        logger.error("Both --sr and --bp cannot be used. Use single file type for all input structural annotations files. User converter to reformat BEDPE/syri.out files")
+        sys.exit()
 
     # Check if both --chr and --reg are defined
     if args.chr is not None and args.reg is not None:
@@ -102,7 +68,7 @@ def plotsr(args):
     # Read alignment coords
     alignments = deque()
     chrids = deque()
-    if len(args.sr) > 0:
+    if args.sr is not None:
         for f in args.sr:
             fin = f.name
             al, cid = readsyriout(fin)
@@ -110,7 +76,7 @@ def plotsr(args):
         #     al, cid = readsyriout(fin) #TODO: Delete this line
             alignments.append([os.path.basename(fin) , al])
             chrids.append((os.path.basename(fin), cid))
-    elif len(args.bp) > 0:
+    elif args.bp is not None:
         for f in args.bp:
             fin = f.name
             al, cid = readbedout(fin)

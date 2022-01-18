@@ -52,6 +52,35 @@ SUPPORT FUNCTIONS
 ################################################################################
 """
 
+def setlogconfig(lg):
+    import logging
+    logging.config.dictConfig({
+        'version': 1,
+        'disable_existing_loggers': False,
+        'formatters': {
+            'log_file': {
+                'format': "%(asctime)s - %(name)s - %(levelname)s - %(funcName)s:%(lineno)d - %(message)s",
+            },
+            'stdout': {
+                'format': "%(name)s - %(levelname)s - %(message)s",
+            },
+        },
+        'handlers': {
+            'stdout': {
+                'class': 'logging.StreamHandler',
+                'formatter': 'stdout',
+                'level': 'WARNING',
+            },
+        },
+        'loggers': {
+            '': {
+                'level': lg,
+                'handlers': ['stdout'],
+                # 'handlers': ['stdout', 'log_file'],
+            },
+        },
+    })
+
 def mergeRanges(ranges):
     """
     Take a 2D numpy array, with each row as a range and return merged ranges
@@ -677,7 +706,7 @@ def validalign2fasta(als, genf):
 
 def filterinput(args, df, chrid):
     # Get region length and filter out smaller SR
-    df = df.loc[((df['aend'] - df['astart']) >= args.s) | ((df['bend'] - df['bstart']) >= args.s) | (df['type']=='SYN')]
+    df = df.loc[((df['aend'] - df['astart']) >= args.s) | ((df['bend'] - df['bstart']) >= args.s) | (df['type'] == 'SYN')]
     df = df.loc[df['bchr'] == [chrid[i] for i in df['achr']]]
     # Filter non-selected variations
     if args.nosyn:
