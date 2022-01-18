@@ -88,7 +88,7 @@ def plotsr(args):
             chrids.append((os.path.basename(fin), cid))
 
     # Get groups of homologous chromosomes. Use the order from the user if provided.
-    cs = set(unique(alignments[0][1]['achrs']))
+    cs = set(unique(alignments[0][1]['achr']))
     if args.chrord is None:
         chrs = [k for k in chrids[0][1].keys() if k in alignments[0][1]['achr'].unique()]
     else:
@@ -99,9 +99,11 @@ def plotsr(args):
                 if c not in cs:
                     logger.error(f"Chromosome {c} in {args.chrord.name} is not a chromosome in alignment file {alignments[0][0]}. Exiting.")
                     sys.exit()
+                chrs.append(c)
         chrs = list(chrs)
         # Check that the chrorder file contains all chromosomes
         if len(chrs) != len(cs):
+            print(cs, chrs)
             logger.error(f"Number of chromsomes in {args.chrord.name} is less than the number of chromsomes in the alignment file {alignments[0][0]}. Either list the order of all chromosomes or use --chr if chromosome selection is requires. Exiting.")
             sys.exit()
 
