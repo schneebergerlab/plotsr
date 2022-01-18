@@ -3,7 +3,7 @@
 """
 Author: Manish Goel
 Date: 30.12.2021
-Description: Plotting multi genome structural annotations 
+Description: Plotting multi genome structural annotations
 """
 
 import argparse
@@ -19,7 +19,8 @@ def main(cmd):
     parser.add_argument('--markers', help='File containing path to markers (bed format)', type=argparse.FileType('r'))
     parser.add_argument('--tracks', help='File listing paths and details for all tracks to be plotted', type=argparse.FileType('r'))
     # parser.add_argument('-B', help='Annotation bed file for marking specific positions on genome', type=argparse.FileType('r'))
-    parser.add_argument('--chr', help='Select specific chromosomes on reference for plotting.', type=str, action='append')
+    parser.add_argument('--chr', help='Select specific chromosomes on reference (first genome) and plots them in the given order. Not compatible with --chrord', type=str, action='append')
+    parser.add_argument('--chrord', help='File containing reference (first genome) chromosome order for plotting. File requires one chromosome ID per line. Not compatible with --chr', type=argparse.FileType('r'))
     parser.add_argument('--reg', help='Plots a specific region. Use as: GenomeID:ChromosomeID:Start-End. Not compatible with --chr and -R.', type=str)
     parser.add_argument('--cfg', help='Path to config file containing parameters to adjust plot.', type=argparse.FileType('r'))
     parser.add_argument('--nosyn', help='Do not plot syntenic regions', default=False, action='store_true')

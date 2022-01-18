@@ -2,6 +2,7 @@ import sys
 import logging.config
 import logging
 from pandas import concat as pdconcat
+from pandas import unique
 from plotsr.func import *
 from collections import deque, OrderedDict
 import os
@@ -26,9 +27,12 @@ def plotsr(args):
     if args.chr is not None and args.reg is not None:
         logger.error("Both --chr and --reg are provided. Only one parameter can be provided at a time. Exiting.")
         sys.exit()
-    # Check if both -R and --reg are defined
-    # if args.reg is not None and args.R:
-    #     logger.warning("-R is not compatible with --reg and will not be used.")
+
+    # Check if both --chr and --chrord are defined
+    if args.chr is not None and args.chrord is not None:
+        logger.error("Both --chr and --chrord are provided. Only one parameter can be provided at a time. Exiting.")
+        sys.exit()
+
 
     # Set Figure height and width. Change later based on chromosome number and size
     FS = args.f             # Font size
@@ -83,8 +87,24 @@ def plotsr(args):
             alignments.append([os.path.basename(fin), al])
             chrids.append((os.path.basename(fin), cid))
 
-    # Get groups of homologous chromosomes
-    chrs = [k for k in chrids[0][1].keys() if k in alignments[0][1]['achr'].unique()]
+    # Get groups of homologous chromosomes. Use the order from the user if provided.
+    cs = set(unique(alignments[0][1]['achrs']))
+    if args.chrord is None:
+        chrs = [k for k in chrids[0][1].keys() if k in alignments[0][1]['achr'].unique()]
+    else:
+        chrs = deque()
+        with open(args.chrord.name, 'r') as fin:
+            for line in fin:
+                c = line.strip()
+                if c not in cs:
+                    logger.error(f"Chromosome {c} in {args.chrord.name} is not a chromosome in alignment file {alignments[0][0]}. Exiting.")
+                    sys.exit()
+        chrs = list(chrs)
+        # Check that the chrorder file contains all chromosomes
+        if len(chrs) != len(cs):
+            logger.error(f"Number of chromsomes in {args.chrord.name} is less than the number of chromsomes in the alignment file {alignments[0][0]}. Either list the order of all chromosomes or use --chr if chromosome selection is requires. Exiting.")
+            sys.exit()
+
     chrgrps = OrderedDict()
     for c in chrs:
         cg = deque([c])
@@ -102,11 +122,13 @@ def plotsr(args):
     # Select only chromosomes selected by --chr
     if args.chr is not None:
         homchrs = deque()
+        chrs = deque()
         for c in args.chr:
-            if c not in chrs:
+            if c not in cs:
                 logger.warning("Selected chromosome: {} is not in reference genome. Skipping it.".format(c))
                 continue
             homchrs.append(chrgrps[c])
+            chrs.append(c)
         for i in range(len(alignments)):
             alignments[i][1] = alignments[i][1].loc[alignments[i][1]['achr'].isin([h[i] for h in homchrs])]
 
@@ -124,7 +146,7 @@ def plotsr(args):
                 if k not in homs:
                     chrlengths[i][1].pop(k)
         # Update groups of homologous chromosomes
-        chrs = [k for k in chrids[0][1].keys() if k in alignments[0][1]['achr'].unique()]
+        # chrs = [k for k in chrids[0][1].keys() if k in alignments[0][1]['achr'].unique()]
         chrgrps = OrderedDict()
         for c in chrs:
             cg = deque([c])
@@ -136,7 +158,6 @@ def plotsr(args):
             chrgrps[c] = cg
 
     if args.reg is not None:
-        # REG = ['cvi', 'LR699761.1', '12000000-13500000'] #TODO: Delete this line
         alignments, chrs, chrgrps = selectregion(REG, chrlengths, alignments, chrids)
 
     # Combine Ribbon is selected than combine rows

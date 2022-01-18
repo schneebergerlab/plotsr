@@ -710,13 +710,13 @@ def filterinput(args, df, chrid):
     df = df.loc[df['bchr'] == [chrid[i] for i in df['achr']]]
     # Filter non-selected variations
     if args.nosyn:
-        df = df.loc[df[10] != 'SYN']
+        df = df.loc[df['type'] != 'SYN']
     if args.noinv:
-        df = df.loc[df[10] != 'INV']
+        df = df.loc[df['type'] != 'INV']
     if args.notr:
-        df = df.loc[~df[10].isin(['TRANS', 'INVTR'])]
+        df = df.loc[~df['type'].isin(['TRANS', 'INVTR'])]
     if args.nodup:
-        df = df.loc[~df[10].isin(['DUP', 'INVDP'])]
+        df = df.loc[~df['type'].isin(['DUP', 'INVDP'])]
     df.sort_values(['bchr', 'bstart', 'bend'], inplace=True)
     df.sort_values(['achr', 'astart', 'aend'], inplace=True)
     return df
