@@ -14,6 +14,19 @@ def plotsr(args):
     setlogconfig(args.log)
     logger = logging.getLogger("Plotsr")
 
+    ###################################################################
+    # Check python and pandas version. Add other checks (if required!!)
+    ###################################################################
+    try:
+        assert sys.version_info.major == 3
+        assert sys.version_info.minor >= 8
+    except AssertionError:
+        logger.warning('\nPlotsr is tested for Python >=3.8. Currently using Python {}.{}. This may result in errors.'.format(sys.version_info.major, sys.version_info.minor))
+    except KeyboardInterrupt:
+        raise()
+    except Exception as E:
+        sys.exit(E)
+
     ## Validate input
     if args.sr is None and args.bp is None:
         logger.error("No structural annotations provided. Use --sr or -bp to provide path to input files")
@@ -97,14 +110,13 @@ def plotsr(args):
             for line in fin:
                 c = line.strip()
                 if c not in cs:
-                    logger.error(f"Chromosome {c} in {args.chrord.name} is not a chromosome in alignment file {alignments[0][0]}. Exiting.")
+                    logger.error("Chromosome {} in {} is not a chromosome in alignment file {}. Exiting.".format(c, args.chrord.name, alignments[0][0]))
                     sys.exit()
                 chrs.append(c)
         chrs = list(chrs)
         # Check that the chrorder file contains all chromosomes
         if len(chrs) != len(cs):
-            print(cs, chrs)
-            logger.error(f"Number of chromsomes in {args.chrord.name} is less than the number of chromsomes in the alignment file {alignments[0][0]}. Either list the order of all chromosomes or use --chr if chromosome selection is requires. Exiting.")
+            logger.error("Number of chromsomes in {} is less than the number of chromsomes in the alignment file {}. Either list the order of all chromosomes or use --chr if chromosome selection is requires. Exiting.".format(args.chrord.name, alignments[0][0]))
             sys.exit()
 
     chrgrps = OrderedDict()
@@ -173,7 +185,7 @@ def plotsr(args):
         invindex = ['INV' in i for i in df['type']]
         g = set(df.loc[invindex, 'bstart'] < df.loc[invindex, 'bend'])
         if len(g) == 2:
-            logger.error(f"Inconsistent coordinates in input file {alignments[i][0]}. For INV, INVTR, INVDUP annotations, either bstart < bend for all annotations or bstart > bend for all annotations. Mixing is not permitted.")
+            logger.error("Inconsistent coordinates in input file {}. For INV, INVTR, INVDUP annotations, either bstart < bend for all annotations or bstart > bend for all annotations. Mixing is not permitted.".format(alignments[i][0]))
             sys.exit()
         elif False in g:
             continue
@@ -198,7 +210,7 @@ def plotsr(args):
         else:
             fig = plt.figure(figsize=[W, H])
     except Exception as e:
-        logger.error("Error in initiliazing figure. Try using a different backend." + '\n' + e.with_traceback())
+        logger.error("Error in initiliazing figure. Try using a different backend.\n{}".format(e.with_traceback()))
         sys.exit()
     ax = fig.add_subplot(111, frameon=False)
 

@@ -147,37 +147,37 @@ def readbasecfg(f, v):
                 continue
             line = line[0].split(':')
             if line[0] not in cfgk:
-                logger.error(f"{line[0]} is not a valid config parameter. Using default value.")
+                logger.error("{} is not a valid config parameter. Using default value.".format(line[0]))
                 continue
             if line[0] in ['syncol', 'invcol', 'tracol', 'dupcol']:
                 try:
                     if line[1] == '#': matplotlib.colors.to_rgb(line[1])
                     else: matplotlib.colors.to_hex(line[1])
                 except ValueError:
-                    logger.error(f"Error in using colour: {line[1]} for {line[0]}. Use correct hexadecimal colours or named colours defined in matplotlib (https://matplotlib.org/stable/gallery/color/named_colors.html). Using default value.")
+                    logger.error("Error in using colour: {} for {}. Use correct hexadecimal colours or named colours defined in matplotlib (https://matplotlib.org/stable/gallery/color/named_colors.html). Using default value.".format(line[1], line[0]))
                     continue
                 cfg[line[0]] = line[1]
             elif line[0] in ['alpha', 'chrmar', 'exmar', 'bboxmar', 'genlegcol']:
                 try:
                     float(line[1])
                 except ValueError:
-                    logger.error(f"Non-numerical value {line[1]} provided for {line[0]}. Using default value.")
+                    logger.error("Non-numerical value {} provided for {}. Using default value.".format(line[1], line[0]))
                     continue
                 cfg[line[0]] = float(line[1])
             elif line[0] == 'bbox':
                 line[1] = line[1].split(',')
                 if len(line[1]) != 4:
-                    logger.error(f"BBOX requires four values ({len(line[1])} provided: {line[1]}). Using default values.")
+                    logger.error("BBOX requires four values ({} provided: {}). Using default values.".format(len(line[1]), line[1]))
                     continue
                 try:
                     cfg['bbox'] = [float(i) for i in line[1]]
                 except ValueError:
-                    logger.error(f"Non-numerical values {line[1]} provided for {line[0]}. Using default value.")
+                    logger.error("Non-numerical values {} provided for {}. Using default value.".format(line[1], line[0]))
                     continue
                 cfg['bboxmar'] = [float(i) for i in line[1]]
             elif line[0] == 'legend':
-                if line[1] not in  ['T', 'F']:
-                    logger.warning(f"Invalid value {line[1]} for legend in base.cfg. Valid values: T/F")
+                if line[1] not in ['T', 'F']:
+                    logger.warning("Invalid value {} for legend in base.cfg. Valid values: T/F".format(line[1]))
                     continue
                 cfg['legend'] = line[1] == 'T'
     return cfg
@@ -338,8 +338,6 @@ def readannobed(path, v, chrlengths):
                 continue
             if len(line) == 5:
                 anno.addtags(line[4])
-            # if len(line) == 6:
-            #     anno.settext(line[5])
             mdata.append(anno)
     return mdata
 # END
@@ -363,7 +361,7 @@ def readsyriout(f):
             else:
                 if l[10] not in skipvartype:
                     skipvartype.append(l[10])
-                    logger.warning(f"{l[10]} is not a valid annotation for alignments in file {f}. Alignments should belong to the following classes {VARS}. Skipping alignment.")
+                    logger.warning("{} is not a valid annotation for alignments in file {}. Alignments should belong to the following classes {}. Skipping alignment.".format(l[10], f, VARS))
 
     try:
         df = DataFrame(list(syri_regs))[[0, 1, 2, 5, 6, 7, 10]]
@@ -401,7 +399,7 @@ def readbedout(f):
             else:
                 if l[10] not in skipvartype:
                     skipvartype.append(l[10])
-                    logger.warning(f"{l[10]} is not a valid annotation for alignments in file {f}. Alignments should belong to the following classes {VARS}. Skipping alignment.")
+                    logger.warning("{} is not a valid annotation for alignments in file {}. Alignments should belong to the following classes {}. Skipping alignment.".format(l[10], f, VARS))
 
     df = DataFrame(list(bed_regs))
     try:
@@ -453,7 +451,6 @@ class track():
                 ## Colour parameters
                 if n in ['nc', 'lc', 'bc']:
                     try:
-                        # print(n, v)
                         if v[0] == '#':
                             matplotlib.colors.to_rgb(v)
                         else:
@@ -603,7 +600,6 @@ def readtrack(f, chrlengths):
                 t.addtags(line[2])
             # Reads BED
             t.readdata(chrlengths)
-            # print(t.bincnt)
             tdata.append(t)
     return tdata
 # END
@@ -774,7 +770,6 @@ def selectregion(reg, chrlengths, al, chrids):
         garb.sort_values(['achr', 'astart', 'aend'], inplace=True)
         garb.reset_index(inplace=True, drop=True)
         newal[i] = garb.copy()
-        # print(newal)
         c, s, e = bc, bs, be
     # Alignments for genome after the focal genome
     c, s, e = reg[1:]
@@ -1159,7 +1154,6 @@ def drawtracks(ax, tracks, s, chrgrps, chrlengths, v, cfg, minl, maxl):
         margin = maxl/500
     for i in range(len(tracks)):
         bedbin = tracks[i].bincnt
-        # print(bedbin)
         for j in range(cl):
             if maxl != -1:
                 chrpos = [k[0] for k in bedbin[chrs[j]] if minl <= k[0] <= maxl]
