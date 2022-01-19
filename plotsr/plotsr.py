@@ -81,7 +81,7 @@ def plotsr(args):
     except :
         sys.exit('Matplotlib backend cannot be selected')
 
-    # fins = ['col_lersyri.out', 'ler_cvisyri.out', 'cvi_erisyri.out', 'eri_shasyri.out', 'sha_kyosyri.out', 'kyo_an1syri.out'] #TODO: Delete this line
+    # fins = ['col_lersyri.out', 'ler_cvisyri.out', 'cvi_erisyri.out', 'eri_shasyri.out', 'sha_kyosyri.out', 'kyo_an1syri.out', 'an1_c24syri.out'] #TODO: Delete this line
     # Read alignment coords
     alignments = deque()
     chrids = deque()

@@ -440,6 +440,7 @@ class track():
         self.ba = 0.7
         self.logger = logging.getLogger("track")
         self.bincnt = {}
+        self.gff = ''
 
     # Add tags
     def addtags(self, tags):
@@ -476,7 +477,7 @@ class track():
                     setattr(self, n, v)
                 ## Input type parameters
                 elif n == 'ft':
-                    if v not in ['bed', 'bedgraph']:
+                    if v not in ['bed', 'bedgraph', 'gff']:
                         raise ValueError("Unknown filetype specified for track {}. Please provide input in bed or bedgraph. Use bed for providing genome coordinate ranges or bedgraph for providing histogram.".format(v, self.n))
                     setattr(self, n, v)
             else:
@@ -538,7 +539,7 @@ class track():
                     continue
                 if line[0] not in chrpos.keys():
                     if line[0] not in skipchrs:
-                        self.logger.warning("Chromosome in BED is not present in FASTA or not selected for plotting. Skipping it. BED line: {}".format("\t".join(line)))
+                        self.logger.warning("Chromosome in BEDGRAPH is not present in FASTA or not selected for plotting. Skipping it. BED line: {}".format("\t".join(line)))
                         skipchrs.append(line[0])
                     continue
                 try:
@@ -564,11 +565,65 @@ class track():
         return
     # END
 
+    def _readgff(self, chrlengths):
+        from collections import defaultdict, deque
+        import sys
+        annos = defaultdict(dict)
+        acceptlist = {'mrna', 'cds'}
+        skiplist = []
+        skipchr = []
+        chrs = set(chrlengths[0][1].keys())
+        with open(self.f, 'r') as fin:
+            self.logger.warning("Reading GFF file {}. Overlapping transcripts would be plotted as such without any filtering.".format(self.f))
+            model = None
+            for line in fin:
+                line = line.strip().split()
+                if line[0] not in chrs:
+                    if line[0] not in skipchr:
+                        skipchr.append(line[0])
+                        self.logger.warning("Chromosome in GFF is not present in FASTA or not selected for plotting. Skipping it. GFF line: {}".format("\t".join(line)))
+                    continue
+                t = line[2].lower()
+                if t not in acceptlist:
+                    if t not in skiplist:
+                        skiplist.append(t)
+                        self.logger.warning("GFF feature: {} is not usable for plotting. Only {} are used. Skipping all these features.".format(line[2], acceptlist))
+                else:
+                    try:
+                        int(line[3]), int(line[4])
+                    except ValueError:
+                        self.logger.error("Non-numerical value in GFF {} at line {}. Exiting.".format(self.f, "\t".join(line)))
+                        sys.exit()
+
+                    if model is not None:
+                        if t == 'mrna':
+                            k = list(model.keys())[0]
+                            annos[k[0]][(k[1], k[2])] = model.values()
+                            model = defaultdict()
+                            cse = (line[0], int(line[3]), int(line[4])) #Chromosome, start, end
+                            model[cse] = deque()
+                        if t == 'cds':
+                            model[cse].append((int(line[3]), int(line[4])))
+                    elif model is None:
+                        if t == 'cds':
+                            self.logger.error("In GFF: {} at line {}, CDS feature is before the mRNA feature. Expected mRNA before CDS. Exiting.".format(self.f, line))
+                            sys.exit()
+                        else:
+                            model = defaultdict()
+                            cse = (line[0], int(line[3]), int(line[4]))
+                            model[cse] = deque()
+            k = list(model.keys())[0]
+            annos[k[0]][(k[1], k[2])] = model.values()
+        self.gff = annos
+    #END
+
     def readdata(self, chrlengths):
         if self.ft == 'bed':
             self._readbed(chrlengths)
         elif self.ft == 'bedgraph':
             self._readbedgraph(chrlengths)
+        elif self.ft == 'gff':
+            self._readgff(chrlengths)
         return
     # END
 # END
@@ -592,8 +647,7 @@ def readtrack(f, chrlengths):
             line = line.strip().split("\t")
             if len(line) == 0: continue
             if len(line) < 2:
-                raise ValueError("Incomplete example in track file line:\n{}\nFile path and name are necessary columns, tags is optional columns".format('\t'.join(line)))
-                sys.exit()
+                raise ValueError("Incomplete line in track file.\n{}\nFile path and name are necessary columns, tags is optional column".format('\t'.join(line)))
             t = track(line[0], line[1])
             # Read tags
             if len(line) == 3:
@@ -1140,49 +1194,78 @@ def drawmarkers(ax, b, v, chrlengths, indents, chrs, chrgrps, minl=0, maxl=-1):
 def drawtracks(ax, tracks, s, chrgrps, chrlengths, v, cfg, minl, maxl):
     from matplotlib.patches import Rectangle
     import numpy as np
+    from collections import deque
     # TODO: Read gap values from base.cfg
     th = (1 - s - 2*cfg['chrmar'])/len(tracks)
     if th < 0.01:
         raise RuntimeError("Decrease the value of -S to plot tracks correctly. Exiting.")
     cl = len(chrgrps.keys())
     chrs = list(chrgrps.keys())
+    diff = 0.7*th
     # Define space between track and track label
     # TODO: read margin spacing from base config
     if maxl == -1:
-        margin = np.max([chrlengths[i][1][v[i]] for v in chrgrps.values() for i in range(len(v))])/500
+        margin = np.max([chrlengths[i][1][v[i]] for v in chrgrps.values() for i in range(len(v))])/300
     else:
-        margin = maxl/500
+        margin = (maxl-minl)/300
     for i in range(len(tracks)):
-        bedbin = tracks[i].bincnt
-        for j in range(cl):
-            if maxl != -1:
-                chrpos = [k[0] for k in bedbin[chrs[j]] if minl <= k[0] <= maxl]
-                tpos = [k[1] for k in bedbin[chrs[j]] if minl <= k[0] <= maxl]
-            else:
-                chrpos = [k[0] for k in bedbin[chrs[j]]]
-                tpos = [k[1] for k in bedbin[chrs[j]]]
-            tposmax = max(tpos)
-            diff = 0.7*th
-            if not v:
-                y0 = cl - j - th*(i+1)
-                ypos = [(t*diff/tposmax)+y0 for t in tpos]
-                # TODO: parameterise colour
-                ax.add_patch(Rectangle((0, y0), chrlengths[0][1][chrs[j]], diff,  linewidth=0, facecolor=tracks[i].bc, alpha=tracks[i].ba))
-                # ax.plot(chrpos, ypos, color=tracks[i].lc, lw=tracks[i].lw)
-                ax.fill_between(chrpos, ypos, y0, color=tracks[i].lc, lw=tracks[i].lw)
-                if maxl == -1:
-                    ax.text(chrlengths[0][1][chrs[j]] + margin, y0 + diff/2, tracks[i].n, color=tracks[i].nc, fontsize=tracks[i].ns, fontfamily=tracks[i].nf, ha='left', va='center', rotation='horizontal')
+        if tracks[i].ft in ['bed', 'bedgraph']:
+            bedbin = tracks[i].bincnt
+            for j in range(cl):
+                if maxl != -1:
+                    chrpos = [k[0] for k in bedbin[chrs[j]] if minl <= k[0] <= maxl]
+                    tpos = [k[1] for k in bedbin[chrs[j]] if minl <= k[0] <= maxl]
                 else:
-                    ax.text(maxl + margin, y0 + diff/2, tracks[i].n, color=tracks[i].nc, fontsize=tracks[i].ns, fontfamily=tracks[i].nf, ha='left', va='center', rotation='horizontal')
-            else:
-                x0 = j + (i+1)*th - diff
-                xpos = [x0 + diff - (t*diff/tposmax) for t in tpos]
-                ax.add_patch(Rectangle((x0, 0), diff, chrlengths[0][1][chrs[j]], linewidth=0, facecolor=tracks[i].bc, alpha=tracks[i].ba))
-                # ax.plot(xpos, chrpos, color=tracks[i].lc, lw=tracks[i].lw)
-                ax.fill_betweenx(chrpos, xpos, x0+diff, color=tracks[i].lc, lw=tracks[i].lw)
-                if maxl == -1:
-                    ax.text(x0 + diff/2, chrlengths[0][1][chrs[j]] + margin, tracks[i].n, color=tracks[i].nc, fontsize=tracks[i].ns, fontfamily=tracks[i].nf, ha='center', va='bottom', rotation='vertical')
+                    chrpos = [k[0] for k in bedbin[chrs[j]]]
+                    tpos = [k[1] for k in bedbin[chrs[j]]]
+                tposmax = max(tpos)
+
+                if not v:
+                    y0 = cl - j - th*(i+1)
+                    ypos = [(t*diff/tposmax)+y0 for t in tpos]
+                    ax.add_patch(Rectangle((0, y0), chrlengths[0][1][chrs[j]], diff,  linewidth=0, facecolor=tracks[i].bc, alpha=tracks[i].ba))
+                    ax.fill_between(chrpos, ypos, y0, color=tracks[i].lc, lw=tracks[i].lw)
+                    xpos = chrlengths[0][1][chrs[j]] + margin if maxl == -1 else maxl + margin
+                    ax.text(xpos, y0 + diff/2, tracks[i].n, color=tracks[i].nc, fontsize=tracks[i].ns, fontfamily=tracks[i].nf, ha='left', va='center', rotation='horizontal')
                 else:
-                    ax.text(x0 + diff/2, maxl + margin, tracks[i].n, color=tracks[i].nc, fontsize=tracks[i].ns, fontfamily=tracks[i].nf, ha='center', va='bottom', rotation='vertical')
+                    x0 = j + (i+1)*th - diff
+                    xpos = [x0 + diff - (t*diff/tposmax) for t in tpos]
+                    ax.add_patch(Rectangle((x0, 0), diff, chrlengths[0][1][chrs[j]], linewidth=0, facecolor=tracks[i].bc, alpha=tracks[i].ba))
+                    ax.fill_betweenx(chrpos, xpos, x0+diff, color=tracks[i].lc, lw=tracks[i].lw)
+                    ypos = chrlengths[0][1][chrs[j]] + margin if maxl == -1 else maxl + margin
+                    ax.text(x0 + diff/2, ypos, tracks[i].n, color=tracks[i].nc, fontsize=tracks[i].ns, fontfamily=tracks[i].nf, ha='center', va='bottom', rotation='vertical')
+        elif tracks[i].ft in ['gff']:
+            from matplotlib import collections as mc
+            annos = tracks[i].gff
+            l = minl
+            r = maxl if maxl != -1 else np.inf
+            for j in range(cl):
+                mrna = deque()
+                cds = deque()
+                for mloc, cloc in annos[chrs[j]].items():
+                    if l <= mloc[0] and mloc[1] <= r:
+                        mrna.append(mloc)
+                        for c in list(cloc)[0]:
+                            cds.append(c)
+                if not v:
+                    y0 = cl - j - th*(i+1)
+                    ypos = y0 + (diff/2)
+                    ax.add_patch(Rectangle((0, y0), chrlengths[0][1][chrs[j]], diff,  linewidth=0, facecolor=tracks[i].bc, alpha=tracks[i].ba))
+                    lc = mc.LineCollection([[(i[0], ypos), (i[1], ypos)] for i in mrna], colors=tracks[i].lc, linewidths=tracks[i].lw)
+                    ax.add_collection(lc)
+                    lc = mc.LineCollection([[(i[0], ypos), (i[1], ypos)] for i in cds], colors=tracks[i].lc, linewidths=2*tracks[i].lw)
+                    ax.add_collection(lc)
+                    xpos = chrlengths[0][1][chrs[j]] + margin if maxl == -1 else maxl + margin
+                    ax.text(xpos, y0 + diff/2, tracks[i].n, color=tracks[i].nc, fontsize=tracks[i].ns, fontfamily=tracks[i].nf, ha='left', va='center', rotation='horizontal')
+                elif v:
+                    x0 = j + (i+1)*th - diff
+                    xpos = x0 + diff/2
+                    ax.add_patch(Rectangle((x0, 0), diff, chrlengths[0][1][chrs[j]], linewidth=0, facecolor=tracks[i].bc, alpha=tracks[i].ba))
+                    lc = mc.LineCollection([[(xpos, i[0]), (xpos, i[1])] for i in mrna], colors=tracks[i].lc, linewidths=tracks[i].lw)
+                    ax.add_collection(lc)
+                    lc = mc.LineCollection([[(xpos, i[0]), (xpos, i[1])] for i in cds], colors=tracks[i].lc, linewidths=2*tracks[i].lw)
+                    ax.add_collection(lc)
+                    ypos = chrlengths[0][1][chrs[j]] + margin if maxl == -1 else maxl + margin
+                    ax.text(x0 + diff/2, ypos, tracks[i].n, color=tracks[i].nc, fontsize=tracks[i].ns, fontfamily=tracks[i].nf, ha='center', va='bottom', rotation='vertical')
     return ax
 # END

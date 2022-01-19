@@ -1,4 +1,4 @@
-##ft = File type (bed/bedgraph, default = bed)
+##ft = File type (bed/bedgraph/gff, default = bed)
 ##bw = bin width (default=100000)
 ##nc = name colour
 ##ns = name size
