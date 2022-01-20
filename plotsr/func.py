@@ -1223,15 +1223,15 @@ def drawtracks(ax, tracks, s, chrgrps, chrlengths, v, cfg, minl, maxl):
                 if not v:
                     y0 = cl - j - th*(i+1)
                     ypos = [(t*diff/tposmax)+y0 for t in tpos]
-                    ax.add_patch(Rectangle((0, y0), chrlengths[0][1][chrs[j]], diff,  linewidth=0, facecolor=tracks[i].bc, alpha=tracks[i].ba))
-                    ax.fill_between(chrpos, ypos, y0, color=tracks[i].lc, lw=tracks[i].lw)
+                    ax.add_patch(Rectangle((0, y0), chrlengths[0][1][chrs[j]], diff,  linewidth=0, facecolor=tracks[i].bc, alpha=tracks[i].ba, zorder=1))
+                    ax.fill_between(chrpos, ypos, y0, color=tracks[i].lc, lw=tracks[i].lw, zorder=2)
                     xpos = chrlengths[0][1][chrs[j]] + margin if maxl == -1 else maxl + margin
                     ax.text(xpos, y0 + diff/2, tracks[i].n, color=tracks[i].nc, fontsize=tracks[i].ns, fontfamily=tracks[i].nf, ha='left', va='center', rotation='horizontal')
                 else:
                     x0 = j + (i+1)*th - diff
                     xpos = [x0 + diff - (t*diff/tposmax) for t in tpos]
-                    ax.add_patch(Rectangle((x0, 0), diff, chrlengths[0][1][chrs[j]], linewidth=0, facecolor=tracks[i].bc, alpha=tracks[i].ba))
-                    ax.fill_betweenx(chrpos, xpos, x0+diff, color=tracks[i].lc, lw=tracks[i].lw)
+                    ax.add_patch(Rectangle((x0, 0), diff, chrlengths[0][1][chrs[j]], linewidth=0, facecolor=tracks[i].bc, alpha=tracks[i].ba, zorder=1))
+                    ax.fill_betweenx(chrpos, xpos, x0+diff, color=tracks[i].lc, lw=tracks[i].lw, zorder=2)
                     ypos = chrlengths[0][1][chrs[j]] + margin if maxl == -1 else maxl + margin
                     ax.text(x0 + diff/2, ypos, tracks[i].n, color=tracks[i].nc, fontsize=tracks[i].ns, fontfamily=tracks[i].nf, ha='center', va='bottom', rotation='vertical')
         elif tracks[i].ft in ['gff']:
@@ -1250,20 +1250,20 @@ def drawtracks(ax, tracks, s, chrgrps, chrlengths, v, cfg, minl, maxl):
                 if not v:
                     y0 = cl - j - th*(i+1)
                     ypos = y0 + (diff/2)
-                    ax.add_patch(Rectangle((0, y0), chrlengths[0][1][chrs[j]], diff,  linewidth=0, facecolor=tracks[i].bc, alpha=tracks[i].ba))
-                    lc = mc.LineCollection([[(i[0], ypos), (i[1], ypos)] for i in mrna], colors=tracks[i].lc, linewidths=tracks[i].lw)
+                    ax.add_patch(Rectangle((0, y0), chrlengths[0][1][chrs[j]], diff,  linewidth=0, facecolor=tracks[i].bc, alpha=tracks[i].ba, zorder=1))
+                    lc = mc.LineCollection([[(i[0], ypos), (i[1], ypos)] for i in mrna], colors=tracks[i].lc, linewidths=tracks[i].lw, zorder=2)
                     ax.add_collection(lc)
-                    lc = mc.LineCollection([[(i[0], ypos), (i[1], ypos)] for i in cds], colors=tracks[i].lc, linewidths=2*tracks[i].lw)
+                    lc = mc.LineCollection([[(i[0], ypos), (i[1], ypos)] for i in cds], colors=tracks[i].lc, linewidths=2*tracks[i].lw, zorder=3)
                     ax.add_collection(lc)
                     xpos = chrlengths[0][1][chrs[j]] + margin if maxl == -1 else maxl + margin
                     ax.text(xpos, y0 + diff/2, tracks[i].n, color=tracks[i].nc, fontsize=tracks[i].ns, fontfamily=tracks[i].nf, ha='left', va='center', rotation='horizontal')
                 elif v:
                     x0 = j + (i+1)*th - diff
                     xpos = x0 + diff/2
-                    ax.add_patch(Rectangle((x0, 0), diff, chrlengths[0][1][chrs[j]], linewidth=0, facecolor=tracks[i].bc, alpha=tracks[i].ba))
-                    lc = mc.LineCollection([[(xpos, i[0]), (xpos, i[1])] for i in mrna], colors=tracks[i].lc, linewidths=tracks[i].lw)
+                    ax.add_patch(Rectangle((x0, 0), diff, chrlengths[0][1][chrs[j]], linewidth=0, facecolor=tracks[i].bc, alpha=tracks[i].ba, zorder=1))
+                    lc = mc.LineCollection([[(xpos, i[0]), (xpos, i[1])] for i in mrna], colors=tracks[i].lc, linewidths=tracks[i].lw, zorder=2)
                     ax.add_collection(lc)
-                    lc = mc.LineCollection([[(xpos, i[0]), (xpos, i[1])] for i in cds], colors=tracks[i].lc, linewidths=2*tracks[i].lw)
+                    lc = mc.LineCollection([[(xpos, i[0]), (xpos, i[1])] for i in cds], colors=tracks[i].lc, linewidths=2*tracks[i].lw, zorder=2)
                     ax.add_collection(lc)
                     ypos = chrlengths[0][1][chrs[j]] + margin if maxl == -1 else maxl + margin
                     ax.text(x0 + diff/2, ypos, tracks[i].n, color=tracks[i].nc, fontsize=tracks[i].ns, fontfamily=tracks[i].nf, ha='center', va='bottom', rotation='vertical')
