@@ -571,7 +571,7 @@ class track():
         import sys
         annos = defaultdict(dict)
         acceptlist = {'mrna', 'cds'}
-        skiplist = []
+        featwarn = True
         skipchr = []
         chrs = set(chrlengths[0][1].keys())
         with open(self.f, 'r') as fin:
@@ -586,9 +586,9 @@ class track():
                     continue
                 t = line[2].lower()
                 if t not in acceptlist:
-                    if t not in skiplist:
-                        skiplist.append(t)
-                        self.logger.warning("GFF feature: {} is not usable for plotting. Only {} are used. Skipping all these features.".format(line[2], acceptlist))
+                    if featwarn:
+                        self.logger.warning("GFF feature: {} is not usable for plotting. Only {} are used for plotting. Will skipping all other features.".format(line[2], acceptlist))
+                        featwarn = False
                 else:
                     try:
                         int(line[3]), int(line[4])
