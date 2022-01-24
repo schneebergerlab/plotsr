@@ -147,8 +147,8 @@ def plotsr(args):
             alignments[i][1] = alignments[i][1].loc[alignments[i][1]['achr'].isin([h[i] for h in homchrs])]
 
     # Check chromsome IDs and sizes
-    chrlengths, chrtags = validalign2fasta(alignments, args.genomes.name)
-    # chrlengths, chrtags = validalign2fasta(alignments, 'genomes.txt') # TODO: Delete this line
+    chrlengths, genomes = validalign2fasta(alignments, args.genomes.name)
+    # chrlengths, genomes = validalign2fasta(alignments, 'genomes.txt') # TODO: Delete this line
 
 
     ## Remove chromosomes that are not homologous to selected reference chromosomes
@@ -234,7 +234,7 @@ def plotsr(args):
     ax, max_l = drawax(ax, chrgrps, chrlengths, V, S, cfg, minl=minl, maxl=maxl)
 
     ## Draw Chromosomes
-    ax, indents, chrlabels = pltchrom(ax, chrs, chrgrps, chrlengths, V, S, chrtags, cfg, minl=minl, maxl=maxl)
+    ax, indents, chrlabels = pltchrom(ax, chrs, chrgrps, chrlengths, V, S, genomes, cfg, minl=minl, maxl=maxl)
 
     if cfg['genlegcol'] < 1:
         ncol = ceil(len(chrlengths)/labelcnt)

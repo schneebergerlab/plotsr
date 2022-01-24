@@ -80,6 +80,7 @@ def setlogconfig(lg):
             },
         },
     })
+#END
 
 def mergeRanges(ranges):
     """
@@ -351,7 +352,7 @@ def readsyriout(f):
     # Reads syri.out. Select: achr, astart, aend, bchr, bstart, bend, srtype
     logger = logging.getLogger("readsyriout")
     syri_regs = deque()
-    skipvartype = []
+    skipvartype = ['CPG', 'CPL', 'DEL', 'DUPAL', 'HDR', 'INS', 'INVAL', 'INVDPAL', 'INVTRAL', 'NOTAL', 'SNP', 'SYNAL', 'TDM', 'TRANSAL']
     with open(f, 'r') as fin:
         for line in fin:
             l = line.strip().split()
@@ -664,6 +665,80 @@ def readtrack(f, chrlengths):
 Validation and filtering
 ################################################################################
 """
+
+class genome():
+    def __init__(self, f, n, c):
+        import logging
+        self.f = f
+        self.n = n
+        self.lc = c
+        self.lw = 1
+        self.ft = 'fa'          # Input file type: "fa"=fasta, "cl"="chromosome length
+        self.glen = None
+        self.logger = logging.getLogger("track")
+
+    # Add tags
+    def addtags(self, tags):
+        import matplotlib
+        import sys
+        for i in tags.split(";"):
+            n, v = i.split(":")
+            if hasattr(self, n):
+                ## Colour parameters
+                if n in ['lc']:
+                    try:
+                        if v[0] == '#':
+                            matplotlib.colors.to_rgb(v)
+                        else:
+                            matplotlib.colors.to_hex(v)
+                    except ValueError:
+                        self.logger.error("Error in using colour: {} for genome {}. Use correct hexadecimal colours or named colours define in matplotlib (https://matplotlib.org/stable/gallery/color/named_colors.html)".format(v, self.n))
+                        sys.exit()
+                    setattr(self, n, v)
+                ## Numerical parameters
+                elif n in ['lw']:
+                    try:
+                        float(v)
+                    except ValueError:
+                        self.logger.error("Non-numerical value {} for {} for genome {}".format(v, n, self.n))
+                        sys.exit()
+                    setattr(self, n, float(v))
+                ## Input type parameters
+                elif n == 'ft':
+                    if v not in ['fa', 'cl']:
+                        self.logger.error("Unknown filetype specified for genome {}. Please provide input type as 'fa' for fasta or 'cl' for chromosome-lengh in tab-separated file. 'cl' files are faster to read.".format(v, self.n))
+                        sys.exit()
+                    setattr(self, n, v)
+            else:
+                self.logger.error("{} is not a valid tag".format(n))
+                sys.exit()
+        return
+    #END
+
+    # Read chromosome lengths
+    def readdata(self):
+        if self.ft == 'fa':
+            try:
+                self.glen = {c: len(seq) for c, seq in readfasta(self.f).items()}
+            except Exception as e:
+                raise ImportError("Error in reading fasta: {}\n{}".format(self.n, e))
+        elif self.ft == 'cl':
+            glen = {}
+            with open(self.f, 'r') as fin:
+                for line in fin:
+                    line = line.strip().split()
+                    try:
+                        glen[line[0]] = int(line[1])
+                    except IndexError:
+                        self.logger.error("Incomplete input. Genome:{} chromosome:{} has no chromosome length. Exiting.")
+                        sys.exit()
+                    except ValueError:
+                        self.logger.error("Incorrect input. Genome:{} chromosome:{} has no-numerical chromosome length. Exiting.")
+                        sys.exit()
+            self.glen = glen
+# END
+
+
 def validalign2fasta(als, genf):
     """
     Check that the chromosome ID and length in the alignment file matches the
@@ -677,16 +752,18 @@ def validalign2fasta(als, genf):
     import os
     from matplotlib.pyplot import get_cmap
     out = deque()
+    errmess0 = "Cannot read annotations for genome: {}. Make sure that structural annotations for all genomes are provided in the same order as genomes. Exiting."
     errmess1 = 'Chromosome ID: {} in structural annotation file: {} not present in genome fasta: {}. Exiting.'
     errmess2 = 'For chromosome ID: {}, length in genome fasta: {} is less than the maximum coordinate in the structural annotation file: {}. Exiting.'
     tags = {'lc': {}, 'lw': {}}
     taglist = set(tags.keys())
-    # Count number of genomes
+
+    # Count number of genomes and set automatic colors
     count = 0
     with open(genf, 'r') as fin:
         i = 0
         for line in fin:
-            if line[0] =='#':
+            if line[0] == '#':
                 continue
             count += 1
     if count <= 10:
@@ -696,27 +773,33 @@ def validalign2fasta(als, genf):
         if count % 2 != 0:
             m = CHRCOLS[int((count/2) + 1)]
         CHRCOLS = [j for i in range(int(count/2)) for j in [CHRCOLS[i]] + [CHRCOLS[int(i +count/2)]]] + [m]
+    # Read genomes and validate chrlengths
     with open(genf, 'r') as fin:
         i = 0
+        genomes = deque()
         for line in fin:
             if line[0] == '#':
                 continue
             line = line.strip().split("\t")
             if len(line) < 2:
                 raise ImportError("Incomplete genomic information.\nExpected format for the genome file:\npath_to_genome1\tgenome1_id\ttags\npath_to_genome2\tgenome2_id\ttags")
-            try:
-                # length of individual chromosomes
-                glen = {c: len(seq) for c, seq in readfasta(line[0]).items()}
-            except Exception as e:
-                raise ImportError("Error in reading fasta: {}\n{}".format(line[1], e))
-            # Check cases when the genome is the query-genome
+            gen = genome(line[0], line[1], CHRCOLS[i])
+            # Read tags
+            if len(line) == 3:
+                gen.addtags(line[2])
+            # Reads fasta
+            gen.readdata()
+            # Validate chromosome lengths
+            glen = gen.glen
+            achr = set()
+            bchr = set()
             if i > 0:
                 try:
                     df = als[i-1][1]
                 except IndexError:
-                    raise ImportError("Cannot read example for genome: {}. Make sure that structural annotation example for all genomes is provided in correct order. Exiting.".format(line[0]))
-                chrs = np.unique(df['bchr'])
-                for c in chrs:
+                    raise ImportError(errmess0.format(line[0]))
+                bchr = np.unique(df['bchr'])
+                for c in bchr:
                     if c not in list(glen.keys()):
                         raise ImportError(errmess1.format(c, als[i-1][0], os.path.basename(line[1])))
                     if np.max(np.max(df.loc[df['bchr'] == c, ['bstart', 'bend']])) > glen[c]:
@@ -726,31 +809,17 @@ def validalign2fasta(als, genf):
                 try:
                     df = als[i][1]
                 except IndexError:
-                    raise ImportError("Cannot read example for genome: {}. Make sure that structural annotation example for all genomes is provided in correct order. Exiting.".format(line[0]))
-                chrs = np.unique(df['achr'])
-                for c in chrs:
+                    raise ImportError(errmess0.format(line[0]))
+                achr = np.unique(df['achr'])
+                for c in achr:
                     if c not in list(glen.keys()):
                         raise ImportError(errmess1.format(c, als[i][0], os.path.basename(line[1])))
                     if np.max(np.max(df.loc[df['achr'] == c, ['astart', 'aend']])) > glen[c]:
                         raise ImportError(errmess2.format(c, os.path.basename(fin), als[i][0]))
-            out.append((line[1], glen))
-
-            # TODO: create a class for genome
-            # Set default tag values
-            tags['lc'][line[1]] = CHRCOLS[i]
-            tags['lw'][line[1]] = 1
-            # Update tag values
-            if len(line) > 2:
-                tg = line[2].split(';')
-                for t in tg:
-                    t = t.split(':')
-                    if t[0] in taglist:
-                        if t[0] in ['lw']:
-                            tags[t[0]][line[1]] = float(t[1])
-                        else:
-                            tags[t[0]][line[1]] = t[1]
+            out.append((line[1], {c: glen[c] for c in set(achr).union(set(bchr))}))
             i += 1
-    return out, tags
+            genomes.append(gen)
+    return out, genomes
 # END
 
 
@@ -1022,7 +1091,7 @@ def drawax(ax, chrgrps, chrlengths, v, s, cfg, minl=0, maxl=-1):
 # END
 
 
-def pltchrom(ax, chrs, chrgrps, chrlengths, v, S, chrtags, cfg, minl=0, maxl=-1):
+def pltchrom(ax, chrs, chrgrps, chrlengths, v, S, genomes, cfg, minl=0, maxl=-1):
     chrlabs = [False]*len(chrlengths)
     # Set chromosome direction
     pltchr = ax.hlines if not v else ax.vlines
@@ -1043,13 +1112,21 @@ def pltchrom(ax, chrs, chrgrps, chrlengths, v, S, chrtags, cfg, minl=0, maxl=-1)
                 maxcoord = chrlengths[s][1][chrgrps[chrs[i]][s]]
             else:
                 maxcoord = maxl
+            genome = [gen for gen in genomes if gen.n == chrlengths[s][0]][0]
             if not chrlabs[s]:
+                # chrlabels.append(pltchr(indents[s]-offset, minl, maxcoord,
+                #                         color=chrtags['lc'][chrlengths[s][0]],
+                #                         linewidth=chrtags['lw'][chrlengths[s][0]],
+                #                         label=chrlengths[s][0]))
                 chrlabels.append(pltchr(indents[s]-offset, minl, maxcoord,
-                                        color=chrtags['lc'][chrlengths[s][0]],
-                                        linewidth=chrtags['lw'][chrlengths[s][0]], label=chrlengths[s][0]))
+                                        color=genome.lc,
+                                        linewidth=genome.lw,
+                                        label=chrlengths[s][0]))
                 chrlabs[s] = True
             else:
-                pltchr(indents[s]-offset, minl, maxcoord, color=chrtags['lc'][chrlengths[s][0]], linewidth=chrtags['lw'][chrlengths[s][0]])
+                pltchr(indents[s]-offset, minl, maxcoord,
+                       color=genome.lc,
+                       linewidth=genome.lw)
     return ax, indents, chrlabels
 # END
 

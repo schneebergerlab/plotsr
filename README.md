@@ -160,7 +160,7 @@ ts = text size
 tf = text font
 tp = text position
 ```
-Check [markers.txt](./config/markers.txt) for the list of available markers.
+Check [markers.txt](config/marker_point_type.txt) for the list of available markers.
 
 ## Adjusting other parameters
 Some other properties of the plot can be adjust by parsing a config file to the `--cfg` parameter. Description of properties and default values present in the example [base.cfg](./config/base.cfg) file.   
