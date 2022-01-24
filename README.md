@@ -1,7 +1,7 @@
 [![Anaconda-Server Badge](https://anaconda.org/bioconda/plotsr/badges/installer/conda.svg)](https://conda.anaconda.org/bioconda)
 [![Anaconda-Server Badge](https://anaconda.org/bioconda/plotsr/badges/downloads.svg)](https://anaconda.org/bioconda/plotsr)
 [![Anaconda-Server Badge](https://anaconda.org/bioconda/plotsr/badges/latest_release_date.svg)](https://anaconda.org/bioconda/plotsr)
-### The package is still in development. Please report any issue that you may find. Features requests are also welcome.
+
 ## Introduction
 Plotsr generates high-quality visualisation of synteny and structural rearrangements between multiple genomes. For this it uses the genomic structural annotations between multiple chromosome-level assemblies.
 ![example](./example/ampril_col0_chr3_6600000_10000000.png)
