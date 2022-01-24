@@ -1,7 +1,7 @@
-### The package is still in development phase. Please report any issue that you may find. Features requests are also welcome.
+### The package is still in development. Please report any issue that you may find. Features requests are also welcome.
 ## Introduction
 Plotsr generates high-quality visualisation of synteny and structural rearrangements between multiple genomes. For this it uses the genomic structural annotations between multiple chromosome-level assemblies.
-![Example](./example/ampril_col0_chr3_6600000_10000000.png)
+![example](./example/ampril_col0_chr3_6600000_10000000.png)
 
 ## Installation:
 The easiest method to install plotsr is using anaconda:
@@ -26,11 +26,11 @@ python setup.py install
 1. Chromosome-level assemblies of the genomes to be compared 
 2. Pairwise structural annotations between genomes
 
-For example, if genomes A,B, and C are to be compared, then structural annotations between A and B as well as between B and C would be required.
+For example, if genomes A, B, and C are to be visualised in this order, then structural annotations of A vs B and B vs C would be required.
 
 #### Additional inputs
-* BED/bedGraph files for adding tracks to the visualisation, like the tracks for genes and SNPs in the [Example](Example) plot above.
-* Bed file containing genomic coordinates to add markers, like the markers for Inv3, Notal1, and Notal2 in the [Example](Example) plot above.
+* GFF/BED/bedGraph files for adding tracks to the visualisation, like the tracks for genes and SNPs in the [example](Example) plot above.
+* Bed file containing genomic coordinates to add markers, like the markers for Inversion 3, Not aligned 1 in the [example](Example) plot above.
 
 ## Running example data
 Following are the steps for a typical pipeline to visualise structural annotations between genomes. For this, we would use the data available in the ```example ``` folder.
@@ -41,8 +41,8 @@ Following are the steps for a typical pipeline to visualise structural annotatio
 ```
 # Unzip genomes
 gzip -d TAIR10.filtered.fa.gz
-gzip -d an1.filtered.fa.gz
-gzip -d c24.filtered.fa.gz
+gzip -d ler.filtered.fa.gz
+gzip -d cvi.filtered.fa.gz
 
 # Align genomes
 minimap2 -ax asm5 -t 4 --eqx TAIR10.filtered.fa ler.filtered.fa \
@@ -73,7 +73,7 @@ Query start position
 Query end position
 Annotation type
 ```
-Values for annotation type should one of the following: SYN, INV, TRA, INVTR, DUP, INVDP. Here:
+Acceptable values for annotation type: SYN, INV, TRA, INVTR, DUP, INVDP. Here:
 
 | <!-- --> |  <!-- -->   |
 |----|--------|
@@ -106,6 +106,7 @@ cvi.filtered.fa	cvi	lw:1.5
 ```
 Currently, following tags are available for genomes.
 ```
+ft = File type (fa/cl for fasta/chromosome_length, default = fa); cl files must be in tsv format with chromosome name in column 1 and chromosome length in column 2
 lw = line width
 lc = line colour
 ```
@@ -127,8 +128,8 @@ TAIR10_GFF3_genes.bed	Genes	ft:bed;bw:50000;nc:black;ns:8;nf:Arial;lc:black;lw:1
 ```
 Currently, following tags are available for tracks.
 ```
+ft = File type (bed/bedgraph/gff, default = bed)
 bw = bin width (default=100000)
-ft = File type (bed/bedgraph, default = bed)
 nc = name colour
 ns = name size
 nf = name font
@@ -163,4 +164,4 @@ tp = text position
 Check [markers.txt](config/marker_point_type.txt) for the list of available markers.
 
 ## Adjusting other parameters
-Some other properties of the plot can be adjust by parsing a config file to the `--cfg` parameter. Description of properties and default values present in the example [base.cfg](./config/base.cfg) file.   
+Additional parameters of the plot can be adjusted by parsing a config file to the `--cfg` parameter. Description and default values present in the example [base.cfg](./example/base.cfg) file.   
