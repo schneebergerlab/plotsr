@@ -8,8 +8,6 @@
 ##bc = background colour
 ##ba = background alpha
 #file	name	tags
-TAIR10_GFF3_genes.bed	Genes	ft:bed;bw:50000;nc:black;ns:8;nf:Arial;lc:black;lw:1;bc:lightgrey;ba:0.5
-#TAIR10_GFF3_transposons.bed	TEs	bw:50000;nc:black;ns:8;nf:Arial;lc:black;lw:1;bc:lightgrey;ba:0.5
-1001genomes.snps.sorted.bed	SNPs	bw:50000;nc:black;ns:8;nf:Arial;lc:navy;lw:1;bc:aqua;ba:0.5
-#1001genomes.indels.sorted.bed	Indels	bw:50000;nc:black;ns:8;nf:Arial;lc:navy;lw:1;bc:aqua;ba:0.5
-#GSE50636_At_H3K27me3_coVcomp.bedGraph	H3K27me3	ft:bedgraph;bw:10000;nc:black;ns:8;nf:Arial;lc:navy;lw:1;bc:aqua;ba:0.5
+TAIR10_GFF3_genes.gff   Genes   ft:gff;bw:10000;nc:black;ns:8;nf:Arial;lc:blue;lw:4;bc:lightblue;ba:0.5
+1001genomes.snps.sorted.bed     SNPs    bw:10000;nc:black;ns:8;nf:Arial;lc:sienna;lw:1;bc:peachpuff;ba:0.5
+Giraut2011_centromeres.bed     Centromeres     bw:10000;nc:black;ns:8;nf:Arial;lc:olive;lw:1;bc:palegreen;ba:0.5

@@ -15,13 +15,18 @@ For manual installation the pre-requisites are:
 1. Python >= 3.8
 2. Python libraries. These can be installed in a conda environment using:
 ```
-conda install numpy=1.20.2 pandas=1.2.4 matplotlib=3.3.4 setuptools
+conda install numpy=1.21.2 pandas=1.2.4 matplotlib=3.3.4 setuptools
 ```
-Then download plotsr and compile:
+Then download plotsr and install:
 ```
 git clone https://github.com/schneebergerlab/plotsr.git
 cd plotsr
 python setup.py install
+```
+
+After this plotsr should be installed and in your environment. Test it by printing the help message:
+```
+plotsr -h
 ```
 
 ## Inputs requirements
@@ -93,7 +98,7 @@ Acceptable values for annotation type: SYN, INV, TRA, INVTR, DUP, INVDP. Here:
 #### Step 3: Running plotsr
 Plotsr can be run using the following command: 
 ```
-plotsr.py \
+plotsr \
     --sr col_lersyri.out \
     --sr ler_cvisyri.out \
     --genomes genomes.txt \
@@ -125,9 +130,9 @@ Feature tracks are parsed to plotsr as a tab-separated file containing the path 
 ```
 $tracks.txt
 # file	name	tags
-TAIR10_GFF3_genes.bed	Genes	ft:bed;bw:50000;nc:black;ns:8;nf:Arial;lc:black;lw:1;bc:lightgrey;ba:0.5
-#TAIR10_GFF3_transposons.bed	TEs	bw:50000;nc:black;ns:8;nf:Arial;lc:black;lw:1;bc:lightgrey;ba:0.5
-1001genomes.snps.sorted.bed	SNPs	bw:50000;nc:black;ns:8;nf:Arial;lc:navy;lw:1;bc:aqua;ba:0.5
+TAIR10_GFF3_genes.gff   Genes   ft:gff;bw:10000;nc:black;ns:8;nf:Arial;lc:blue;lw:4;bc:lightblue;ba:0.5
+1001genomes.snps.sorted.bed     SNPs    bw:10000;nc:black;ns:8;nf:Arial;lc:sienna;lw:1;bc:peachpuff;ba:0.5
+Giraut2011_centromeres.bed     Centromeres     bw:10000;nc:black;ns:8;nf:Arial;lc:olive;lw:1;bc:palegreen;ba:0.5
 ```
 Currently, following tags are available for tracks.
 ```
@@ -167,4 +172,9 @@ tp = text position
 Check [markers.txt](config/marker_point_type.txt) for the list of available markers.
 
 ## Adjusting other parameters
-Additional parameters of the plot can be adjusted by parsing a config file to the `--cfg` parameter. Description and default values present in the example [base.cfg](./example/base.cfg) file.   
+Additional parameters (colors, spacing, legends) of the plot can be adjusted by parsing a config file to the `--cfg` parameter. Description and default values present in the example [base.cfg](./example/base.cfg) file.   
+
+## Citation:
+If you find plotsr helpful, please cite:
+
+`Goel, M., Schneeberger, K., plotsr: Visualising structural similarities and rearrangements between multiple genomes. bioRxiv 2022.01.24.477489, doi.org/10.1101/2022.01.24.477489`
