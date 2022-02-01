@@ -778,11 +778,15 @@ def validalign2fasta(als, genf):
         i = 0
         genomes = deque()
         for line in fin:
+            if len(line) == 0:
+                continue
             if line[0] == '#':
                 continue
             line = line.strip().split("\t")
+            if len(line) == 0:
+                continue
             if len(line) < 2:
-                raise ImportError("Incomplete genomic information.\nExpected format for the genome file:\npath_to_genome1\tgenome1_id\ttags\npath_to_genome2\tgenome2_id\ttags")
+                raise ImportError("Incomplete genomic information.\nExpected format for the genome file:\npath_to_genome1\tgenome1_id\ttags\npath_to_genome2\tgenome2_id\ttags\n\nMake sure that the columns are separated by tabs (and not spaces).")
             gen = genome(line[0], line[1], CHRCOLS[i])
             # Read tags
             if len(line) == 3:
