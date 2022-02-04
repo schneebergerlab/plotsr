@@ -24,10 +24,10 @@ def main(cmd):
     inputfiles.add_argument('-o', help='Output file name. Acceptable format: pdf, png, svg', default="plotsr.pdf")
 
     filtering = parser.add_argument_group("Data filtering")
-    filtering.add_argument('--itx', help='Plot inter-chromosomal SRs as well (experimental)', default='FALSE', action='store_true')
+    # filtering.add_argument('--itx', help='Plot inter-chromosomal SRs as well (experimental)', default='FALSE', action='store_true')
     filtering.add_argument('--chr', help='Select specific chromosome on reference (first genome) and plots them in the given order. Not compatible with --chrord. Can be used multiple time to select more than one chromosomes.', type=str, action='append')
     filtering.add_argument('--reg', help='Plots a specific region. Use as: GenomeID:ChromosomeID:Start-End. Not compatible with --chr and -R.', type=str)
-    filtering.add_argument('--rtr', help='When using --reg, plot all SRs that are within the coordinate boundaries.', default=False, action='store_true')
+    filtering.add_argument('--rtr', help='When using --reg, plot all SRs that are within the boundaries of the homologous regions. For highly zoomed regions, this could result in visually disconnected alignments.', default=False, action='store_true')
     filtering.add_argument('--nosyn', help='Do not plot syntenic regions', default=False, action='store_true')
     filtering.add_argument('--noinv', help='Do not plot inversions', default=False, action='store_true')
     filtering.add_argument('--notr', help='Do not plot translocations regions', default=False, action='store_true')

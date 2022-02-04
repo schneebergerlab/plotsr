@@ -830,6 +830,7 @@ def validalign2fasta(als, genf):
 def filterinput(args, df, chrid):
     # Get region length and filter out smaller SR
     df = df.loc[((df['aend'] - df['astart']) >= args.s) | ((df['bend'] - df['bstart']) >= args.s) | (df['type'] == 'SYN')]
+    ## TODO: Adjust this to make it suitable for ITX plotting
     df = df.loc[df['bchr'] == [chrid[i] for i in df['achr']]]
     # Filter non-selected variations
     if args.nosyn:
@@ -846,7 +847,7 @@ def filterinput(args, df, chrid):
 # END
 
 
-def selectregion(reg, chrlengths, al, chrids):
+def selectregion(reg, rtr, chrlengths, al, chrids):
     import pandas as pd
     import copy
     from collections import OrderedDict, deque
@@ -860,24 +861,23 @@ def selectregion(reg, chrlengths, al, chrids):
         raise ValueError("Genome ID in --reg do not match with any genome ID provided with --genomes. Exiting.")
     if reg[1] not in chrlengths[genids.index(reg[0])][1].keys():
         raise ValueError("Chromosome ID in --reg do not match with any chromosome ID for genome {}. Exiting.".format(reg[0]))
-    l = chrlengths[genids.index(reg[0])][1][reg[1]]
+    # Get length of thetarget chromosome
+    ind = genids.index(reg[0])
+    l = chrlengths[ind][1][reg[1]]
     if any([reg[2] < 1, reg[2] > l, reg[3] < 1, reg[3] > l, reg[2] > reg[3]]):
         raise ValueError("Incorrect chromosome coordinates provided for --reg. Exiting.")
     # Select alignments that are within the selected region in the focal genome. For other genomes, maximal syntenic region coordinate would be used as boundaries.
-    ind = genids.index(reg[0])
     newal = [0]*len(alignments)
-    # Alignments for genomes after the focal genome
+    # Alignments for genomes before the focal genome
     c, s, e = reg[1:]
     for i in range(0, ind).__reversed__():
         df = alignments[i][1].copy()
         syncrd = df.loc[(df['bchr'] == c) & (df['bstart'] <= e) & (df['bend'] >= s) & (df['type'] == 'SYN')].copy()
-
         if min(syncrd['bstart']) < s:
             lower = syncrd['bstart'] < s
             a = (syncrd['bend'][lower] - s)/(syncrd['bend'][lower] - syncrd['bstart'][lower])
             syncrd.loc[lower, 'astart'] = (syncrd['aend'][lower] - (syncrd['aend'][lower] - syncrd['astart'][lower])*a).astype(int)
             syncrd.loc[lower, 'bstart'] = s
-
         if max(syncrd['bend']) > e:
             higher = syncrd['bend'] > e
             a = (e-syncrd['bstart'][higher])/(syncrd['bend'][higher] - syncrd['bstart'][higher])
@@ -886,17 +886,7 @@ def selectregion(reg, chrlengths, al, chrids):
         bc = syncrd['achr'].tolist()[0]
         bs = min(syncrd['astart'])
         be = max(syncrd['aend'])
-        srcrd = df.loc[(df['achr'] == bc) &
-                       (df['astart'] >= bs) &
-                       (df['aend'] <= be) &
-                       (df['bchr'] == c) &
-                       (df['bstart'] >= s) &
-                       (df['bend'] <= e) &
-                       (df['type'] != 'SYN')].reset_index(drop=True).copy()
-        garb = pd.concat([syncrd, srcrd])
-        garb.sort_values(['achr', 'astart', 'aend'], inplace=True)
-        garb.reset_index(inplace=True, drop=True)
-        newal[i] = garb.copy()
+        newal[i] = syncrd.copy()
         c, s, e = bc, bs, be
     # Alignments for genome after the focal genome
     c, s, e = reg[1:]
@@ -918,21 +908,46 @@ def selectregion(reg, chrlengths, al, chrids):
         bc = syncrd['bchr'].tolist()[0]
         bs = min(syncrd['bstart'])
         be = max(syncrd['bend'])
-        srcrd = df.loc[(df['achr'] == c) &
-                       (df['astart'] >= s) &
-                       (df['aend'] <= e) &
-                       (df['bchr'] == bc) &
-                       (df['bstart'] >= bs) &
-                       (df['bend'] <= be) &
-                       (df['type'] != 'SYN')].reset_index(drop=True).copy()
-        garb = pd.concat([syncrd, srcrd])
-        garb.sort_values(['achr', 'astart', 'aend'], inplace=True)
-        garb.reset_index(inplace=False, drop=True)
-        newal[i] = garb
+        newal[i] = syncrd.copy()
         c, s, e = bc, bs, be
     # Update alignments, chrs and chrgrps
-    for i in range(len(alignments)):
-        alignments[i][1] = newal[i].copy()
+    if not rtr:
+        for i in range(len(alignments)):
+            achr = newal[i]['achr'].tolist()[0]
+            astart = min(newal[i]['astart'])
+            aend = max(newal[i]['aend'])
+            bchr = newal[i]['bchr'].tolist()[0]
+            bstart = min(newal[i]['bstart'])
+            bend = max(newal[i]['bend'])
+            srcrd = alignments[i][1].loc[(alignments[i][1]['achr'] == achr) &
+                                         (alignments[i][1]['astart'] >= astart) &
+                                         (alignments[i][1]['aend'] <= aend) &
+                                         (alignments[i][1]['bchr'] == bchr) &
+                                         (alignments[i][1]['bstart'] >= bstart) &
+                                         (alignments[i][1]['bend'] <= bend) &
+                                         (alignments[i][1]['type'] != 'SYN')].reset_index(drop=True).copy()
+            tmp = pd.concat([newal[i], srcrd])
+            tmp.sort_values(['achr', 'astart', 'aend'], inplace=True)
+            tmp.reset_index(inplace=False, drop=True)
+            alignments[i][1] = tmp
+    else:
+        allal = pd.concat(newal)[['astart', 'aend', 'bstart', 'bend']]
+        minx = min(allal.apply(min))
+        maxx = max(allal.apply(max))
+        for i in range(len(alignments)):
+            ac = list(set(newal[i]['achr']))[0]
+            bc = list(set(newal[i]['bchr']))[0]
+            srcrd = alignments[i][1].loc[(alignments[i][1]['achr'] == ac) &
+                                         (alignments[i][1]['astart'] >= minx) &
+                                         (alignments[i][1]['aend'] <= maxx) &
+                                         (alignments[i][1]['bchr'] == bc) &
+                                         (alignments[i][1]['bstart'] >= minx) &
+                                         (alignments[i][1]['bend'] <= maxx) &
+                                         (alignments[i][1]['type'] != 'SYN')].reset_index(drop=True).copy()
+            tmp = pd.concat([newal[i], srcrd])
+            tmp.sort_values(['achr', 'astart', 'aend'], inplace=True)
+            tmp.reset_index(inplace=False, drop=True)
+            alignments[i][1] = tmp
     chrs = [k for k in chrids[0][1].keys() if k in alignments[0][1]['achr'].unique()]
     chrgrps = OrderedDict()
     for c in chrs:
@@ -944,7 +959,7 @@ def selectregion(reg, chrlengths, al, chrids):
             cur = n
         chrgrps[c] = cg
     return alignments, chrs, chrgrps
-
+# END
 
 
 def createribbon(df):

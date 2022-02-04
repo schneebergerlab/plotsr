@@ -46,6 +46,15 @@ def plotsr(args):
         logger.error("Both --chr and --chrord are provided. Only one parameter can be provided at a time. Exiting.")
         sys.exit()
 
+    # Check if --rtr is used without --reg
+    if args.rtr and args.reg is None:
+        logger.error("Cannot use --rtr without --reg. Exiting.")
+    sys.exit()
+
+
+    ###################################################################
+    # Declare variable using argument values
+    ###################################################################
 
     # Set Figure height and width. Change later based on chromosome number and size
     FS = args.f             # Font size
@@ -59,6 +68,7 @@ def plotsr(args):
     B = None if args.markers is None else args.markers.name              # Annotation bed file
     TRACKS = None if args.tracks is None else args.tracks.name
     REG = None if args.reg is None else args.reg.strip().split(":")
+    RTR = args.rtr
 
     ## Get config
     cfg = readbasecfg('', V) if args.cfg is None else readbasecfg(args.cfg.name, V)
@@ -171,8 +181,8 @@ def plotsr(args):
                 cur = n
             chrgrps[c] = cg
 
-    if args.reg is not None:
-        alignments, chrs, chrgrps = selectregion(REG, chrlengths, alignments, chrids)
+    if REG is not None:
+        alignments, chrs, chrgrps = selectregion(REG, RTR, chrlengths, alignments, chrids)
 
     # Combine Ribbon is selected than combine rows
     if R:
@@ -215,7 +225,7 @@ def plotsr(args):
     ax = fig.add_subplot(111, frameon=False)
 
     allal = pdconcat([alignments[i][1] for i in range(len(alignments))])
-    if not args.reg:
+    if REG is None:
         minl, maxl = 0, -1
     else:
         minl = min(allal[['astart', 'bstart']].apply(min))
@@ -260,8 +270,8 @@ def plotsr(args):
         ax = drawmarkers(ax, B, V, chrlengths, indents, chrs, chrgrps, minl=minl, maxl=maxl)
 
     # Draw tracks
-    if args.tracks is not None:
-        tracks = readtrack(args.tracks.name, chrlengths)
+    if TRACKS is not None:
+        tracks = readtrack(TRACKS, chrlengths)
         # tracks = readtrack(f, chrlengths) #TODO: delete this
         ax = drawtracks(ax, tracks, S, chrgrps, chrlengths, V, cfg, minl=minl, maxl=maxl)
 
