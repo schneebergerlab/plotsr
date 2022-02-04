@@ -49,7 +49,7 @@ def plotsr(args):
     # Check if --rtr is used without --reg
     if args.rtr and args.reg is None:
         logger.error("Cannot use --rtr without --reg. Exiting.")
-    sys.exit()
+        sys.exit()
 
 
     ###################################################################
