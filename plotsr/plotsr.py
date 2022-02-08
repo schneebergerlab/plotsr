@@ -69,6 +69,7 @@ def plotsr(args):
     TRACKS = None if args.tracks is None else args.tracks.name
     REG = None if args.reg is None else args.reg.strip().split(":")
     RTR = args.rtr
+    CTX = args.ctx
 
     ## Get config
     cfg = readbasecfg('', V) if args.cfg is None else readbasecfg(args.cfg.name, V)
@@ -86,8 +87,8 @@ def plotsr(args):
     ## Set matplotlib backend
 
     try :
-        matplotlib.use(args.b)
-        # matplotlib.use('Qt5Agg')    # TODO: Delete this line
+        # matplotlib.use(args.b)
+        matplotlib.use('Qt5Agg')    # TODO: Delete this line
     except :
         sys.exit('Matplotlib backend cannot be selected')
 
@@ -99,8 +100,8 @@ def plotsr(args):
         for f in args.sr:
             fin = f.name
             al, cid = readsyriout(fin)
-        # for fin in fins: #TODO: Delete this line
-        #     al, cid = readsyriout(fin) #TODO: Delete this line
+        for fin in fins: #TODO: Delete this line
+            al, cid = readsyriout(fin) #TODO: Delete this line
             alignments.append([os.path.basename(fin) , al])
             chrids.append((os.path.basename(fin), cid))
     elif args.bp is not None:
@@ -141,7 +142,7 @@ def plotsr(args):
 
     # Filter alignments to select long alignments between homologous chromosomes
     for i in range(len(alignments)):
-        alignments[i][1] = filterinput(args, alignments[i][1], chrids[i][1])
+        alignments[i][1] = filterinput(args, alignments[i][1], chrids[i][1], CTX).copy()
 
     # Select only chromosomes selected by --chr
     if args.chr is not None:

@@ -388,7 +388,9 @@ def readbedout(f):
     from pandas import DataFrame
     import numpy as np
     from collections import deque, OrderedDict
+    import logging
     # BEDPE format: achr, astart, aend, bchr, bstart, bend, srtype
+    logger = logging.getLogger('readbedout')
     bed_regs = deque()
     skipvartype = []
     with open(f, 'r') as fin:
@@ -717,13 +719,16 @@ class genome():
 
     # Read chromosome lengths
     def readdata(self):
+        import sys
         if self.ft == 'fa':
             try:
+                self.logger.debug("Reading fasta file: {}".format(self.f))
                 self.glen = {c: len(seq) for c, seq in readfasta(self.f).items()}
             except Exception as e:
                 raise ImportError("Error in reading fasta: {}\n{}".format(self.n, e))
         elif self.ft == 'cl':
             glen = {}
+            self.logger.debug("Reading chromosome length file: {}".format(self.f))
             with open(self.f, 'r') as fin:
                 for line in fin:
                     line = line.strip().split()
@@ -756,7 +761,6 @@ def validalign2fasta(als, genf):
     errmess1 = 'Chromosome ID: {} in structural annotation file: {} not present in genome fasta: {}. Exiting.'
     errmess2 = 'For chromosome ID: {}, length in genome fasta: {} is less than the maximum coordinate in the structural annotation file: {}. Exiting.'
     tags = {'lc': {}, 'lw': {}}
-    taglist = set(tags.keys())
 
     # Count number of genomes and set automatic colors
     count = 0
@@ -827,11 +831,11 @@ def validalign2fasta(als, genf):
 # END
 
 
-def filterinput(args, df, chrid):
+def filterinput(args, df, chrid, ctx=False):
     # Get region length and filter out smaller SR
-    df = df.loc[((df['aend'] - df['astart']) >= args.s) | ((df['bend'] - df['bstart']) >= args.s) | (df['type'] == 'SYN')]
-    ## TODO: Adjust this to make it suitable for ITX plotting
-    df = df.loc[df['bchr'] == [chrid[i] for i in df['achr']]]
+    df = df.loc[((df['aend'] - df['astart']) >= args.s) | ((df['bend'] - df['bstart']) >= args.s) | (df['type'] == 'SYN')].copy()
+    if not ctx:
+        df = df.loc[df['bchr'] == [chrid[i] for i in df['achr']]]
     # Filter non-selected variations
     if args.nosyn:
         df = df.loc[df['type'] != 'SYN']
@@ -1047,9 +1051,7 @@ Draw and plot
 def drawax(ax, chrgrps, chrlengths, v, s, cfg, minl=0, maxl=-1):
     import numpy as np
     nchr = len(chrgrps)
-    # qchrs = [chrid_dict[k] for k in chrs]
-    # tick_pos = 1 - (S/2)
-    bottom_limit = -cfg['exmar']
+     bottom_limit = -cfg['exmar']
     upper_limit = cfg['exmar']
     ticklabels = list(chrgrps.keys())
     if maxl == -1:
