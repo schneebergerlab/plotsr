@@ -92,6 +92,7 @@ def plotsr(args):
         sys.exit('Matplotlib backend cannot be selected')
 
     # fins = ['col_lersyri.out', 'ler_cvisyri.out', 'cvi_erisyri.out', 'eri_shasyri.out', 'sha_kyosyri.out', 'kyo_an1syri.out', 'an1_c24syri.out'] #TODO: Delete this line
+    # fins = ['ler_cvisyri.out', 'cvi_erisyri.out', 'eri_shasyri.out', 'sha_kyosyri.out'] #TODO: Delete this line
     # Read alignment coords
     alignments = deque()
     chrids = deque()
@@ -101,7 +102,7 @@ def plotsr(args):
             al, cid = readsyriout(fin)
         # for fin in fins: #TODO: Delete this line
         #     al, cid = readsyriout(fin) #TODO: Delete this line
-            alignments.append([os.path.basename(fin) , al])
+            alignments.append([os.path.basename(fin), al])
             chrids.append((os.path.basename(fin), cid))
     elif args.bp is not None:
         for f in args.bp:
