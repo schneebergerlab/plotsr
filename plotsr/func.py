@@ -936,11 +936,12 @@ def selectregion(reg, rtr, chrlengths, al, chrids):
             alignments[i][1] = tmp
     else:
         allal = pd.concat(newal)[['astart', 'aend', 'bstart', 'bend']]
-        minx = min(allal.apply(min))
-        maxx = max(allal.apply(max))
+        minx = min([reg[2]] + allal.apply(min).tolist())
+        maxx = max([reg[3]] + allal.apply(max).tolist())
         for i in range(len(alignments)):
             ac = list(set(newal[i]['achr']))[0]
             bc = list(set(newal[i]['bchr']))[0]
+            # Get SR alignments within the view
             srcrd = alignments[i][1].loc[(alignments[i][1]['achr'] == ac) &
                                          (alignments[i][1]['astart'] >= minx) &
                                          (alignments[i][1]['aend'] <= maxx) &
@@ -948,7 +949,42 @@ def selectregion(reg, rtr, chrlengths, al, chrids):
                                          (alignments[i][1]['bstart'] >= minx) &
                                          (alignments[i][1]['bend'] <= maxx) &
                                          (alignments[i][1]['type'] != 'SYN')].reset_index(drop=True).copy()
-            tmp = pd.concat([newal[i], srcrd])
+            # Get syntenic regions within the view
+            syncrd = alignments[i][1].loc[(alignments[i][1]['achr'] == ac) &
+                                          (alignments[i][1]['astart'] <= maxx) &
+                                          (alignments[i][1]['aend'] >= minx) &
+                                          (alignments[i][1]['bchr'] == bc) &
+                                          (alignments[i][1]['bstart'] <= maxx) &
+                                          (alignments[i][1]['bend'] >= minx) &
+                                          (alignments[i][1]['type'] == 'SYN')].reset_index(drop=True).copy()
+            # Alter syn alignments to fit within the selected view
+            ## Trim astart
+            if min(syncrd['astart']) < minx:
+                lower = syncrd['astart'] < minx
+                a = (syncrd['aend'][lower] - minx)/(syncrd['aend'][lower] - syncrd['astart'][lower])
+                syncrd.loc[lower, 'bstart'] = (syncrd['bend'][lower] - (syncrd['bend'][lower] - syncrd['bstart'][lower])*a).astype(int)
+                syncrd.loc[lower, 'astart'] = minx
+            ## Trim aend
+            if max(syncrd['aend']) > maxx:
+                higher = syncrd['aend'] > maxx
+                a = (maxx - syncrd['astart'][higher])/(syncrd['aend'][higher] - syncrd['astart'][higher])
+                syncrd.loc[higher, 'bend'] = (syncrd['bstart'][higher] + (syncrd['bend'][higher] - syncrd['bstart'][higher])*a).astype(int)
+                syncrd.loc[higher, 'aend'] = maxx
+            ## Trim bstart
+            if min(syncrd['bstart']) < minx:
+                lower = syncrd['bstart'] < minx
+                a = (syncrd['bend'][lower] - minx)/(syncrd['bend'][lower] - syncrd['bstart'][lower])
+                syncrd.loc[lower, 'astart'] = (syncrd['aend'][lower] - (syncrd['aend'][lower] - syncrd['astart'][lower])*a).astype(int)
+                syncrd.loc[lower, 'bstart'] = minx
+            ## Trim bend
+            if max(syncrd['bend']) > maxx:
+                higher = syncrd['bend'] > maxx
+                a = (maxx-syncrd['bstart'][higher])/(syncrd['bend'][higher] - syncrd['bstart'][higher])
+                syncrd.loc[higher, 'aend'] = (syncrd['astart'][higher] + (syncrd['aend'][higher] - syncrd['astart'][higher])*a).astype(int)
+                syncrd.loc[higher, 'bend'] = maxx
+
+
+            tmp = pd.concat([syncrd, srcrd])
             tmp.sort_values(['achr', 'astart', 'aend'], inplace=True)
             tmp.reset_index(inplace=False, drop=True)
             alignments[i][1] = tmp

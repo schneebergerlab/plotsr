@@ -93,6 +93,7 @@ def plotsr(args):
         sys.exit('Matplotlib backend cannot be selected')
 
     # fins = ['col_lersyri.out', 'ler_cvisyri.out', 'cvi_erisyri.out', 'eri_shasyri.out', 'sha_kyosyri.out', 'kyo_an1syri.out', 'an1_c24syri.out'] #TODO: Delete this line
+    # fins = ['ler_cvisyri.out', 'cvi_erisyri.out', 'eri_shasyri.out', 'sha_kyosyri.out'] #TODO: Delete this line
     # Read alignment coords
     alignments = deque()
     chrids = deque()
@@ -103,6 +104,9 @@ def plotsr(args):
         for fin in fins: #TODO: Delete this line
             al, cid = readsyriout(fin) #TODO: Delete this line
             alignments.append([os.path.basename(fin) , al])
+        # for fin in fins: #TODO: Delete this line
+        #     al, cid = readsyriout(fin) #TODO: Delete this line
+            alignments.append([os.path.basename(fin), al])
             chrids.append((os.path.basename(fin), cid))
     elif args.bp is not None:
         for f in args.bp:
@@ -142,7 +146,7 @@ def plotsr(args):
 
     # Filter alignments to select long alignments between homologous chromosomes
     for i in range(len(alignments)):
-        alignments[i][1] = filterinput(args, alignments[i][1], chrids[i][1], CTX).copy()
+        alignments[i][1] = filterinput(args, alignments[i][1], chrids[i][1])
 
     # Select only chromosomes selected by --chr
     if args.chr is not None:
