@@ -772,7 +772,9 @@ def validalign2fasta(als, genf):
         CHRCOLS = [matplotlib.colors.to_hex(get_cmap('gist_rainbow')(int(255/count) * i)) for i in range(0, count)]
         if count % 2 != 0:
             m = CHRCOLS[int((count/2) + 1)]
-        CHRCOLS = [j for i in range(int(count/2)) for j in [CHRCOLS[i]] + [CHRCOLS[int(i +count/2)]]] + [m]
+            CHRCOLS = [j for i in range(int(count/2)) for j in [CHRCOLS[i]] + [CHRCOLS[int(i +count/2)]]] + [m]
+        else:
+            CHRCOLS = [j for i in range(int(count/2)) for j in [CHRCOLS[i]] + [CHRCOLS[int(i +count/2)]]]
     # Read genomes and validate chrlengths
     with open(genf, 'r') as fin:
         i = 0
