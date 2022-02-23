@@ -809,7 +809,7 @@ def validalign2fasta(als, genf):
                     if c not in list(glen.keys()):
                         raise ImportError(errmess1.format(c, als[i-1][0], os.path.basename(line[1])))
                     if np.max(np.max(df.loc[df['bchr'] == c, ['bstart', 'bend']])) > glen[c]:
-                        raise ImportError(errmess2.format(c, os.path.basename(fin), als[i-1][0]))
+                        raise ImportError(errmess2.format(c, os.path.basename(genf), als[i-1][0]))
             # Check cases when the genome is the reference-genome
             if i < len(als):
                 try:
