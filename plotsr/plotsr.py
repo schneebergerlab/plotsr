@@ -69,7 +69,9 @@ def plotsr(args):
     TRACKS = None if args.tracks is None else args.tracks.name
     REG = None if args.reg is None else args.reg.strip().split(":")
     RTR = args.rtr
-    CTX = args.ctx
+    CHRS = args.chr
+    ITX = args.itx
+
 
     ## Get config
     cfg = readbasecfg('', V) if args.cfg is None else readbasecfg(args.cfg.name, V)
@@ -93,19 +95,15 @@ def plotsr(args):
         sys.exit('Matplotlib backend cannot be selected')
 
     # fins = ['col_lersyri.out', 'ler_cvisyri.out', 'cvi_erisyri.out', 'eri_shasyri.out', 'sha_kyosyri.out', 'kyo_an1syri.out', 'an1_c24syri.out'] #TODO: Delete this line
-    # fins = ['ler_cvisyri.out', 'cvi_erisyri.out', 'eri_shasyri.out', 'sha_kyosyri.out'] #TODO: Delete this line
+    fins = ['ler_cvisyri.out', 'cvi_erisyri.out', 'eri_shasyri.out', 'sha_kyosyri.out'] #TODO: Delete this line
     # Read alignment coords
     alignments = deque()
     chrids = deque()
     if args.sr is not None:
         for f in args.sr:
             fin = f.name
-            al, cid = readsyriout(fin)
         for fin in fins: #TODO: Delete this line
             al, cid = readsyriout(fin) #TODO: Delete this line
-            alignments.append([os.path.basename(fin) , al])
-        # for fin in fins: #TODO: Delete this line
-        #     al, cid = readsyriout(fin) #TODO: Delete this line
             alignments.append([os.path.basename(fin), al])
             chrids.append((os.path.basename(fin), cid))
     elif args.bp is not None:
@@ -148,43 +146,15 @@ def plotsr(args):
     for i in range(len(alignments)):
         alignments[i][1] = filterinput(args, alignments[i][1], chrids[i][1])
 
-    # Select only chromosomes selected by --chr
-    if args.chr is not None:
-        homchrs = deque()
-        chrs = deque()
-        for c in args.chr:
-            if c not in cs:
-                logger.warning("Selected chromosome: {} is not in reference genome. Skipping it.".format(c))
-                continue
-            homchrs.append(chrgrps[c])
-            chrs.append(c)
-        for i in range(len(alignments)):
-            alignments[i][1] = alignments[i][1].loc[alignments[i][1]['achr'].isin([h[i] for h in homchrs])]
-
-    # Check chromsome IDs and sizes
+        # Check chromsome IDs and sizes
     chrlengths, genomes = validalign2fasta(alignments, args.genomes.name)
-    # chrlengths, genomes = validalign2fasta(alignments, 'genomes.txt') # TODO: Delete this line
+    # chrlengths, genomes = validalign2fasta(alignments, 'genomes2.txt') # TODO: Delete this line
 
 
-    ## Remove chromosomes that are not homologous to selected reference chromosomes
-    if args.chr is not None:
-        for i in range(len(chrlengths)):
-            ks = list(chrlengths[i][1].keys())
-            homs = [h[i] for h in homchrs]
-            for k in ks:
-                if k not in homs:
-                    chrlengths[i][1].pop(k)
-        # Update groups of homologous chromosomes
-        # chrs = [k for k in chrids[0][1].keys() if k in alignments[0][1]['achr'].unique()]
-        chrgrps = OrderedDict()
-        for c in chrs:
-            cg = deque([c])
-            cur = c
-            for i in range(len(chrids)):
-                n = chrids[i][1][cur]
-                cg.append(n)
-                cur = n
-            chrgrps[c] = cg
+    # Select only chromosomes selected by --chr
+    if CHRS is not None:
+        alignments, chrs, chrgrps, chrlengths = selectchrom(CHRS, cs, chrgrps, alignments, chrlengths, chrids)
+
 
     if REG is not None:
         alignments, chrs, chrgrps = selectregion(REG, RTR, chrlengths, alignments, chrids)

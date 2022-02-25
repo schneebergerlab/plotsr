@@ -853,6 +853,42 @@ def filterinput(args, df, chrid, ctx=False):
 # END
 
 
+def selectchrom(CHRS, cs, chrgrps, alignments, chrlengths, chrids):
+    homchrs = deque()
+    chrs = deque()
+    logger = logging.getLogger("Selecting chromosomes")
+    for c in CHRS:
+        if c not in cs:
+            logger.warning("Selected chromosome: {} is not in reference genome. Skipping it.".format(c))
+            continue
+        homchrs.append(chrgrps[c])
+        chrs.append(c)
+    for i in range(len(alignments)):
+        alignments[i][1] = alignments[i][1].loc[(alignments[i][1]['achr'].isin([h[i] for h in homchrs])) &
+                                                (alignments[i][1]['bchr'].isin([h[i+1] for h in homchrs]))]
+    ## Remove chromosomes that are not homologous to selected reference chromosomes
+    if CHRS is not None:
+        for i in range(len(chrlengths)):
+            ks = list(chrlengths[i][1].keys())
+            homs = [h[i] for h in homchrs]
+            for k in ks:
+                if k not in homs:
+                    chrlengths[i][1].pop(k)
+        # Update groups of homologous chromosomes
+        # chrs = [k for k in chrids[0][1].keys() if k in alignments[0][1]['achr'].unique()]
+        chrgrps = OrderedDict()
+        for c in chrs:
+            cg = deque([c])
+            cur = c
+            for i in range(len(chrids)):
+                n = chrids[i][1][cur]
+                cg.append(n)
+                cur = n
+            chrgrps[c] = cg
+    return alignments, chrs, chrgrps, chrlengths
+# END
+
+
 def selectregion(reg, rtr, chrlengths, al, chrids):
     import pandas as pd
     import copy
@@ -1089,63 +1125,71 @@ Draw and plot
 def drawax(ax, chrgrps, chrlengths, v, s, cfg, minl=0, maxl=-1):
     import numpy as np
     nchr = len(chrgrps)
-     bottom_limit = -cfg['exmar']
+    bottom_limit = -cfg['exmar']
     upper_limit = cfg['exmar']
     ticklabels = list(chrgrps.keys())
-    if maxl == -1:
-        maxl = np.max([chrlengths[i][1][c[i]] for c in chrgrps.values() for i in range(len(c))])
-    if not v:
-        tick_pos = s/2 + cfg['chrmar']
-        ax.set_ylim(bottom_limit, nchr+upper_limit)
-        ax.set_yticks([tick_pos+i for i in range(nchr)])
-        ax.set_yticklabels(ticklabels[::-1])
-        ax.tick_params(axis='y', right=False, left=False)
-        ax.set_xlim(minl, maxl)
-        ax.xaxis.grid(True, which='both', linestyle='--')
-        ax.ticklabel_format(axis='x', useOffset=False, style='plain')
-        xticks = ax.get_xticks()
-        if maxl >= 1000000000:
-            xticksl = xticks/1000000000
-            ax.set_xlabel('Chromosome position (in Gbp)')
-        elif maxl >= 1000000:
-            xticksl = xticks/1000000
-            ax.set_xlabel('Chromosome position (in Mbp)')
-        elif maxl >= 1000:
-            xticksl = xticks/1000
-            ax.set_xlabel('Chromosome position (in Kbp)')
+    if not ITX:
+        if maxl == -1:
+            maxl = np.max([chrlengths[i][1][c[i]] for c in chrgrps.values() for i in range(len(c))])
+        if not v:
+            tick_pos = s/2 + cfg['chrmar']
+            ax.set_ylim(bottom_limit, nchr+upper_limit)
+            ax.set_yticks([tick_pos+i for i in range(nchr)])
+            ax.set_yticklabels(ticklabels[::-1])
+            ax.tick_params(axis='y', right=False, left=False)
+            ax.set_xlim(minl, maxl)
+            ax.xaxis.grid(True, which='both', linestyle='--')
+            ax.ticklabel_format(axis='x', useOffset=False, style='plain')
+            xticks = ax.get_xticks()
+            if maxl >= 1000000000:
+                xticksl = xticks/1000000000
+                ax.set_xlabel('Chromosome position (in Gbp)')
+            elif maxl >= 1000000:
+                xticksl = xticks/1000000
+                ax.set_xlabel('Chromosome position (in Mbp)')
+            elif maxl >= 1000:
+                xticksl = xticks/1000
+                ax.set_xlabel('Chromosome position (in Kbp)')
+            else:
+                xticksl = xticks
+                ax.set_xlabel('Chromosome position')
+            ax.set_xticks(xticks[:-1])
+            ax.set_xticklabels(xticksl[:-1])
+            ax.set_ylabel('Reference Chromosome ID')
+            ax.set_axisbelow(True)
         else:
-            xticksl = xticks
-            ax.set_xlabel('Chromosome position')
-        ax.set_xticks(xticks[:-1])
-        ax.set_xticklabels(xticksl[:-1])
-        ax.set_ylabel('Reference Chromosome ID')
-        ax.set_axisbelow(True)
-    else:
-        tick_pos = 1 - cfg['chrmar'] - s/2
-        ax.set_xlim(bottom_limit, nchr+upper_limit)
-        ax.set_xticks([tick_pos+i for i in range(nchr)])
-        ax.set_xticklabels(ticklabels)
-        ax.tick_params(axis='x', top=False, bottom=False)
-        ax.set_ylim(minl, maxl)
-        ax.ticklabel_format(axis='y', useOffset=False, style='plain')
-        yticks = ax.get_yticks()
-        if maxl >= 1000000000:
-            yticksl = yticks/1000000000
-            ax.set_ylabel('Chromosome position (in Gbp)')
-        elif maxl >= 1000000:
-            yticksl = yticks/1000000
-            ax.set_ylabel('Chromosome position (in Mbp)')
-        elif maxl >= 1000:
-            yticksl = yticks/1000
-            ax.set_ylabel('Chromosome position (in Kbp)')
-        else:
-            yticksl = yticks
-            ax.set_ylabel('Chromosome position')
-        ax.set_yticks(yticks[:-1])
-        ax.set_yticklabels(yticksl[:-1])
-        ax.set_xlabel('Reference Chromosome ID')
-        ax.yaxis.grid(True, which='both', linestyle='--')
-        ax.set_axisbelow(True)
+            tick_pos = 1 - cfg['chrmar'] - s/2
+            ax.set_xlim(bottom_limit, nchr+upper_limit)
+            ax.set_xticks([tick_pos+i for i in range(nchr)])
+            ax.set_xticklabels(ticklabels)
+            ax.tick_params(axis='x', top=False, bottom=False)
+            ax.set_ylim(minl, maxl)
+            ax.ticklabel_format(axis='y', useOffset=False, style='plain')
+            yticks = ax.get_yticks()
+            if maxl >= 1000000000:
+                yticksl = yticks/1000000000
+                ax.set_ylabel('Chromosome position (in Gbp)')
+            elif maxl >= 1000000:
+                yticksl = yticks/1000000
+                ax.set_ylabel('Chromosome position (in Mbp)')
+            elif maxl >= 1000:
+                yticksl = yticks/1000
+                ax.set_ylabel('Chromosome position (in Kbp)')
+            else:
+                yticksl = yticks
+                ax.set_ylabel('Chromosome position')
+            ax.set_yticks(yticks[:-1])
+            ax.set_yticklabels(yticksl[:-1])
+            ax.set_xlabel('Reference Chromosome ID')
+            ax.yaxis.grid(True, which='both', linestyle='--')
+            ax.set_axisbelow(True)
+    elif ITX:
+        MCHR = 0.01     # Spacing between neighbouring chromosome
+        maxchr = max([sum(chrlengths[i][1].values()) for i in range(len(chrlengths))])
+        maxl = int(maxchr/(MCHR + 1 - (MCHR*len(chrgrps))))
+        mchr = MCHR*maxl
+
+
     return ax, maxl
 # END
 
