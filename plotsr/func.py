@@ -400,8 +400,8 @@ def readbedout(f):
             if l[6] in VARS:
                 bed_regs.append(l)
             else:
-                if l[10] not in skipvartype:
-                    skipvartype.append(l[10])
+                if l[6] not in skipvartype:
+                    skipvartype.append(l[6])
                     logger.warning("{} is not a valid annotation for alignments in file {}. Alignments should belong to the following classes {}. Skipping alignment.".format(l[10], f, VARS))
 
     df = DataFrame(list(bed_regs))
@@ -776,7 +776,9 @@ def validalign2fasta(als, genf):
         CHRCOLS = [matplotlib.colors.to_hex(get_cmap('gist_rainbow')(int(255/count) * i)) for i in range(0, count)]
         if count % 2 != 0:
             m = CHRCOLS[int((count/2) + 1)]
-        CHRCOLS = [j for i in range(int(count/2)) for j in [CHRCOLS[i]] + [CHRCOLS[int(i +count/2)]]] + [m]
+            CHRCOLS = [j for i in range(int(count/2)) for j in [CHRCOLS[i]] + [CHRCOLS[int(i +count/2)]]] + [m]
+        else:
+            CHRCOLS = [j for i in range(int(count/2)) for j in [CHRCOLS[i]] + [CHRCOLS[int(i +count/2)]]]
     # Read genomes and validate chrlengths
     with open(genf, 'r') as fin:
         i = 0
@@ -811,7 +813,7 @@ def validalign2fasta(als, genf):
                     if c not in list(glen.keys()):
                         raise ImportError(errmess1.format(c, als[i-1][0], os.path.basename(line[1])))
                     if np.max(np.max(df.loc[df['bchr'] == c, ['bstart', 'bend']])) > glen[c]:
-                        raise ImportError(errmess2.format(c, os.path.basename(fin), als[i-1][0]))
+                        raise ImportError(errmess2.format(c, os.path.basename(genf), als[i-1][0]))
             # Check cases when the genome is the reference-genome
             if i < len(als):
                 try:
@@ -823,7 +825,7 @@ def validalign2fasta(als, genf):
                     if c not in list(glen.keys()):
                         raise ImportError(errmess1.format(c, als[i][0], os.path.basename(line[1])))
                     if np.max(np.max(df.loc[df['achr'] == c, ['astart', 'aend']])) > glen[c]:
-                        raise ImportError(errmess2.format(c, os.path.basename(fin), als[i][0]))
+                        raise ImportError(errmess2.format(c, os.path.basename(genf), als[i][0]))
             out.append((line[1], {c: glen[c] for c in set(achr).union(set(bchr))}))
             i += 1
             genomes.append(gen)
