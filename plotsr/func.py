@@ -1124,11 +1124,11 @@ Draw and plot
 
 def drawax(ax, chrgrps, chrlengths, v, s, cfg, minl=0, maxl=-1):
     import numpy as np
-    nchr = len(chrgrps)
     bottom_limit = -cfg['exmar']
     upper_limit = cfg['exmar']
     ticklabels = list(chrgrps.keys())
     if not ITX:
+        nchr = len(chrgrps)
         if maxl == -1:
             maxl = np.max([chrlengths[i][1][c[i]] for c in chrgrps.values() for i in range(len(c))])
         if not v:
@@ -1184,12 +1184,30 @@ def drawax(ax, chrgrps, chrlengths, v, s, cfg, minl=0, maxl=-1):
             ax.yaxis.grid(True, which='both', linestyle='--')
             ax.set_axisbelow(True)
     elif ITX:
-        MCHR = 0.01     # Spacing between neighbouring chromosome
+        MCHR = 0.01     # TODO : read spacing between neighbouring chromosome from config file
         maxchr = max([sum(chrlengths[i][1].values()) for i in range(len(chrlengths))])
         maxl = int(maxchr/(MCHR + 1 - (MCHR*len(chrgrps))))
         mchr = MCHR*maxl
-
-
+        ngen = len(chrlengths)
+        if not v:
+            ax.set_xlim(0, maxl)
+            ax.set_ylim(bottom_limit, ngen+upper_limit)
+            tick_pos = deque()
+            tick_lab = deque()
+            offset = 0
+            for k, v in chrgrps.items():
+                maxchr = max([chrlengths[j][1][v[j]] for j in range(len(v))])
+                tick_pos.append(offset + (maxchr/2))
+                tick_lab.append(k)
+                offset += maxchr + mchr
+            ax.set_xticks(tick_pos)
+            ax.set_xticklabels(tick_lab)
+            ax.set_yticks([i + 0.5 for i in range(len(chrlengths))][::-1])
+            ax.set_yticklabels([i[0] for i in chrlengths])
+            ax.tick_params(axis='y', right=False, left=False)
+            ax.set_axisbelow(True)
+            ax.set_xlabel('Reference Chromosome ID')
+            ax.set_ylabel('Genome')
     return ax, maxl
 # END
 
@@ -1202,34 +1220,41 @@ def pltchrom(ax, chrs, chrgrps, chrlengths, v, S, genomes, cfg, minl=0, maxl=-1)
     step = S/(len(chrlengths)-1)
     chrlabels = []
     if not v:
-        # TODO: Read margin from base.cfg
         rend = len(chrs)-1+S+cfg['chrmar']
         indents = [rend - (i*step) for i in range(len(chrlengths))]
     elif v:
         rend = 1-S-cfg['chrmar']
         indents = [rend + (i*step) for i in range(len(chrlengths))]
-    for s in range(len(chrlengths)):
-        for i in range(len(chrs)):
-            offset = i if not v else -i
-            if maxl == -1:
-                maxcoord = chrlengths[s][1][chrgrps[chrs[i]][s]]
-            else:
-                maxcoord = maxl
-            genome = [gen for gen in genomes if gen.n == chrlengths[s][0]][0]
-            if not chrlabs[s]:
-                # chrlabels.append(pltchr(indents[s]-offset, minl, maxcoord,
-                #                         color=chrtags['lc'][chrlengths[s][0]],
-                #                         linewidth=chrtags['lw'][chrlengths[s][0]],
-                #                         label=chrlengths[s][0]))
-                chrlabels.append(pltchr(indents[s]-offset, minl, maxcoord,
-                                        color=genome.lc,
-                                        linewidth=genome.lw,
-                                        label=chrlengths[s][0]))
-                chrlabs[s] = True
-            else:
-                pltchr(indents[s]-offset, minl, maxcoord,
+    if not ITX:
+        for s in range(len(chrlengths)):
+            for i in range(len(chrs)):
+                offset = i if not v else -i
+                if maxl == -1:
+                    maxcoord = chrlengths[s][1][chrgrps[chrs[i]][s]]
+                else:
+                    maxcoord = maxl
+                genome = [gen for gen in genomes if gen.n == chrlengths[s][0]][0]
+                if not chrlabs[s]:
+                    chrlabels.append(pltchr(indents[s]-offset, minl, maxcoord,
+                                            color=genome.lc,
+                                            linewidth=genome.lw,
+                                            label=chrlengths[s][0]))
+                    chrlabs[s] = True
+                else:
+                    pltchr(indents[s]-offset, minl, maxcoord,
+                           color=genome.lc,
+                           linewidth=genome.lw)
+    elif ITX:
+        for s in range(len(chrlengths)):
+            start = 0
+            for i in range(len(chrs)):
+                y = len(chrlengths) - s - 0.5
+                end = start + chrlengths[s][1][chrgrps[chrs[i]][s]]
+                genome = [gen for gen in genomes if gen.n == chrlengths[s][0]][0]
+                pltchr(y, start, end,
                        color=genome.lc,
                        linewidth=genome.lw)
+                start = end + (MCHR*maxl)
     return ax, indents, chrlabels
 # END
 
@@ -1241,7 +1266,7 @@ def pltsv(ax, alignments, chrs, v, chrgrps, indents, cfg):
     adtralab = False
     adduplab = False
 
-    alpha = cfg['alpha'] # TODO: Set alpha as a parameter
+    alpha = cfg['alpha']
     svlabels = deque()
     for s in range(len(alignments)):
         df = alignments[s][1]
@@ -1330,14 +1355,8 @@ def bezierpath(rs, re, qs, qe, ry, qy, v, col, alpha, label='', lw=0):
         Path.CURVE4,
         Path.CLOSEPOLY,
     ]
-
     path = Path(verts, codes)
-    # fig, ax = plt.subplots()
     patch = patches.PathPatch(path, facecolor=col, lw=lw, alpha=alpha, label=label, edgecolor=col)
-    # patch = patches.PathPatch(path) #, facecolor=col, lw=lw, alpha=alpha, label=label, linecolor=c)
-    # ax.set_xlim(-0.1, 2.5)
-    # ax.set_ylim(-0.1, 2991784)
-    # ax.add_patch(patch)
     return patch
 # END
 
