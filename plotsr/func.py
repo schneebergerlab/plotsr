@@ -322,7 +322,7 @@ def readannobed(path, v, chrlengths):
                 continue
             line = line.strip().split("\t")
             if len(line) < 4:
-                logger.warning("Incomplete example in BED file line:\n{}\nGenome coordinate (chromosome, start,end) and genome name are required columns, while tags is an optional column".format('\t'.join(line)))
+                logger.warning("Incomplete example in BED file line:\n{}\nGenome coordinate (chromosome, start, end) and genome name are required columns; tags can be in optional column".format('\t'.join(line)))
                 continue
             found = False
             for i in chrlengths:
@@ -833,10 +833,10 @@ def validalign2fasta(als, genf):
 # END
 
 
-def filterinput(args, df, chrid, ctx=False):
+def filterinput(args, df, chrid, itx=False):
     # Get region length and filter out smaller SR
     df = df.loc[((df['aend'] - df['astart']) >= args.s) | ((df['bend'] - df['bstart']) >= args.s) | (df['type'] == 'SYN')].copy()
-    if not ctx:
+    if not itx:
         df = df.loc[df['bchr'] == [chrid[i] for i in df['achr']]]
     # Filter non-selected variations
     if args.nosyn:
@@ -1122,12 +1122,12 @@ Draw and plot
 """
 
 
-def drawax(ax, chrgrps, chrlengths, v, s, cfg, minl=0, maxl=-1):
+def drawax(ax, chrgrps, chrlengths, v, s, cfg, itx, minl=0, maxl=-1):
     import numpy as np
     bottom_limit = -cfg['exmar']
     upper_limit = cfg['exmar']
-    ticklabels = list(chrgrps.keys())
-    if not ITX:
+    if not itx:
+        ticklabels = list(chrgrps.keys())
         nchr = len(chrgrps)
         if maxl == -1:
             maxl = np.max([chrlengths[i][1][c[i]] for c in chrgrps.values() for i in range(len(c))])
@@ -1183,7 +1183,7 @@ def drawax(ax, chrgrps, chrlengths, v, s, cfg, minl=0, maxl=-1):
             ax.set_xlabel('Reference Chromosome ID')
             ax.yaxis.grid(True, which='both', linestyle='--')
             ax.set_axisbelow(True)
-    elif ITX:
+    elif itx:
         MCHR = 0.01     # TODO : read spacing between neighbouring chromosome from config file
         maxchr = max([sum(chrlengths[i][1].values()) for i in range(len(chrlengths))])
         maxl = int(maxchr/(MCHR + 1 - (MCHR*len(chrgrps))))
@@ -1195,8 +1195,9 @@ def drawax(ax, chrgrps, chrlengths, v, s, cfg, minl=0, maxl=-1):
             tick_pos = deque()
             tick_lab = deque()
             offset = 0
-            for k, v in chrgrps.items():
-                maxchr = max([chrlengths[j][1][v[j]] for j in range(len(v))])
+            for k in chrgrps:
+                c = chrgrps[k]
+                maxchr = max([chrlengths[j][1][c[j]] for j in range(len(c))])
                 tick_pos.append(offset + (maxchr/2))
                 tick_lab.append(k)
                 offset += maxchr + mchr
@@ -1208,24 +1209,45 @@ def drawax(ax, chrgrps, chrlengths, v, s, cfg, minl=0, maxl=-1):
             ax.set_axisbelow(True)
             ax.set_xlabel('Reference Chromosome ID')
             ax.set_ylabel('Genome')
+        else:
+            ax.set_ylim(0, maxl)
+            ax.set_xlim(bottom_limit, ngen+upper_limit)
+            tick_pos = deque()
+            tick_lab = deque()
+            offset = 0
+            for k in chrgrps.__reversed__():
+                c = chrgrps[k]
+                maxchr = max([chrlengths[j][1][c[j]] for j in range(len(c))])
+                tick_pos.append(offset + (maxchr/2))
+                tick_lab.append(k)
+                offset += maxchr + mchr
+            ax.set_yticks(tick_pos)
+            ax.set_yticklabels(tick_lab)
+            ax.set_xticks([i + 0.5 for i in range(len(chrlengths))])
+            ax.set_xticklabels([i[0] for i in chrlengths])
+            ax.tick_params(axis='x', right=False, left=False)
+            ax.set_axisbelow(True)
+            ax.set_ylabel('Reference Chromosome ID')
+            ax.set_xlabel('Genome')
     return ax, maxl
 # END
 
 
-def pltchrom(ax, chrs, chrgrps, chrlengths, v, S, genomes, cfg, minl=0, maxl=-1):
+def pltchrom(ax, chrs, chrgrps, chrlengths, v, S, genomes, cfg, itx, minl=0, maxl=-1):
     chrlabs = [False]*len(chrlengths)
     # Set chromosome direction
     pltchr = ax.hlines if not v else ax.vlines
-    # Define indents
-    step = S/(len(chrlengths)-1)
     chrlabels = []
-    if not v:
-        rend = len(chrs)-1+S+cfg['chrmar']
-        indents = [rend - (i*step) for i in range(len(chrlengths))]
-    elif v:
-        rend = 1-S-cfg['chrmar']
-        indents = [rend + (i*step) for i in range(len(chrlengths))]
-    if not ITX:
+    indents = []
+    if not itx:
+        # Define indents
+        step = S/(len(chrlengths)-1)
+        if not v:
+            rend = len(chrs)-1+S+cfg['chrmar']
+            indents = [rend - (i*step) for i in range(len(chrlengths))]
+        elif v:
+            rend = 1-S-cfg['chrmar']
+            indents = [rend + (i*step) for i in range(len(chrlengths))]
         for s in range(len(chrlengths)):
             for i in range(len(chrs)):
                 offset = i if not v else -i
@@ -1238,85 +1260,115 @@ def pltchrom(ax, chrs, chrgrps, chrlengths, v, S, genomes, cfg, minl=0, maxl=-1)
                     chrlabels.append(pltchr(indents[s]-offset, minl, maxcoord,
                                             color=genome.lc,
                                             linewidth=genome.lw,
-                                            label=chrlengths[s][0]))
+                                            label=chrlengths[s][0],
+                                            zorder=2))
                     chrlabs[s] = True
                 else:
                     pltchr(indents[s]-offset, minl, maxcoord,
                            color=genome.lc,
-                           linewidth=genome.lw)
-    elif ITX:
+                           linewidth=genome.lw,
+                           zorder=2)
+    elif itx:
+        MCHR = 0.01     # TODO: read spacing between neighbouring chromosome from config file
         for s in range(len(chrlengths)):
             start = 0
+            genome = [gen for gen in genomes if gen.n == chrlengths[s][0]][0]
+            fixed = len(chrlengths) - s - 0.5 if not v else s + 0.5
             for i in range(len(chrs)):
-                y = len(chrlengths) - s - 0.5
-                end = start + chrlengths[s][1][chrgrps[chrs[i]][s]]
-                genome = [gen for gen in genomes if gen.n == chrlengths[s][0]][0]
-                pltchr(y, start, end,
+                if not v:
+                    end = start + chrlengths[s][1][chrgrps[chrs[i]][s]]
+                else:
+                    end = start + chrlengths[s][1][chrgrps[chrs[len(chrs)-1-i]][s]]
+                pltchr(fixed, start, end,
                        color=genome.lc,
-                       linewidth=genome.lw)
+                       linewidth=genome.lw,
+                       zorder=2)
                 start = end + (MCHR*maxl)
     return ax, indents, chrlabels
 # END
 
 
-def pltsv(ax, alignments, chrs, v, chrgrps, indents, cfg):
+def genbuff(s, chrlengths, chrgrps, chrs, maxl, v):
+    MCHR = 0.01     # TODO: read spacing between neighbouring chromosome from config file
+    rchrlen = [chrlengths[s][1][chrgrps[c][s]] for c in chrs]
+    rbuff = [0]
+    if not v:
+        for i in range(0, len(rchrlen)-1):
+            rbuff.append(int(rbuff[-1] + (MCHR*maxl) + rchrlen[i]))
+    else:
+        for i in range(1, len(rchrlen))[::-1]:
+            rbuff.append(int(rbuff[-1] + (MCHR*maxl) + rchrlen[i]))
+        rbuff = rbuff[::-1]
+    rbuff = dict(zip([chrgrps[c][s] for c in chrs], rbuff))
+    return rbuff
+# END
+
+
+def pltsv(ax, alignments, chrs, v, chrgrps, chrlengths, indents, cfg, itx):
     from collections import deque
+    from copy import deepcopy
+    alpha = cfg['alpha']
     adsynlab = False
     adinvlab = False
     adtralab = False
     adduplab = False
-
-    alpha = cfg['alpha']
     svlabels = deque()
+    legenddict = {'SYN': adsynlab, 'INV': adinvlab,
+                  'TRANS': adtralab, 'INVTR': adtralab,
+                  'DUP': adduplab, 'INVDP': adduplab}
     for s in range(len(alignments)):
-        df = alignments[s][1]
-        for i in range(len(chrs)):
-            offset = i if not v else -i
-            # Plot syntenic regions
-            for row in df.loc[(df['achr'] == chrgrps[chrs[i]][s]) & (df['type'] == 'SYN')].itertuples(index=False):
-                if not adsynlab:
-                    p = bezierpath(row[1], row[2], row[4], row[5], indents[s]-offset, indents[s+1]-offset, v, col=cfg['syncol'], alpha=alpha, label='Syntenic')
-                    adsynlab = True
-                    syn = ax.add_patch(p)
-                    svlabels.append(syn)
-                else:
-                    p = bezierpath(row[1], row[2], row[4], row[5], indents[s]-offset, indents[s+1]-offset, v, col=cfg['syncol'], alpha=alpha)
-                    ax.add_patch(p)
-            # Plot Inversions
-            for row in df.loc[(df['achr'] == chrgrps[chrs[i]][s]) & (df['type'] == 'INV')].itertuples(index=False):
-                if not adinvlab:
-                    p = bezierpath(row[1], row[2], row[4], row[5], indents[s]-offset, indents[s+1]-offset, v, col=cfg['invcol'], alpha=alpha, label='Inversion', lw=0.1)
-                    adinvlab = True
-                    inv = ax.add_patch(p)
-                    svlabels.append(inv)
-                else:
-                    p = bezierpath(row[1], row[2], row[4], row[5], indents[s]-offset, indents[s+1]-offset, v, col=cfg['invcol'], alpha=alpha, lw=0.1)
-                    ax.add_patch(p)
-            # Plot Translocations
-            for row in df.loc[(df['achr'] == chrgrps[chrs[i]][s]) & (df['type'].isin(['TRANS', 'INVTR']))].itertuples(index=False):
-                if not adtralab:
-                    p = bezierpath(row[1], row[2], row[4], row[5], indents[s]-offset, indents[s+1]-offset, v, col=cfg['tracol'], alpha=alpha, label='Translocation', lw=0.1)
-                    adtralab = True
-                    tra = ax.add_patch(p)
-                    svlabels.append(tra)
-                else:
-                    p = bezierpath(row[1], row[2], row[4], row[5], indents[s]-offset, indents[s+1]-offset, v, col=cfg['tracol'], alpha=alpha, lw=0.1)
-                    ax.add_patch(p)
-            # Plot Duplications
-            for row in df.loc[(df['achr'] == chrgrps[chrs[i]][s]) & (df['type'].isin(['DUP', 'INVDP']))].itertuples(index=False):
-                if not adduplab:
-                    p = bezierpath(row[1], row[2], row[4], row[5], indents[s]-offset, indents[s+1]-offset, v, col=cfg['dupcol'], alpha=alpha, label='Duplication', lw=0.1)
-                    adduplab=True
-                    dup = ax.add_patch(p)
-                    svlabels.append(dup)
-                else:
-                    p = bezierpath(row[1], row[2], row[4], row[5], indents[s]-offset, indents[s+1]-offset, v, col=cfg['dupcol'], alpha=alpha, lw=0.1)
-                    ax.add_patch(p)
+        df = deepcopy(alignments[s][1])
+        df.loc[df['type'] == 'INVTR', 'type'] = 'TRANS'
+        df.loc[df['type'] == 'INVDP', 'type'] = 'DUP'
+        coldict = {'SYN': cfg['syncol'],
+                   'INV': cfg['invcol'],
+                   'TRANS': cfg['tracol'],
+                   'DUP': cfg['dupcol']}
+        df['col'] = [coldict[c] for c in df['type']]
+        labdict = {'SYN': 'Syntenic', 'INV': 'Inversion', 'TRANS': 'Translocation', 'DUP': 'Duplication'}
+        df['lab'] = [labdict[c] for c in df['type']]
+        df.loc[df.duplicated(['lab']), 'lab'] = ''
+        df['lw'] = 0
+        df.loc[df['type'] != 'SYN', 'lw'] = 0.1
+        df['zorder'] = 0
+        df.loc[df['type'] != 'SYN', 'zorder'] = 1
+        if not itx:
+            df['ry'] = indents[s]
+            df['qy'] = indents[s+1]
+            for i in range(len(chrs)):
+                offset = i if not v else -i
+                df.loc[df['achr'] == chrs[i], 'ry'] -= offset
+                df.loc[df['achr'] == chrs[i], 'qy'] -= offset
+            for row in df.itertuples(index=False):
+                p = bezierpath(row.astart, row.aend, row.bstart, row.bend, row.ry, row.qy, v, row.col, alpha=alpha, label=row.lab, lw=row.lw, zorder=row.zorder)
+                l = ax.add_patch(p)
+                if row.lab != '':
+                    if not legenddict[row.type]:
+                        svlabels.append(l)
+                        legenddict[row.type] = True
+        elif itx:
+            rbuff = genbuff(s, chrlengths, chrgrps, chrs, maxl, v)
+            rbuff = [rbuff[c] for c in df['achr']]
+            df['astart'] += rbuff
+            df['aend'] += rbuff
+            qbuff = genbuff(s+1, chrlengths, chrgrps, chrs, maxl, v)
+            qbuff = [qbuff[c] for c in df['bchr']]
+            df['bstart'] += qbuff
+            df['bend'] += qbuff
+            df['ry'] = len(chrlengths) - s - 0.5 if not v else s + 0.5
+            df['qy'] = len(chrlengths) - s - 1 - 0.5 if not v else s + 1 + 0.5
+            for row in df.itertuples(index=False):
+                p = bezierpath(row.astart, row.aend, row.bstart, row.bend, row.ry, row.qy, v, row.col, alpha=alpha, label=row.lab, lw=row.lw, zorder=row.zorder)
+                l = ax.add_patch(p)
+                if row.lab != '':
+                    if not legenddict[row.type]:
+                        svlabels.append(l)
+                        legenddict[row.type] = True
     return ax, svlabels
 # END
 
 
-def bezierpath(rs, re, qs, qe, ry, qy, v, col, alpha, label='', lw=0):
+def bezierpath(rs, re, qs, qe, ry, qy, v, col, alpha, label='', lw=0, zorder=0):
     import matplotlib.patches as patches
     from matplotlib.path import Path
     smid = (qs-rs)/2    # Start increment
@@ -1356,18 +1408,17 @@ def bezierpath(rs, re, qs, qe, ry, qy, v, col, alpha, label='', lw=0):
         Path.CLOSEPOLY,
     ]
     path = Path(verts, codes)
-    patch = patches.PathPatch(path, facecolor=col, lw=lw, alpha=alpha, label=label, edgecolor=col)
+    patch = patches.PathPatch(path, facecolor=col, lw=lw, alpha=alpha, label=label, edgecolor=col, zorder=zorder)
     return patch
 # END
 
 
-def drawmarkers(ax, b, v, chrlengths, indents, chrs, chrgrps, minl=0, maxl=-1):
+def drawmarkers(ax, b, v, chrlengths, indents, chrs, chrgrps, itx, minl=0, maxl=-1):
     import logging
     logger = logging.getLogger('drawmarkers')
     mdata = readannobed(b, v, chrlengths)
     for m in mdata:
         ind = [i for i in range(len(chrlengths)) if chrlengths[i][0] == m.genome][0]
-        indent = indents[ind]
         chrid = [k for k, c in chrgrps.items() if c[ind] == m.chr]
         if chrid != []:
             offset = chrs.index(chrid[0])
@@ -1378,14 +1429,27 @@ def drawmarkers(ax, b, v, chrlengths, indents, chrs, chrgrps, minl=0, maxl=-1):
             if m.start < minl or m.end > maxl:
                 logger.warning("Cannot draw marker at {}:{}-{} on genome {} because the marker position is out of the selected range. Skipping it.".format(m.chr, m.start, m.end, m.genome))
                 continue
-        if not v:
-            ax.plot(m.start, indent-offset, marker=m.mt, color=m.mc, markersize=m.ms)
-            if m.tt != '':
-                ax.text(m.start, indent-offset+m.tp, m.tt, color=m.tc, fontsize=m.ts, fontfamily=m.tf, ha='center', va='bottom')
-        elif v:
-            ax.plot(indent+offset, m.start, marker=m.mt, color=m.mc, markersize=m.ms)
-            if m.tt != '':
-                ax.text(indent+offset-m.tp, m.start, m.tt, color=m.tc, fontsize=m.ts, fontfamily=m.tf, ha='left', va='center', rotation='vertical')
+        if not itx:
+            indent = indents[ind]
+            if not v:
+                ax.plot(m.start, indent-offset, marker=m.mt, color=m.mc, markersize=m.ms)
+                if m.tt != '':
+                    ax.text(m.start, indent-offset+m.tp, m.tt, color=m.tc, fontsize=m.ts, fontfamily=m.tf, ha='center', va='bottom')
+            elif v:
+                ax.plot(indent+offset, m.start, marker=m.mt, color=m.mc, markersize=m.ms)
+                if m.tt != '':
+                    ax.text(indent+offset-m.tp, m.start, m.tt, color=m.tc, fontsize=m.ts, fontfamily=m.tf, ha='left', va='center', rotation='vertical')
+        elif itx:
+            buff = genbuff(ind, chrlengths, chrgrps, chrs, maxl, v)
+            chrid = chrid[0]
+            if not v:
+                ax.plot(m.start+buff[chrid], len(chrlengths)-ind-0.5, marker=m.mt, color=m.mc, markersize=m.ms)
+                if m.tt != '':
+                    ax.text(m.start+buff[chrid], len(chrlengths)-ind-0.5, m.tt, color=m.tc, fontsize=m.ts, fontfamily=m.tf, ha='center', va='bottom')
+            elif v:
+                ax.plot(ind+0.5, m.start+buff[chrid], marker=m.mt, color=m.mc, markersize=m.ms)
+                if m.tt != '':
+                    ax.text(ind+0.5-m.tp, m.start+buff[chrid], m.tt, color=m.tc, fontsize=m.ts, fontfamily=m.tf, ha='left', va='center', rotation='vertical')
     return ax
 # END
 
@@ -1394,7 +1458,6 @@ def drawtracks(ax, tracks, s, chrgrps, chrlengths, v, cfg, minl, maxl):
     from matplotlib.patches import Rectangle
     import numpy as np
     from collections import deque
-    # TODO: Read gap values from base.cfg
     th = (1 - s - 2*cfg['chrmar'])/len(tracks)
     if th < 0.01:
         raise RuntimeError("Decrease the value of -S to plot tracks correctly. Exiting.")

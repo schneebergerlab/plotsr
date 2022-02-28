@@ -144,11 +144,11 @@ def plotsr(args):
 
     # Filter alignments to select long alignments between homologous chromosomes
     for i in range(len(alignments)):
-        alignments[i][1] = filterinput(args, alignments[i][1], chrids[i][1])
+        alignments[i][1] = filterinput(args, alignments[i][1], chrids[i][1], ITX)
 
         # Check chromsome IDs and sizes
     chrlengths, genomes = validalign2fasta(alignments, args.genomes.name)
-    # chrlengths, genomes = validalign2fasta(alignments, 'genomes2.txt') # TODO: Delete this line
+    # chrlengths, genomes = validalign2fasta(alignments, 'genomes.txt') # TODO: Delete this line
 
 
     # Select only chromosomes selected by --chr
@@ -200,7 +200,12 @@ def plotsr(args):
     ax = fig.add_subplot(111, frameon=False)
 
     allal = pdconcat([alignments[i][1] for i in range(len(alignments))])
-    if REG is None:
+    if ITX:
+        MCHR = 0.01     # TODO : read spacing between neighbouring chromosome from config file
+        maxchr = max([sum(chrlengths[i][1].values()) for i in range(len(chrlengths))])
+        maxl = int(maxchr/(MCHR + 1 - (MCHR*len(chrgrps))))
+        print('here')
+    elif REG is None:
         minl, maxl = 0, -1
     else:
         minl = min(allal[['astart', 'bstart']].apply(min))
@@ -216,10 +221,10 @@ def plotsr(args):
         labelcnt += 1
 
     ## Draw Axes
-    ax, max_l = drawax(ax, chrgrps, chrlengths, V, S, cfg, minl=minl, maxl=maxl)
+    ax, max_l = drawax(ax, chrgrps, chrlengths, V, S, cfg, ITX, minl=minl, maxl=maxl)
 
     ## Draw Chromosomes
-    ax, indents, chrlabels = pltchrom(ax, chrs, chrgrps, chrlengths, V, S, genomes, cfg, minl=minl, maxl=maxl)
+    ax, indents, chrlabels = pltchrom(ax, chrs, chrgrps, chrlengths, V, S, genomes, cfg, ITX, minl=minl, maxl=maxl)
 
     if cfg['genlegcol'] < 1:
         ncol = ceil(len(chrlengths)/labelcnt)
@@ -234,7 +239,7 @@ def plotsr(args):
         plt.gca().add_artist(l1)
 
     # Plot structural annotations
-    ax, svlabels = pltsv(ax, alignments, chrs, V, chrgrps, indents, cfg)
+    ax, svlabels = pltsv(ax, alignments, chrs, V, chrgrps, chrlengths, indents, cfg, ITX)
 
     if cfg['legend']:
         bbox_to_anchor[0] += cfg['bboxmar']
@@ -242,7 +247,7 @@ def plotsr(args):
 
     # Plot markers
     if B is not None:
-        ax = drawmarkers(ax, B, V, chrlengths, indents, chrs, chrgrps, minl=minl, maxl=maxl)
+        ax = drawmarkers(ax, B, V, chrlengths, indents, chrs, chrgrps, ITX, minl=minl, maxl=maxl)
 
     # Draw tracks
     if TRACKS is not None:
