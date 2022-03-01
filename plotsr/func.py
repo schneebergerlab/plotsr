@@ -1188,30 +1188,33 @@ def drawax(ax, chrgrps, chrlengths, v, s, cfg, itx, minl=0, maxl=-1):
         maxchr = max([sum(chrlengths[i][1].values()) for i in range(len(chrlengths))])
         maxl = int(maxchr/(MCHR + 1 - (MCHR*len(chrgrps))))
         mchr = MCHR*maxl
-        ngen = len(chrlengths)
+        step = s/(len(chrlengths)-1)
         if not v:
             ax.set_xlim(0, maxl)
-            ax.set_ylim(bottom_limit, ngen+upper_limit)
+            ax.set_ylim(bottom_limit, 1+upper_limit)
             tick_pos = deque()
             tick_lab = deque()
             offset = 0
+            ## For x-tick position, get the middle position of the bottom most chromosome
             for k in chrgrps:
                 c = chrgrps[k]
-                maxchr = max([chrlengths[j][1][c[j]] for j in range(len(c))])
+                maxchr = chrlengths[-1][1][c[-1]]
                 tick_pos.append(offset + (maxchr/2))
                 tick_lab.append(k)
                 offset += maxchr + mchr
             ax.set_xticks(tick_pos)
             ax.set_xticklabels(tick_lab)
-            ax.set_yticks([i + 0.5 for i in range(len(chrlengths))][::-1])
-            ax.set_yticklabels([i[0] for i in chrlengths])
+            step = s/(len(chrlengths)-1)
+            ax.set_yticks([round(step*i, 2) for i in range(len(chrlengths))])
+            # ax.set_yticks([i + 0.5 for i in range(len(chrlengths))][::-1])
+            ax.set_yticklabels([i[0] for i in chrlengths][::-1])
             ax.tick_params(axis='y', right=False, left=False)
             ax.set_axisbelow(True)
             ax.set_xlabel('Reference Chromosome ID')
             ax.set_ylabel('Genome')
         else:
             ax.set_ylim(0, maxl)
-            ax.set_xlim(bottom_limit, ngen+upper_limit)
+            ax.set_xlim(bottom_limit, 1+upper_limit)
             tick_pos = deque()
             tick_lab = deque()
             offset = 0
@@ -1223,7 +1226,8 @@ def drawax(ax, chrgrps, chrlengths, v, s, cfg, itx, minl=0, maxl=-1):
                 offset += maxchr + mchr
             ax.set_yticks(tick_pos)
             ax.set_yticklabels(tick_lab)
-            ax.set_xticks([i + 0.5 for i in range(len(chrlengths))])
+            ax.set_xticks([round((1-s) + step*i, 2) for i in range(len(chrlengths))])
+            # ax.set_xticks([i + 0.5 for i in range(len(chrlengths))])
             ax.set_xticklabels([i[0] for i in chrlengths])
             ax.tick_params(axis='x', right=False, left=False)
             ax.set_axisbelow(True)
@@ -1270,10 +1274,12 @@ def pltchrom(ax, chrs, chrgrps, chrlengths, v, S, genomes, cfg, itx, minl=0, max
                            zorder=2)
     elif itx:
         MCHR = 0.01     # TODO: read spacing between neighbouring chromosome from config file
+        step = S/(len(chrlengths)-1)
         for s in range(len(chrlengths)):
             start = 0
             genome = [gen for gen in genomes if gen.n == chrlengths[s][0]][0]
-            fixed = len(chrlengths) - s - 0.5 if not v else s + 0.5
+            fixed = S - (step*s) if not v else 1 - S + (step*s)
+            print(fixed)
             for i in range(len(chrs)):
                 if not v:
                     end = start + chrlengths[s][1][chrgrps[chrs[i]][s]]
@@ -1304,7 +1310,7 @@ def genbuff(s, chrlengths, chrgrps, chrs, maxl, v):
 # END
 
 
-def pltsv(ax, alignments, chrs, v, chrgrps, chrlengths, indents, cfg, itx):
+def pltsv(ax, alignments, chrs, v, chrgrps, chrlengths, indents, S, cfg, itx):
     from collections import deque
     from copy import deepcopy
     alpha = cfg['alpha']
@@ -1347,6 +1353,8 @@ def pltsv(ax, alignments, chrs, v, chrgrps, chrlengths, indents, cfg, itx):
                         svlabels.append(l)
                         legenddict[row.type] = True
         elif itx:
+            step = S/(len(chrlengths)-1)
+            S - (step*s) if not v else 1 - S + (step*s)
             rbuff = genbuff(s, chrlengths, chrgrps, chrs, maxl, v)
             rbuff = [rbuff[c] for c in df['achr']]
             df['astart'] += rbuff
@@ -1355,8 +1363,8 @@ def pltsv(ax, alignments, chrs, v, chrgrps, chrlengths, indents, cfg, itx):
             qbuff = [qbuff[c] for c in df['bchr']]
             df['bstart'] += qbuff
             df['bend'] += qbuff
-            df['ry'] = len(chrlengths) - s - 0.5 if not v else s + 0.5
-            df['qy'] = len(chrlengths) - s - 1 - 0.5 if not v else s + 1 + 0.5
+            df['ry'] = S - (step*s) if not v else 1 - S + (step*s) #   len(chrlengths) - s - 0.5 if not v else s + 0.5
+            df['qy'] = S - (step*(s+1)) if not v else 1 - S + (step*(s+1)) #    len(chrlengths) - s - 1 - 0.5 if not v else s + 1 + 0.5
             for row in df.itertuples(index=False):
                 p = bezierpath(row.astart, row.aend, row.bstart, row.bend, row.ry, row.qy, v, row.col, alpha=alpha, label=row.lab, lw=row.lw, zorder=row.zorder)
                 l = ax.add_patch(p)
@@ -1413,7 +1421,7 @@ def bezierpath(rs, re, qs, qe, ry, qy, v, col, alpha, label='', lw=0, zorder=0):
 # END
 
 
-def drawmarkers(ax, b, v, chrlengths, indents, chrs, chrgrps, itx, minl=0, maxl=-1):
+def drawmarkers(ax, b, v, chrlengths, indents, chrs, chrgrps, S, itx, minl=0, maxl=-1):
     import logging
     logger = logging.getLogger('drawmarkers')
     mdata = readannobed(b, v, chrlengths)
@@ -1442,22 +1450,24 @@ def drawmarkers(ax, b, v, chrlengths, indents, chrs, chrgrps, itx, minl=0, maxl=
         elif itx:
             buff = genbuff(ind, chrlengths, chrgrps, chrs, maxl, v)
             chrid = chrid[0]
+            step = S/(len(chrlengths)-1)
             if not v:
-                ax.plot(m.start+buff[chrid], len(chrlengths)-ind-0.5, marker=m.mt, color=m.mc, markersize=m.ms)
+                ax.plot(m.start+buff[chrid], S - (step*ind), marker=m.mt, color=m.mc, markersize=m.ms)
                 if m.tt != '':
-                    ax.text(m.start+buff[chrid], len(chrlengths)-ind-0.5, m.tt, color=m.tc, fontsize=m.ts, fontfamily=m.tf, ha='center', va='bottom')
+                    ax.text(m.start+buff[chrid], S - (step*ind) + m.tp, m.tt, color=m.tc, fontsize=m.ts, fontfamily=m.tf, ha='center', va='bottom')
             elif v:
-                ax.plot(ind+0.5, m.start+buff[chrid], marker=m.mt, color=m.mc, markersize=m.ms)
+                ax.plot(1 - S + (step*ind), m.start+buff[chrid], marker=m.mt, color=m.mc, markersize=m.ms)
                 if m.tt != '':
-                    ax.text(ind+0.5-m.tp, m.start+buff[chrid], m.tt, color=m.tc, fontsize=m.ts, fontfamily=m.tf, ha='left', va='center', rotation='vertical')
+                    ax.text(1 - S + (step*ind)-m.tp, m.start+buff[chrid], m.tt, color=m.tc, fontsize=m.ts, fontfamily=m.tf, ha='left', va='center', rotation='vertical')
     return ax
 # END
 
 
-def drawtracks(ax, tracks, s, chrgrps, chrlengths, v, cfg, minl, maxl):
+def drawtracks(ax, tracks, s, chrgrps, chrlengths, v, itx, cfg, minl, maxl):
     from matplotlib.patches import Rectangle
     import numpy as np
     from collections import deque
+    from functools import partial
     th = (1 - s - 2*cfg['chrmar'])/len(tracks)
     if th < 0.01:
         raise RuntimeError("Decrease the value of -S to plot tracks correctly. Exiting.")
@@ -1470,7 +1480,18 @@ def drawtracks(ax, tracks, s, chrgrps, chrlengths, v, cfg, minl, maxl):
         margin = np.max([chrlengths[i][1][v[i]] for v in chrgrps.values() for i in range(len(v))])/300
     else:
         margin = (maxl-minl)/300
+    rbuff = genbuff(0, chrlengths, chrgrps, chrs, maxl, v)
     for i in range(len(tracks)):
+        for j in range(cl):
+            if not v:
+                x0 = 0 if not itx else 0 + rbuff[chrs[j]]
+                y0 = cl - j - th*(i+1) if not itx else 1 - th*(i+1)
+                ax.add_patch(Rectangle((x0, y0), chrlengths[0][1][chrs[j]], diff,  linewidth=0, facecolor=tracks[i].bc, alpha=tracks[i].ba, zorder=1))
+            else:
+                x0 = j + (i+1)*th - diff if not itx else (i+1)*th - diff
+                y0 = 0 if not itx else 0 + rbuff[chrs[j]]
+                ax.add_patch(Rectangle((x0, y0), diff, chrlengths[0][1][chrs[j]], linewidth=0, facecolor=tracks[i].bc, alpha=tracks[i].ba, zorder=1))
+
         if tracks[i].ft in ['bed', 'bedgraph']:
             bedbin = tracks[i].bincnt
             for j in range(cl):
@@ -1481,18 +1502,13 @@ def drawtracks(ax, tracks, s, chrgrps, chrlengths, v, cfg, minl, maxl):
                     chrpos = [k[0] for k in bedbin[chrs[j]]]
                     tpos = [k[1] for k in bedbin[chrs[j]]]
                 tposmax = max(tpos)
-
                 if not v:
-                    y0 = cl - j - th*(i+1)
                     ypos = [(t*diff/tposmax)+y0 for t in tpos]
-                    ax.add_patch(Rectangle((0, y0), chrlengths[0][1][chrs[j]], diff,  linewidth=0, facecolor=tracks[i].bc, alpha=tracks[i].ba, zorder=1))
                     ax.fill_between(chrpos, ypos, y0, color=tracks[i].lc, lw=tracks[i].lw, zorder=2)
                     xpos = chrlengths[0][1][chrs[j]] + margin if maxl == -1 else maxl + margin
                     ax.text(xpos, y0 + diff/2, tracks[i].n, color=tracks[i].nc, fontsize=tracks[i].ns, fontfamily=tracks[i].nf, ha='left', va='center', rotation='horizontal')
                 else:
-                    x0 = j + (i+1)*th - diff
                     xpos = [x0 + diff - (t*diff/tposmax) for t in tpos]
-                    ax.add_patch(Rectangle((x0, 0), diff, chrlengths[0][1][chrs[j]], linewidth=0, facecolor=tracks[i].bc, alpha=tracks[i].ba, zorder=1))
                     ax.fill_betweenx(chrpos, xpos, x0+diff, color=tracks[i].lc, lw=tracks[i].lw, zorder=2)
                     ypos = chrlengths[0][1][chrs[j]] + margin if maxl == -1 else maxl + margin
                     ax.text(x0 + diff/2, ypos, tracks[i].n, color=tracks[i].nc, fontsize=tracks[i].ns, fontfamily=tracks[i].nf, ha='center', va='bottom', rotation='vertical')
@@ -1501,18 +1517,42 @@ def drawtracks(ax, tracks, s, chrgrps, chrlengths, v, cfg, minl, maxl):
             annos = tracks[i].gff
             l = minl
             r = maxl if maxl != -1 else np.inf
+            anno = deque()
             for j in range(cl):
-                mrna = deque()
-                cds = deque()
+                # mrna = deque()
+                # cds = deque()
                 for mloc, cloc in annos[chrs[j]].items():
                     if l <= mloc[0] and mloc[1] <= r:
-                        mrna.append(mloc)
+                        anno.append([chrs[j], mloc[0], mloc[1], 'mrna'])
                         for c in list(cloc)[0]:
-                            cds.append(c)
+                            anno.append([chrs[j], c[0], c[1], 'cds'])
+            anno = pd.DataFrame(anno)
+            anno.columns = ['chr', 'xstart', 'xend', 'type']
+            anno['zorder'] = 2
+            anno.loc[anno['type'] == 'cds', 'zorder'] = 3
+            anno['lw'] = tracks[i].lw
+            anno.loc[anno['type'] == 'cds', 'lw'] = 2*tracks[i].lw
+            anno['colour'] = tracks[i].lc
+            anno['fixed'] = round(1 - th*(i+1) + diff/2, 4) if not v else round((i+1)*th - diff/2, 4)
+            if not itx:
+                # Update fixed coordinate when not using ITX mode
+                anno['fixed'] = [round(cl-chrs.index(c)-th*(i+1) + diff/2, 4) if not v else round(chrs.index(c) + (i+1)*th - diff/2, 4) for c in anno['chr']]
+            if itx:
+                # Update genome coordinate when using the ITX mode
+                for c in chrs:
+                    anno.loc[anno['chr'] == c, 'xstart'] += rbuff[c]
+                    anno.loc[anno['chr'] == c, 'xend'] += rbuff[c]
+
+            for grp in anno.groupby(['chr', 'type']):
+                # print(grp[0], grp[1].head())
+                mcl = partial(mc.LineCollection, colors=tracks[i].lc, linewidths=float(pd.unique(grp[1]['lw'])), zorder=float(pd.unique(grp[1]['zorder'])))
+                lc = mcl([[(row.xstart, row.fixed), (row.xend, row.fixed)] if not v else [(row.fixed, row.xstart), (row.fixed, row.xend)] for row in grp[1].itertuples(index=False)])
+                ax.add_collection(lc)
+
+
+
                 if not v:
-                    y0 = cl - j - th*(i+1)
                     ypos = y0 + (diff/2)
-                    ax.add_patch(Rectangle((0, y0), chrlengths[0][1][chrs[j]], diff,  linewidth=0, facecolor=tracks[i].bc, alpha=tracks[i].ba, zorder=1))
                     lc = mc.LineCollection([[(i[0], ypos), (i[1], ypos)] for i in mrna], colors=tracks[i].lc, linewidths=tracks[i].lw, zorder=2)
                     ax.add_collection(lc)
                     lc = mc.LineCollection([[(i[0], ypos), (i[1], ypos)] for i in cds], colors=tracks[i].lc, linewidths=2*tracks[i].lw, zorder=3)
@@ -1520,9 +1560,7 @@ def drawtracks(ax, tracks, s, chrgrps, chrlengths, v, cfg, minl, maxl):
                     xpos = chrlengths[0][1][chrs[j]] + margin if maxl == -1 else maxl + margin
                     ax.text(xpos, y0 + diff/2, tracks[i].n, color=tracks[i].nc, fontsize=tracks[i].ns, fontfamily=tracks[i].nf, ha='left', va='center', rotation='horizontal')
                 elif v:
-                    x0 = j + (i+1)*th - diff
                     xpos = x0 + diff/2
-                    ax.add_patch(Rectangle((x0, 0), diff, chrlengths[0][1][chrs[j]], linewidth=0, facecolor=tracks[i].bc, alpha=tracks[i].ba, zorder=1))
                     lc = mc.LineCollection([[(xpos, i[0]), (xpos, i[1])] for i in mrna], colors=tracks[i].lc, linewidths=tracks[i].lw, zorder=2)
                     ax.add_collection(lc)
                     lc = mc.LineCollection([[(xpos, i[0]), (xpos, i[1])] for i in cds], colors=tracks[i].lc, linewidths=2*tracks[i].lw, zorder=2)

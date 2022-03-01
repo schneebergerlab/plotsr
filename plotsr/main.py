@@ -40,7 +40,7 @@ def main(cmd):
     plotting.add_argument('-f', help='font size', type=int, default=6)
     plotting.add_argument('-H', help='height of the plot', type=int)
     plotting.add_argument('-W', help='width of the plot', type=int)
-    plotting.add_argument('-S', help='Space between homologous chromosome (0.1-0.75). Adjust this to make more space for annotation marker/text and tracks.', default=0.7, type=float)
+    plotting.add_argument('-S', help='Space for homologous chromosome (0.1-0.75). Adjust this to make more space for annotation markers/texts and tracks.', default=0.7, type=float)
     plotting.add_argument('-d', help='DPI for the final image', default="300", type=int)
     plotting.add_argument('-b', help='Matplotlib backend to use', default="agg", type=str, choices=bklist)
     plotting.add_argument('-v', help='Plot vertical chromosome', default=False, action='store_true')

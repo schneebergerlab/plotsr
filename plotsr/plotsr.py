@@ -94,8 +94,8 @@ def plotsr(args):
     except :
         sys.exit('Matplotlib backend cannot be selected')
 
-    # fins = ['col_lersyri.out', 'ler_cvisyri.out', 'cvi_erisyri.out', 'eri_shasyri.out', 'sha_kyosyri.out', 'kyo_an1syri.out', 'an1_c24syri.out'] #TODO: Delete this line
-    fins = ['ler_cvisyri.out', 'cvi_erisyri.out', 'eri_shasyri.out', 'sha_kyosyri.out'] #TODO: Delete this line
+    fins = ['col_lersyri.out', 'ler_cvisyri.out', 'cvi_erisyri.out', 'eri_shasyri.out', 'sha_kyosyri.out', 'kyo_an1syri.out', 'an1_c24syri.out'] #TODO: Delete this line
+    # fins = ['ler_cvisyri.out', 'cvi_erisyri.out', 'eri_shasyri.out', 'sha_kyosyri.out'] #TODO: Delete this line
     # Read alignment coords
     alignments = deque()
     chrids = deque()
@@ -201,10 +201,10 @@ def plotsr(args):
 
     allal = pdconcat([alignments[i][1] for i in range(len(alignments))])
     if ITX:
+        minl = 0
         MCHR = 0.01     # TODO : read spacing between neighbouring chromosome from config file
         maxchr = max([sum(chrlengths[i][1].values()) for i in range(len(chrlengths))])
         maxl = int(maxchr/(MCHR + 1 - (MCHR*len(chrgrps))))
-        print('here')
     elif REG is None:
         minl, maxl = 0, -1
     else:
@@ -239,15 +239,16 @@ def plotsr(args):
         plt.gca().add_artist(l1)
 
     # Plot structural annotations
-    ax, svlabels = pltsv(ax, alignments, chrs, V, chrgrps, chrlengths, indents, cfg, ITX)
+    ax, svlabels = pltsv(ax, alignments, chrs, V, chrgrps, chrlengths, indents, S, cfg, ITX)
 
-    if cfg['legend']:
-        bbox_to_anchor[0] += cfg['bboxmar']
-        plt.legend(handles=svlabels, loc='lower left', bbox_to_anchor=bbox_to_anchor, ncol=1, mode='expand', borderaxespad=0., frameon=False, title='Annotations')._legend_box.align = "left"
+    # TODO: Uncomment this
+    # if cfg['legend']:
+    #     bbox_to_anchor[0] += cfg['bboxmar']
+    #     plt.legend(handles=svlabels, loc='lower left', bbox_to_anchor=bbox_to_anchor, ncol=1, mode='expand', borderaxespad=0., frameon=False, title='Annotations')._legend_box.align = "left"
 
     # Plot markers
     if B is not None:
-        ax = drawmarkers(ax, B, V, chrlengths, indents, chrs, chrgrps, ITX, minl=minl, maxl=maxl)
+        ax = drawmarkers(ax, B, V, chrlengths, indents, chrs, chrgrps, S, ITX, minl=minl, maxl=maxl)
 
     # Draw tracks
     if TRACKS is not None:
