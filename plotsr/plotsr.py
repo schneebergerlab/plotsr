@@ -71,6 +71,7 @@ def plotsr(args):
     RTR = args.rtr
     CHRS = args.chr
     ITX = args.itx
+    CHRNAME= args.chrname
 
 
     ## Get config
@@ -221,10 +222,10 @@ def plotsr(args):
         labelcnt += 1
 
     ## Draw Axes
-    ax, max_l = drawax(ax, chrgrps, chrlengths, V, S, cfg, ITX, minl=minl, maxl=maxl)
+    ax, max_l = drawax(ax, chrgrps, chrlengths, V, S, cfg, ITX, minl=minl, maxl=maxl, chrname=CHRNAME)
 
     ## Draw Chromosomes
-    ax, indents, chrlabels = pltchrom(ax, chrs, chrgrps, chrlengths, V, S, genomes, cfg, ITX, minl=minl, maxl=maxl)
+    ax, indents, chrlabels = pltchrom(ax, chrs, chrgrps, chrlengths, V, S, genomes, cfg, ITX, minl=minl, maxl=maxln)
 
     if cfg['genlegcol'] < 1:
         ncol = ceil(len(chrlengths)/labelcnt)

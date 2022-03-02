@@ -1122,12 +1122,26 @@ Draw and plot
 """
 
 
-def drawax(ax, chrgrps, chrlengths, v, s, cfg, itx, minl=0, maxl=-1):
+def drawax(ax, chrgrps, chrlengths, v, s, cfg, itx, minl=0, maxl=-1, chrname=None):
     import numpy as np
     bottom_limit = -cfg['exmar']
     upper_limit = cfg['exmar']
+    if chrname is not None:
+        chrnamedict = {}
+        with open(chrname, 'r') as fin:
+            for line in fin:
+                line = line.strip().split('\t')
+                if len(line) != 2:
+                    raise ImportError("Error in reading --chrname. Each row needs to have two columns. Error in line: " + " ".join(line) + ". Exiting.")
+                chrnamedict[line[0]] = line[1]
+        try:
+            _ = [chrnamedict[k] for k in chrgrps.keys()]
+        except KeyError:
+            raise ImportError("Error in reading --chrname. Chromosome IDs do not match. Exiting.")
+    else:
+        chrnamedict = {k: k for k in chrgrps.keys()}
     if not itx:
-        ticklabels = list(chrgrps.keys())
+        ticklabels = [chrnamedict[k] for k in chrgrps.keys()]
         nchr = len(chrgrps)
         if maxl == -1:
             maxl = np.max([chrlengths[i][1][c[i]] for c in chrgrps.values() for i in range(len(c))])
@@ -1200,7 +1214,7 @@ def drawax(ax, chrgrps, chrlengths, v, s, cfg, itx, minl=0, maxl=-1):
                 c = chrgrps[k]
                 maxchr = chrlengths[-1][1][c[-1]]
                 tick_pos.append(offset + (maxchr/2))
-                tick_lab.append(k)
+                tick_lab.append(chrnamedict[k])
                 offset += maxchr + mchr
             ax.set_xticks(tick_pos)
             ax.set_xticklabels(tick_lab)
@@ -1222,7 +1236,7 @@ def drawax(ax, chrgrps, chrlengths, v, s, cfg, itx, minl=0, maxl=-1):
                 c = chrgrps[k]
                 maxchr = max([chrlengths[j][1][c[j]] for j in range(len(c))])
                 tick_pos.append(offset + (maxchr/2))
-                tick_lab.append(k)
+                tick_lab.append(chrnamedict[k])
                 offset += maxchr + mchr
             ax.set_yticks(tick_pos)
             ax.set_yticklabels(tick_lab)

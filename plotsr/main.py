@@ -21,10 +21,12 @@ def main(cmd):
     inputfiles.add_argument('--markers', help='File containing path to markers (bed format)', type=argparse.FileType('r'))
     inputfiles.add_argument('--tracks', help='File listing paths and details for all tracks to be plotted', type=argparse.FileType('r'))
     inputfiles.add_argument('--chrord', help='File containing reference (first genome) chromosome IDs in the order in which they are to be plotted. File requires one chromosome ID per line. Not compatible with --chr', type=argparse.FileType('r'))
+    inputfiles.add_argument('--chrord', help='File containing reference (first genome) chromosome IDs in the order in which they are to be plotted. File requires one chromosome ID per line. Not compatible with --chr', type=argparse.FileType('r'))
+    inputfiles.add_argument('--chrname', help='File containing reference (first genome) chromosome names to be used in the plot. File needs to be a TSV with the chromosome ID in first column and chromosome name in the second.', type=argparse.FileType('r'))
     inputfiles.add_argument('-o', help='Output file name. Acceptable format: pdf, png, svg', default="plotsr.pdf")
 
     filtering = parser.add_argument_group("Data filtering")
-    # filtering.add_argument('--itx', help='Plot inter-chromosomal SRs as well (experimental)', default='FALSE', action='store_true')
+    filtering.add_argument('--itx', help='Use inter-chromosomal plotting mode (experimental)', default='FALSE', action='store_true')
     filtering.add_argument('--chr', help='Select specific chromosome on reference (first genome) and plots them in the given order. Not compatible with --chrord. Can be used multiple time to select more than one chromosomes.', type=str, action='append')
     filtering.add_argument('--reg', help='Plots a specific region. Use as: GenomeID:ChromosomeID:Start-End. Not compatible with --chr and -R.', type=str)
     filtering.add_argument('--rtr', help='When using --reg, plot all SRs that are within the boundaries of the homologous regions. For highly zoomed regions, this could result in visually disconnected alignments.', default=False, action='store_true')
