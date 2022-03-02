@@ -1279,7 +1279,6 @@ def pltchrom(ax, chrs, chrgrps, chrlengths, v, S, genomes, cfg, itx, minl=0, max
             start = 0
             genome = [gen for gen in genomes if gen.n == chrlengths[s][0]][0]
             fixed = S - (step*s) if not v else 1 - S + (step*s)
-            print(fixed)
             for i in range(len(chrs)):
                 if not v:
                     end = start + chrlengths[s][1][chrgrps[chrs[i]][s]]
@@ -1495,24 +1494,37 @@ def drawtracks(ax, tracks, s, chrgrps, chrlengths, v, itx, cfg, minl, maxl):
 
         if tracks[i].ft in ['bed', 'bedgraph']:
             bedbin = tracks[i].bincnt
+            # Select positions that are within the limits
             for j in range(cl):
                 if maxl != -1:
-                    chrpos = [k[0] for k in bedbin[chrs[j]] if minl <= k[0] <= maxl]
+                    chrpos = [k[0] if not itx else k[0] + rbuff[chrs[j]] for k in bedbin[chrs[j]] if minl <= k[0] <= maxl]
                     tpos = [k[1] for k in bedbin[chrs[j]] if minl <= k[0] <= maxl]
                 else:
-                    chrpos = [k[0] for k in bedbin[chrs[j]]]
+                    chrpos = [k[0] if not itx else k[0] + rbuff[chrs[j]]  for k in bedbin[chrs[j]]]
                     tpos = [k[1] for k in bedbin[chrs[j]]]
                 tposmax = max(tpos)
                 if not v:
+                    y0 = cl - j - th*(i+1) if not itx else 1 - th*(i+1)
                     ypos = [(t*diff/tposmax)+y0 for t in tpos]
                     ax.fill_between(chrpos, ypos, y0, color=tracks[i].lc, lw=tracks[i].lw, zorder=2)
+                    if not itx:
+                        xpos = chrlengths[0][1][chrs[j]] + margin if maxl == -1 else maxl + margin
+                        ax.text(xpos, y0 + diff/2, tracks[i].n, color=tracks[i].nc, fontsize=tracks[i].ns, fontfamily=tracks[i].nf, ha='left', va='center', rotation='horizontal')
+                else:
+                    x0 = j + (i+1)*th - diff if not itx else (i+1)*th - diff
+                    xpos = [x0 + diff - (t*diff/tposmax) for t in tpos]
+                    ax.fill_betweenx(chrpos, xpos, x0+diff, color=tracks[i].lc, lw=tracks[i].lw, zorder=2)
+                    if not itx:
+                        ypos = chrlengths[0][1][chrs[j]] + margin if maxl == -1 else maxl + margin
+                        ax.text(x0 + diff/2, ypos, tracks[i].n, color=tracks[i].nc, fontsize=tracks[i].ns, fontfamily=tracks[i].nf, ha='center', va='bottom', rotation='vertical')
+            if itx:
+                if not v:
                     xpos = chrlengths[0][1][chrs[j]] + margin if maxl == -1 else maxl + margin
                     ax.text(xpos, y0 + diff/2, tracks[i].n, color=tracks[i].nc, fontsize=tracks[i].ns, fontfamily=tracks[i].nf, ha='left', va='center', rotation='horizontal')
                 else:
-                    xpos = [x0 + diff - (t*diff/tposmax) for t in tpos]
-                    ax.fill_betweenx(chrpos, xpos, x0+diff, color=tracks[i].lc, lw=tracks[i].lw, zorder=2)
                     ypos = chrlengths[0][1][chrs[j]] + margin if maxl == -1 else maxl + margin
                     ax.text(x0 + diff/2, ypos, tracks[i].n, color=tracks[i].nc, fontsize=tracks[i].ns, fontfamily=tracks[i].nf, ha='center', va='bottom', rotation='vertical')
+
         elif tracks[i].ft in ['gff']:
             from matplotlib import collections as mc
             annos = tracks[i].gff
