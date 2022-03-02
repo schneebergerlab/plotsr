@@ -1482,6 +1482,7 @@ def drawtracks(ax, tracks, s, chrgrps, chrlengths, v, itx, cfg, minl, maxl):
         margin = (maxl-minl)/300
     rbuff = genbuff(0, chrlengths, chrgrps, chrs, maxl, v)
     for i in range(len(tracks)):
+        # Plot background rectangles for the tracks
         for j in range(cl):
             if not v:
                 x0 = 0 if not itx else 0 + rbuff[chrs[j]]
@@ -1519,8 +1520,6 @@ def drawtracks(ax, tracks, s, chrgrps, chrlengths, v, itx, cfg, minl, maxl):
             r = maxl if maxl != -1 else np.inf
             anno = deque()
             for j in range(cl):
-                # mrna = deque()
-                # cds = deque()
                 for mloc, cloc in annos[chrs[j]].items():
                     if l <= mloc[0] and mloc[1] <= r:
                         anno.append([chrs[j], mloc[0], mloc[1], 'mrna'])
@@ -1544,28 +1543,25 @@ def drawtracks(ax, tracks, s, chrgrps, chrlengths, v, itx, cfg, minl, maxl):
                     anno.loc[anno['chr'] == c, 'xend'] += rbuff[c]
 
             for grp in anno.groupby(['chr', 'type']):
-                # print(grp[0], grp[1].head())
                 mcl = partial(mc.LineCollection, colors=tracks[i].lc, linewidths=float(pd.unique(grp[1]['lw'])), zorder=float(pd.unique(grp[1]['zorder'])))
                 lc = mcl([[(row.xstart, row.fixed), (row.xend, row.fixed)] if not v else [(row.fixed, row.xstart), (row.fixed, row.xend)] for row in grp[1].itertuples(index=False)])
                 ax.add_collection(lc)
-
-
-
+            if not v:
+                axt = partial(ax.text, s=tracks[i].n, color=tracks[i].nc, fontsize=tracks[i].ns, fontfamily=tracks[i].nf, ha='left', va='center', rotation='horizontal')
+            else:
+                axt = partial(ax.text, s=tracks[i].n, color=tracks[i].nc, fontsize=tracks[i].ns, fontfamily=tracks[i].nf, ha='center', va='bottom', rotation='vertical')
+            if not itx:
+                for j in range(cl):
+                    pos = chrlengths[0][1][chrs[j]] + margin if maxl == -1 else maxl + margin
+                    if not v:
+                        axt(pos, float(pd.unique(anno.loc[anno['chr']==chrs[j], 'fixed'])))
+                    else:
+                        axt(float(pd.unique(anno.loc[anno['chr']==chrs[j], 'fixed'])), pos)
+            else:
+                pos = maxl + margin
                 if not v:
-                    ypos = y0 + (diff/2)
-                    lc = mc.LineCollection([[(i[0], ypos), (i[1], ypos)] for i in mrna], colors=tracks[i].lc, linewidths=tracks[i].lw, zorder=2)
-                    ax.add_collection(lc)
-                    lc = mc.LineCollection([[(i[0], ypos), (i[1], ypos)] for i in cds], colors=tracks[i].lc, linewidths=2*tracks[i].lw, zorder=3)
-                    ax.add_collection(lc)
-                    xpos = chrlengths[0][1][chrs[j]] + margin if maxl == -1 else maxl + margin
-                    ax.text(xpos, y0 + diff/2, tracks[i].n, color=tracks[i].nc, fontsize=tracks[i].ns, fontfamily=tracks[i].nf, ha='left', va='center', rotation='horizontal')
-                elif v:
-                    xpos = x0 + diff/2
-                    lc = mc.LineCollection([[(xpos, i[0]), (xpos, i[1])] for i in mrna], colors=tracks[i].lc, linewidths=tracks[i].lw, zorder=2)
-                    ax.add_collection(lc)
-                    lc = mc.LineCollection([[(xpos, i[0]), (xpos, i[1])] for i in cds], colors=tracks[i].lc, linewidths=2*tracks[i].lw, zorder=2)
-                    ax.add_collection(lc)
-                    ypos = chrlengths[0][1][chrs[j]] + margin if maxl == -1 else maxl + margin
-                    ax.text(x0 + diff/2, ypos, tracks[i].n, color=tracks[i].nc, fontsize=tracks[i].ns, fontfamily=tracks[i].nf, ha='center', va='bottom', rotation='vertical')
+                    axt(pos, float(pd.unique(anno['fixed'])))
+                else:
+                    axt(float(pd.unique(anno['fixed'])), pos)
     return ax
 # END
