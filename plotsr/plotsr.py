@@ -71,8 +71,10 @@ def plotsr(args):
     RTR = args.rtr
     CHRS = args.chr
     ITX = args.itx
-    CHRNAME= args.chrname
+    CHRNAME= args.chrname.name if args.chrname is not None else None
 
+    # print(ITX)
+    # sys.exit()
 
     ## Get config
     cfg = readbasecfg('', V) if args.cfg is None else readbasecfg(args.cfg.name, V)
@@ -90,8 +92,8 @@ def plotsr(args):
     ## Set matplotlib backend
 
     try :
-        matplotlib.use(args.b)
-        # matplotlib.use('Qt5Agg')    # TODO: Delete this line
+        # matplotlib.use(args.b)
+        matplotlib.use('Qt5Agg')    # TODO: Delete this line
     except :
         sys.exit('Matplotlib backend cannot be selected')
 
@@ -104,7 +106,7 @@ def plotsr(args):
         for f in args.sr:
             fin = f.name
         # for fin in fins: #TODO: Delete this line
-        #     al, cid = readsyriout(fin) #TODO: Delete this line
+            al, cid = readsyriout(fin) #TODO: Delete this line
             alignments.append([os.path.basename(fin), al])
             chrids.append((os.path.basename(fin), cid))
     elif args.bp is not None:
@@ -222,10 +224,10 @@ def plotsr(args):
         labelcnt += 1
 
     ## Draw Axes
-    ax, max_l = drawax(ax, chrgrps, chrlengths, V, S, cfg, ITX, minl=minl, maxl=maxl, chrname=CHRNAME)
+    ax  = drawax(ax, chrgrps, chrlengths, V, S, cfg, ITX, minl=minl, maxl=maxl, chrname=CHRNAME)
 
     ## Draw Chromosomes
-    ax, indents, chrlabels = pltchrom(ax, chrs, chrgrps, chrlengths, V, S, genomes, cfg, ITX, minl=minl, maxl=maxln)
+    ax, indents, chrlabels = pltchrom(ax, chrs, chrgrps, chrlengths, V, S, genomes, cfg, ITX, minl=minl, maxl=maxl)
 
     if cfg['genlegcol'] < 1:
         ncol = ceil(len(chrlengths)/labelcnt)
@@ -240,7 +242,7 @@ def plotsr(args):
         plt.gca().add_artist(l1)
 
     # Plot structural annotations
-    ax, svlabels = pltsv(ax, alignments, chrs, V, chrgrps, chrlengths, indents, S, cfg, ITX)
+    ax, svlabels = pltsv(ax, alignments, chrs, V, chrgrps, chrlengths, indents, S, cfg, ITX, maxl)
 
     # TODO: Uncomment this
     if cfg['legend']:
