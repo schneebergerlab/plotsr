@@ -509,9 +509,9 @@ class track():
         curchr = ''
         pos = deque()
         added_chrs = list()
-        # with open(self.f, 'r') as fin:
+        with open(self.f, 'r') as fin:
         # with open('athal/1001genomes.snps.sorted.bed', 'r') as fin: # TODO: delete
-        with open('common.snps.sorted.bed', 'r') as fin: # TODO: delete
+        # with open('common.snps.sorted.bed', 'r') as fin: # TODO: delete
             for line in fin:
                 line = line.strip().split()
                 if len(line) < 3:
@@ -558,92 +558,93 @@ class track():
     # END
 
     # Read input bedgraph file
-    def _readbedgraph(self, chrlengths):
-        from collections import deque, defaultdict
-        import numpy as np
-        bw = int(self.bw)
-        # chrpos = {k: np.zeros(v, dtype=np.int0) for k, v in chrlengths[0][1].items()}
-        _chrs = set([c for c in chrlengths[0][1].keys()])
-        bincnt = defaultdict(deque)
-        skipchrs = []
-        curchr = ''
-        pos = deque()
-        value = deque()
-        added_chrs = list()
-        # with open(self.f, 'r') as fin:
-        with open('GSE50636_At_H3K27me3_coVcomp.bedGraph', 'r') as fin:
-            for line in tqdm(fin):
-                if line[0] == '#': continue
-                line = line.strip().split()
-                if line[0] == 'track': continue
-                if len(line) < 4:
-                    self.logger.warning("Incomplete information in bedgraph file at line: {}. Skipping it.".format("\t".join(line)))
-                    continue
-                if line[0] not in _chrs:
-                    if line[0] not in skipchrs:
-                        self.logger.warning("Chromosome in BEDGRAPH is not present in FASTA or not selected for plotting. Skipping it. BED line: {}".format("\t".join(line)))
-                        skipchrs.append(line[0])
-                    continue
-                if curchr == '':
-                    curchr = line[0]
-                    # pos.extend([i for i in range(int(line[1]), int(line[2]))])
-                    # value.extend([int(line[3])]*(int(line[2]) - int(line[1])))
-                    pos.append([int(line[1]), int(line[2])])
-                    value.append(int(line[3]))
-                elif curchr == line[0]:
-                    # pos.extend([i for i in range(int(line[1]), int(line[2]))])
-                    # value.extend([int(line[3])]*(int(line[2]) - int(line[1])))
-                    pos.append([int(line[1]), int(line[2])])
-                    value.append(int(line[3]))
-                else:
-                    if line[0] in added_chrs:
-                        self.logger.error("BedGraph file: {} is not sorted. For plotting tracks, sorted BedGraph file is required. Exiting.".format(self.f))
-                        sys.exit()
-                    chrpos = np.array([i for r in pos for i in range(r[0], r[1])])
-                    value = np.array([i for r in range(len(pos)) for i in value[r]*(pos[r][1] - pos[r][0])])
-                    # Get bin breakpoints for the chromosome
-                    bins = np.concatenate((np.arange(0, chrlengths[0][1][curchr], bw), np.array([chrlengths[0][1][curchr]])), axis=0)
-                    binindex = np.digitize(chrpos, bins)
-                    bins = [(bins[i] + bins[i+1])/2 for i in range(len(bins) - 1)]
-                    values = np.zeros(len(bins))
-                    for i in range(len(value)):
-                        values[binindex[i]-1] += value[i]
-                    bincnt[curchr] = deque([(bins[i], values[i]) for i in range(len(bins))])
-                    added_chrs.append(curchr)
-                    # Set the new chromosome
-                    curchr = line[0]
-                    pos.extend([i for i in range(int(line[1]), int(line[2]))])
-                    value.extend([int(line[3])]*(int(line[2]) - int(line[1])))
-        chrpos = np.array(pos)
-        # Get bin breakpoints for the chromosome
-        bins = np.concatenate((np.arange(0, chrlengths[0][1][curchr], bw), np.array([chrlengths[0][1][curchr]])), axis=0)
-        binindex = np.digitize(chrpos, bins)
-        bins = [(bins[i] + bins[i+1])/2 for i in range(len(bins) - 1)]
-        values = np.zeros(len(bins))
-        for i in range(len(value)):
-            values[binindex[i]-1] += value[i]
-        bincnt[curchr] = deque([(bins[i], values[i]) for i in range(len(bins))])
-        #
-        #         try:
-        #             chrpos[line[0]][int(line[1]):int(line[2])] += int(line[3])
-        #         except ValueError:
-        #             self.logger.warning("Invalid values for line: {}. Skipping it.".format("\t".join(line)))
-        # ## Create bins
-        # bins = {}
-        # for k, v in chrlengths[0][1].items():
-        #     s = np.array(range(0, v, bw))
-        #     e = np.concatenate((s[1:], [v]))
-        #     bins[k] = np.array(list(zip(s, e)))
-        # bincnt = defaultdict(deque)
-        maxv = 0
-        for k, v in bincnt.items():
-            for r in v:
-                if r[1] > maxv:
-                    maxv = r[1]
-        for k, v in bincnt.items():
-            bincnt[k] = deque([(r[0], r[1]/maxv) for r in v])
-        self.bincnt = bincnt
-        return
+    # TODO: Fix bedgraph reading by improving its performance
+    # def _readbedgraph(self, chrlengths):
+    #     from collections import deque, defaultdict
+    #     import numpy as np
+    #     bw = int(self.bw)
+    #     # chrpos = {k: np.zeros(v, dtype=np.int0) for k, v in chrlengths[0][1].items()}
+    #     _chrs = set([c for c in chrlengths[0][1].keys()])
+    #     bincnt = defaultdict(deque)
+    #     skipchrs = []
+    #     curchr = ''
+    #     pos = deque()
+    #     value = deque()
+    #     added_chrs = list()
+    #     # with open(self.f, 'r') as fin:
+    #     with open('GSE50636_At_H3K27me3_coVcomp.bedGraph', 'r') as fin:
+    #         for line in tqdm(fin):
+    #             if line[0] == '#': continue
+    #             line = line.strip().split()
+    #             if line[0] == 'track': continue
+    #             if len(line) < 4:
+    #                 self.logger.warning("Incomplete information in bedgraph file at line: {}. Skipping it.".format("\t".join(line)))
+    #                 continue
+    #             if line[0] not in _chrs:
+    #                 if line[0] not in skipchrs:
+    #                     self.logger.warning("Chromosome in BEDGRAPH is not present in FASTA or not selected for plotting. Skipping it. BED line: {}".format("\t".join(line)))
+    #                     skipchrs.append(line[0])
+    #                 continue
+    #             if curchr == '':
+    #                 curchr = line[0]
+    #                 # pos.extend([i for i in range(int(line[1]), int(line[2]))])
+    #                 # value.extend([int(line[3])]*(int(line[2]) - int(line[1])))
+    #                 pos.append([int(line[1]), int(line[2])])
+    #                 value.append(int(line[3]))
+    #             elif curchr == line[0]:
+    #                 # pos.extend([i for i in range(int(line[1]), int(line[2]))])
+    #                 # value.extend([int(line[3])]*(int(line[2]) - int(line[1])))
+    #                 pos.append([int(line[1]), int(line[2])])
+    #                 value.append(int(line[3]))
+    #             else:
+    #                 if line[0] in added_chrs:
+    #                     self.logger.error("BedGraph file: {} is not sorted. For plotting tracks, sorted BedGraph file is required. Exiting.".format(self.f))
+    #                     sys.exit()
+    #                 chrpos = np.array([i for r in pos for i in range(r[0], r[1])])
+    #                 value = np.array([i for r in range(len(pos)) for i in value[r]*(pos[r][1] - pos[r][0])])
+    #                 # Get bin breakpoints for the chromosome
+    #                 bins = np.concatenate((np.arange(0, chrlengths[0][1][curchr], bw), np.array([chrlengths[0][1][curchr]])), axis=0)
+    #                 binindex = np.digitize(chrpos, bins)
+    #                 bins = [(bins[i] + bins[i+1])/2 for i in range(len(bins) - 1)]
+    #                 values = np.zeros(len(bins))
+    #                 for i in range(len(value)):
+    #                     values[binindex[i]-1] += value[i]
+    #                 bincnt[curchr] = deque([(bins[i], values[i]) for i in range(len(bins))])
+    #                 added_chrs.append(curchr)
+    #                 # Set the new chromosome
+    #                 curchr = line[0]
+    #                 pos.extend([i for i in range(int(line[1]), int(line[2]))])
+    #                 value.extend([int(line[3])]*(int(line[2]) - int(line[1])))
+    #     chrpos = np.array(pos)
+    #     # Get bin breakpoints for the chromosome
+    #     bins = np.concatenate((np.arange(0, chrlengths[0][1][curchr], bw), np.array([chrlengths[0][1][curchr]])), axis=0)
+    #     binindex = np.digitize(chrpos, bins)
+    #     bins = [(bins[i] + bins[i+1])/2 for i in range(len(bins) - 1)]
+    #     values = np.zeros(len(bins))
+    #     for i in range(len(value)):
+    #         values[binindex[i]-1] += value[i]
+    #     bincnt[curchr] = deque([(bins[i], values[i]) for i in range(len(bins))])
+    #     #
+    #     #         try:
+    #     #             chrpos[line[0]][int(line[1]):int(line[2])] += int(line[3])
+    #     #         except ValueError:
+    #     #             self.logger.warning("Invalid values for line: {}. Skipping it.".format("\t".join(line)))
+    #     # ## Create bins
+    #     # bins = {}
+    #     # for k, v in chrlengths[0][1].items():
+    #     #     s = np.array(range(0, v, bw))
+    #     #     e = np.concatenate((s[1:], [v]))
+    #     #     bins[k] = np.array(list(zip(s, e)))
+    #     # bincnt = defaultdict(deque)
+    #     maxv = 0
+    #     for k, v in bincnt.items():
+    #         for r in v:
+    #             if r[1] > maxv:
+    #                 maxv = r[1]
+    #     for k, v in bincnt.items():
+    #         bincnt[k] = deque([(r[0], r[1]/maxv) for r in v])
+    #     self.bincnt = bincnt
+    #     return
     # END
 
     def _readgff(self, chrlengths):
@@ -1412,10 +1413,8 @@ def pltsv(ax, alignments, chrs, v, chrgrps, chrlengths, indents, S, cfg, itx, ma
     adinvlab = False
     adtralab = False
     adduplab = False
-    svlabels = deque()
-    legenddict = {'SYN': adsynlab, 'INV': adinvlab,
-                  'TRANS': adtralab, 'INVTR': adtralab,
-                  'DUP': adduplab, 'INVDP': adduplab}
+    svlabels = dict()
+    legenddict = {'SYN': adsynlab, 'INV': adinvlab, 'TRANS': adtralab, 'DUP': adduplab}
     for s in range(len(alignments)):
         df = deepcopy(alignments[s][1])
         df.loc[df['type'] == 'INVTR', 'type'] = 'TRANS'
@@ -1444,7 +1443,7 @@ def pltsv(ax, alignments, chrs, v, chrgrps, chrlengths, indents, S, cfg, itx, ma
                 l = ax.add_patch(p)
                 if row.lab != '':
                     if not legenddict[row.type]:
-                        svlabels.append(l)
+                        svlabels[row.type] = l
                         legenddict[row.type] = True
         elif itx:
             step = S/(len(chrlengths)-1)
@@ -1464,9 +1463,9 @@ def pltsv(ax, alignments, chrs, v, chrgrps, chrlengths, indents, S, cfg, itx, ma
                 l = ax.add_patch(p)
                 if row.lab != '':
                     if not legenddict[row.type]:
-                        svlabels.append(l)
+                        svlabels[row.type] = l
                         legenddict[row.type] = True
-    return ax, svlabels
+    return ax, [svlabels[i] for i in ['SYN', 'INV', 'TRANS', 'DUP'] if i in svlabels]
 # END
 
 

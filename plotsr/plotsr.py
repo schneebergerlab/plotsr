@@ -237,9 +237,10 @@ def plotsr(args):
     # Get Genome legend
     if cfg['legend']:
         bbox_to_anchor = cfg['bbox']
-        l1 = plt.legend(handles=chrlabels, loc='lower left', bbox_to_anchor=bbox_to_anchor, ncol=ncol, mode=None, borderaxespad=0., frameon=False, title='Genomes')
-        l1._legend_box.align = "left"
-        plt.gca().add_artist(l1)
+        if not ITX:
+            l1 = plt.legend(handles=chrlabels, loc='lower left', bbox_to_anchor=bbox_to_anchor, ncol=ncol, mode=None, borderaxespad=0., frameon=False, title='Genomes')
+            l1._legend_box.align = "left"
+            plt.gca().add_artist(l1)
 
     # Plot structural annotations
     ax, svlabels = pltsv(ax, alignments, chrs, V, chrgrps, chrlengths, indents, S, cfg, ITX, maxl)
