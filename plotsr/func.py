@@ -510,8 +510,6 @@ class track():
         pos = deque()
         added_chrs = list()
         with open(self.f, 'r') as fin:
-        # with open('athal/1001genomes.snps.sorted.bed', 'r') as fin: # TODO: delete
-        # with open('common.snps.sorted.bed', 'r') as fin: # TODO: delete
             for line in fin:
                 line = line.strip().split()
                 if len(line) < 3:
@@ -587,7 +585,6 @@ class track():
                     continue
                 if curchr == '':
                     curchr = line[0]
-                    print(curchr)
                     binv = np.zeros(ceil(chrlengths[0][1][curchr]/bw), dtype=int)
                     s = int(line[1])
                     e = int(line[2])
@@ -634,7 +631,7 @@ class track():
         for k, v in bincnt.items():
             bincnt[k] = deque([(r[0], r[1]/maxv) for r in v])
         self.bincnt = bincnt
-    return
+        return
     # END
 
     def _readgff(self, chrlengths):

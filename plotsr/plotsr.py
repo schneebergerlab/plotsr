@@ -92,13 +92,12 @@ def plotsr(args):
     ## Set matplotlib backend
 
     try :
-        # matplotlib.use(args.b)
-        matplotlib.use('Qt5Agg')    # TODO: Delete this line
+        matplotlib.use(args.b)
+        # matplotlib.use('Qt5Agg')    # TODO: Delete this line
     except :
         sys.exit('Matplotlib backend cannot be selected')
 
     # fins = ['col_lersyri.out', 'ler_cvisyri.out', 'cvi_erisyri.out', 'eri_shasyri.out', 'sha_kyosyri.out', 'kyo_an1syri.out', 'an1_c24syri.out'] #TODO: Delete this line
-    # fins = ['ler_cvisyri.out', 'cvi_erisyri.out', 'eri_shasyri.out', 'sha_kyosyri.out'] #TODO: Delete this line
     # Read alignment coords
     alignments = deque()
     chrids = deque()
@@ -106,7 +105,7 @@ def plotsr(args):
         for f in args.sr:
             fin = f.name
         # for fin in fins: #TODO: Delete this line
-            al, cid = readsyriout(fin) #TODO: Delete this line
+            al, cid = readsyriout(fin)
             alignments.append([os.path.basename(fin), al])
             chrids.append((os.path.basename(fin), cid))
     elif args.bp is not None:
@@ -245,7 +244,6 @@ def plotsr(args):
     # Plot structural annotations
     ax, svlabels = pltsv(ax, alignments, chrs, V, chrgrps, chrlengths, indents, S, cfg, ITX, maxl)
 
-    # TODO: Uncomment this
     if cfg['legend']:
         bbox_to_anchor[0] += cfg['bboxmar']
         plt.legend(handles=svlabels, loc='lower left', bbox_to_anchor=bbox_to_anchor, ncol=1, mode='expand', borderaxespad=0., frameon=False, title='Annotations')._legend_box.align = "left"
