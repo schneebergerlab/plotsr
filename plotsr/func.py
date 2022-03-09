@@ -167,7 +167,11 @@ def readbasecfg(f, v):
                     logger.error("Non-numerical value {} provided for {}. Using default value.".format(line[1], line[0]))
                     continue
                 cfg[line[0]] = float(line[1])
-            elif line[0] == 'bbox':
+            elif line[0] in ['bbox', 'bbox_v']:
+                if line[0] == 'bbox' and v:
+                    continue
+                if line[0] == 'bbox_v' and not v:
+                    continue
                 line[1] = line[1].split(',')
                 if len(line[1]) != 4:
                     logger.error("BBOX requires four values ({} provided: {}). Using default values.".format(len(line[1]), line[1]))
