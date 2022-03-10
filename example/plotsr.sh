@@ -4,7 +4,7 @@ gzip -d TAIR10_GFF3_genes.gff.gz
 gzip -d 1001genomes.snps.sorted.bed.gz
 
 ## Load environment where plotsr is installed
-conda activate ENV_WITH_PLOTSR
+conda activate ENV_WITH_PLOTSR  ## Edit to your environment
 
 ## Below are examples of different configuration in which the chromosomes can be seected and visualised
 # STACKED

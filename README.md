@@ -4,7 +4,7 @@
 
 ## Introduction
 Plotsr generates high-quality visualisation of synteny and structural rearrangements between multiple genomes. For this, it uses the genomic structural annotations between multiple chromosome-level assemblies.
-![example](./example/ampril_col0_chr3_6600000_10000000.png)
+![Example](./example/ampril_col0_chr3_6600000_10000000.png)
 
 ## Installation:
 The easiest method to install plotsr is using anaconda:
@@ -31,7 +31,7 @@ plotsr -h
 
 ## Inputs requirements
 #### Minimal requirements
-1. Chromosome-level assemblies of the genomes to be compared 
+1. Chromosome-level assemblies or chromosome length information for the genomes to be compared 
 2. Pairwise structural annotations between genomes
 
 For example, if genomes A, B, and C are to be visualised in this order, then structural annotations of A vs B and B vs C genome comparisons would be required.
@@ -40,9 +40,31 @@ For example, if genomes A, B, and C are to be visualised in this order, then str
 * GFF/BED/bedGraph files for adding tracks to the visualisation, like the tracks for genes and SNPs in the [example](Example) plot above.
 * Bed file containing genomic coordinates to add markers, like the markers for Inversion 3, Not aligned 1 in the [example](Example) plot above.
 
-## Running example data
+## Quick example for visualisation
+
+As example, we would visualise structural rearrangements between four accessions of <i>Arabidopsis thaliana</i>. All required files are in the [example](./example/) folder. Following is the list of the important input files:
+| File name|  File Description   |
+|----|--------|
+| `*.chrlen` | Table containing chromosome lengths |
+| `*syri.filtered.out` | Pairwise structural annotation information between genomes |
+| `genomes.txt` | [Genomes information file](genomes.txt) |
+| `markers.bed` | [Markers information file](markers.bed) |
+| `tracks.txt` | [Tracks information file](tracks.txt) |
+| `plotsr.sh` | Bash script containing commands to generate different visualisations for the four genomes |
+| `base.cfg` | Configuration file for adjusting visual properties of the plot |
+
+Use the following commands to generate an example plot:
+```
+cd example
+gzip -d TAIR10_GFF3_genes.gff.gz
+gzip -d 1001genomes.snps.sorted.bed.gz
+plotsr --sr col_lersyri.filtered.out --sr ler_cvisyri.filtered.out --sr cvi_erisyri.filtered.out  --genomes genomes.txt --tracks tracks.txt -S 0.5 -o output_plot.png -W 7 -H 10 -f 8 --cfg base.cfg --markers markers.bed
+```
 
 
+
+
+## Pipeline for visualising genomic differences
 
 Following are the steps for a typical pipeline to visualise structural annotations between genomes. For this, we would use the data available in the [example](./example/) folder.
 
@@ -108,6 +130,7 @@ plotsr \
     -o ampril_horizon.png
 ```
 Here, genomes.txt is a tab-separated file containing the path and names for the genomes. A third column can also be added to customise the visualisation of genomes.
+![genomes.txt]
 ```
 $genomes.txt
 #file	name	tags
@@ -130,6 +153,7 @@ In addition to structural annotations, plotsr can also be used for visualising t
 #### Visualising tracks
 Feature track information should be in BED or bedGraph format and should correspond to the first genome in visualisation (here for an example: col-0). Plotsr would then calculate and plot the relative frequency of these features in bins along the chromosomes.
 Feature tracks are parsed to plotsr as a tab-separated file containing the path and names for the tracks. The visualisation properties of the tracks can be adjusted by providing a third column containing different tags and corresponding values.
+![tracks.txt]
 ```
 $tracks.txt
 # file	name	tags
@@ -152,6 +176,7 @@ ba = background alpha
 
 #### Visualising Markers
 Plotsr can mark positions of interest in the genomes. Markers are provided as an extended BED file with five columns: chromosome name, start position, end position, genome name, tags (optional)
+![markers.bed]
 ```
 $markers.bed
 #chr	start	end genome_id	tags
