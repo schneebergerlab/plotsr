@@ -44,7 +44,7 @@ For example, if genomes A, B, and C are to be visualised in this order, then str
 
 ## Example visualisation
 
-As example, we would visualise structural rearrangements between four accessions of <i>Arabidopsis thaliana</i> (Col-0, L<i>er>, Cvi, and Eri). All required files are in the [example](./example/) folder. Following is the list of the important input files:
+As example, we would visualise structural rearrangements between four accessions of <i>Arabidopsis thaliana</i> (Col-0, L<i>er</i>, Cvi, and Eri). All required files are in the [example](./example/) folder. Following is the list of the important input files:
 | File name|  File Description   |
 |----|--------|
 | `*.chrlen` | Table containing chromosome lengths |
