@@ -4,6 +4,8 @@
 
 ## Introduction
 Plotsr generates high-quality visualisation of synteny and structural rearrangements between multiple genomes. For this, it uses the genomic structural annotations between multiple chromosome-level assemblies.
+
+
 ![Example](./example/ampril_col0_chr3_6600000_10000000.png)
 
 ## Installation:
@@ -31,7 +33,7 @@ plotsr -h
 
 ## Inputs requirements
 #### Minimal requirements
-1. Chromosome-level assemblies or chromosome length information for the genomes to be compared 
+1. Chromosome-level assemblies for the genomes to be compared 
 2. Pairwise structural annotations between genomes
 
 For example, if genomes A, B, and C are to be visualised in this order, then structural annotations of A vs B and B vs C genome comparisons would be required.
@@ -42,7 +44,7 @@ For example, if genomes A, B, and C are to be visualised in this order, then str
 
 ## Example visualisation
 
-As example, we would visualise structural rearrangements between four accessions of <i>Arabidopsis thaliana</i>. All required files are in the [example](./example/) folder. Following is the list of the important input files:
+As example, we would visualise structural rearrangements between four accessions of <i>Arabidopsis thaliana</i> (Col-0, L<i>er>, Cvi, and Eri). All required files are in the [example](./example/) folder. Following is the list of the important input files:
 | File name|  File Description   |
 |----|--------|
 | `*.chrlen` | Table containing chromosome lengths |
@@ -50,10 +52,9 @@ As example, we would visualise structural rearrangements between four accessions
 | `genomes.txt` | [Genomes information file](#genomes) |
 | `tracks.txt` | [Tracks information file](#visualising-tracks) |
 | `markers.bed` | [Markers information file](#visualising-markers) |
-| `plotsr.sh` | Bash script containing commands to generate different visualisations for the four genomes |
 | `base.cfg` | Configuration file for adjusting visual properties of the plot |
 
-Use the following commands to generate an example plot:
+The structural rearrangements between the genomes can be visualised using the following commands:
 ```
 cd example
 # Unzip gene annotation and SNPs file. These would be plotted as tracks.
@@ -61,21 +62,22 @@ gzip -d TAIR10_GFF3_genes.gff.gz
 gzip -d 1001genomes.snps.sorted.bed.gz
 # Plot using plotsr
 plotsr --sr col_lersyri.filtered.out \
---sr ler_cvisyri.filtered.out \
---sr cvi_erisyri.filtered.out \
---genomes genomes.txt \
---tracks tracks.txt \
---markers markers.bed \
---cfg base.cfg \
--o output_plot.png \
--S 0.5 -W 7 -H 10 -f 8 
+       --sr ler_cvisyri.filtered.out \
+       --sr cvi_erisyri.filtered.out \
+       --genomes genomes.txt \
+       --tracks tracks.txt \
+       --markers markers.bed \
+       --cfg base.cfg \
+       -o output_plot.png \
+       -S 0.5 -W 7 -H 10 -f 8 
 ```
+This would create the output_plot.png.
 
-[plotsr.sh](./example/plotsr.sh) file contains ten different commands for corresponding to different modes of visualisation (stacked chromosomes or the itx mode), different selection of genomic regions (all chromosomes, some chromosomes, or specific region), and different orientation of chromosomes (horizontal vs stacked).
+[plotsr.sh](./example/plotsr.sh) file contains ten different commands corresponding to different modes of visualisation (stacked vs itx mode), different selection of genomic regions (all chromosomes, some chromosomes, or specific region), and different orientation of chromosomes (horizontal vs stacked).
 
 ## Pipeline for visualising genomic differences
 
-Let's say that we want to visualise genomic differences between four genome assemblies: A.fa, B.fa, C.fa, and D.fa. Further, we want to visualsize the genomes in the order A > B > C > D. Then, following are the steps for a typical pipeline to visualise structural annotations between these genomes.
+Let's say that we want to visualise genomic differences between four genome assemblies: A.fa, B.fa, C.fa, and D.fa. Further, we want to visualsize the genomes in the order A > B > C > D. Then, following steps are involved in visualising structural rearrangements between these genomes using plotsr:
 
 #### Step 1: Align the genomes
 * Genomes need to aligned using a whole-genome alignment tool. Here, we align the genomes using [minimap2](https://github.com/lh3/minimap2) and index the alignment BAM file using [samtools](https://www.htslib.org/download/): 
@@ -93,7 +95,7 @@ samtools index C_D.bam
 ```
 
 #### Step 2: Finding structural annotations between genomes
-* We use [SyRI](https://github.com/schneebergerlab/syri) to get structural annotations between the genomes.
+* Next we need to find synteny and structural rearrangements between the genomes. For this, we use [SyRI](https://github.com/schneebergerlab/syri):
 ```
 # Running syri for finding structural rearrangements between A and B
 syri -c A_B.bam -r A.fa -q B.fa -F B --prefix A_B &
@@ -114,7 +116,7 @@ Query start position
 Query end position
 Annotation type
 ```
-Acceptable values for annotation type: SYN, INV, TRA, INVTR, DUP, INVDP. Here:
+Valid values for annotation type: SYN, INV, TRA, INVTR, DUP, INVDP. Here:
 
 | <!-- --> |  <!-- -->   |
 |----|--------|
@@ -155,7 +157,7 @@ D.fa	D	lw:1.5
 Currently, the following tags are available for genomes.
 
 ```
-ft = File type (fa/cl for fasta/chromosome_length, default = fa); cl files must be in tsv format with chromosome name in column 1 and chromosome length in column 2; using cl files is much faster than using fa files
+ft = File type (fa/cl for fasta/chromosome_length, default = fa); cl files must be in tsv format with chromosome name in column 1 and chromosome length in column 2; using cl files is much faster than using fasta files
 lw = line width
 lc = line colour
 ```
