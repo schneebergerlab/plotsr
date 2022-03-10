@@ -48,8 +48,8 @@ As example, we would visualise structural rearrangements between four accessions
 | `*.chrlen` | Table containing chromosome lengths |
 | `*syri.filtered.out` | Pairwise structural annotation information between genomes |
 | `genomes.txt` | [Genomes information file](#genomes) |
-| `markers.bed` | [Markers information file](#markers.bed) |
-| `tracks.txt` | [Tracks information file](tracks.txt) |
+| `tracks.txt` | [Tracks information file](#tracks) |
+| `markers.bed` | [Markers information file](#markers) |
 | `plotsr.sh` | Bash script containing commands to generate different visualisations for the four genomes |
 | `base.cfg` | Configuration file for adjusting visual properties of the plot |
 
@@ -156,9 +156,10 @@ lc = line colour
 In addition to structural annotations, plotsr can also be used for visualising tracks for genomics features as well as for marking specific positions in the genomes.
 
 #### Visualising tracks
+<a name="tracks">
 Feature track information should be in BED or bedGraph format and should correspond to the first genome in visualisation (here for an example: col-0). Plotsr would then calculate and plot the relative frequency of these features in bins along the chromosomes.
 Feature tracks are parsed to plotsr as a tab-separated file containing the path and names for the tracks. The visualisation properties of the tracks can be adjusted by providing a third column containing different tags and corresponding values.
-
+</a>
 ```
 $tracks.txt
 # file	name	tags
@@ -180,8 +181,9 @@ ba = background alpha
 ```
 
 #### Visualising Markers
-Plotsr can mark positions of interest in the genomes. Markers are provided as an extended BED file with five columns: chromosome name, start position, end position, genome name, tags (optional)
-![markers.bed]
+<a name="markers">
+Plotsr can mark positions of interest in the genomes. Markers are provided as an extended BED file with five columns: chromosome name, start position, end position, genome name, tags (optional).
+</a>
 ```
 $markers.bed
 #chr	start	end genome_id	tags
