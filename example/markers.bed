@@ -9,4 +9,4 @@
 #chr	start	end genome_id	tags
 Chr3	4035330	4035331	eri	mt:v;mc:black;ms:3;tt:Inversion 1;tp:0.02;ts:8;tf:Arial;tc:black
 Chr4	2322547	2322548	ler	mt:^;mc:black;ms:3;tt:Inversion 2;tp:-0.07;ts:8;tf:Arial;tc:black
-Chr3	7354325	7354326	cvi	mt:v;mc:black;ms:3;tt:Inversion 3;tp:0.02;ts:8;tf:Arial;tc:black
+Chr3	8792851	8792852	col-0	mt:.;mc:red;ms:10;tt:Notal aligned;tp:0.02;ts:8;tf:Arial;tc:black

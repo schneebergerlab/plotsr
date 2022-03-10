@@ -40,7 +40,7 @@ For example, if genomes A, B, and C are to be visualised in this order, then str
 * GFF/BED/bedGraph files for adding tracks to the visualisation, like the tracks for genes and SNPs in the [example](Example) plot above.
 * Bed file containing genomic coordinates to add markers, like the markers for Inversion 3, Not aligned 1 in the [example](Example) plot above.
 
-## Quick example for visualisation
+## Example visualisation
 
 As example, we would visualise structural rearrangements between four accessions of <i>Arabidopsis thaliana</i>. All required files are in the [example](./example/) folder. Following is the list of the important input files:
 | File name|  File Description   |
@@ -56,45 +56,53 @@ As example, we would visualise structural rearrangements between four accessions
 Use the following commands to generate an example plot:
 ```
 cd example
+# Unzip gene annotation and SNPs file. These would be plotted as tracks.
 gzip -d TAIR10_GFF3_genes.gff.gz
 gzip -d 1001genomes.snps.sorted.bed.gz
-plotsr --sr col_lersyri.filtered.out --sr ler_cvisyri.filtered.out --sr cvi_erisyri.filtered.out  --genomes genomes.txt --tracks tracks.txt -S 0.5 -o output_plot.png -W 7 -H 10 -f 8 --cfg base.cfg --markers markers.bed
+# Plot using plotsr
+plotsr --sr col_lersyri.filtered.out \
+--sr ler_cvisyri.filtered.out \
+--sr cvi_erisyri.filtered.out \
+--genomes genomes.txt \
+--tracks tracks.txt \
+--markers markers.bed \
+--cfg base.cfg \
+-o output_plot.png \
+-S 0.5 -W 7 -H 10 -f 8 
 ```
 
-
-
+[plotsr.sh](./example/plotsr.sh) file contains ten different commands for corresponding to different modes of visualisation (stacked chromosomes or the itx mode), different selection of genomic regions (all chromosomes, some chromosomes, or specific region), and different orientation of chromosomes (horizontal vs stacked).
 
 ## Pipeline for visualising genomic differences
 
-Following are the steps for a typical pipeline to visualise structural annotations between genomes. For this, we would use the data available in the [example](./example/) folder.
+Let's say that we want to visualise genomic differences between four genome assemblies: A.fa, B.fa, C.fa, and D.fa. Further, we want to visualsize the genomes in the order A > B > C > D. Then, following are the steps for a typical pipeline to visualise structural annotations between these genomes.
 
-#### Step 1: Aligning genomes
-* In the ```example``` folder, assemblies for three strains of _Arabidopsis thaliana_ are available (Col-0: TAIR10.filtered.fa.gz, L<i>er</i>: ler.filtered.fa.gz, C<i>vi</i>: cvi.filtered.fa.gz).
-* We would unzip and then align these genomes using minimap2 (v2.17).
+#### Step 1: Align the genomes
+* Genomes need to aligned using a whole-genome alignment tool. Here, we align the genomes using [minimap2](https://github.com/lh3/minimap2) and index the alignment BAM file using [samtools](https://www.htslib.org/download/): 
 ```
-# Unzip genomes
-gzip -d TAIR10.filtered.fa.gz
-gzip -d ler.filtered.fa.gz
-gzip -d cvi.filtered.fa.gz
-
 # Align genomes
-minimap2 -ax asm5 -t 4 --eqx TAIR10.filtered.fa ler.filtered.fa \
- | samtools sort -O BAM - > col_ler.bam
-samtools index col_ler.bam
-minimap2 -ax asm5 -t 4 --eqx ler.filtered.fa cvi.filtered.fa \
- | samtools sort -O BAM - > ler_cvi.bam
-samtools index ler_cvi.bam
+minimap2 -ax asm5 -t 4 --eqx A.fa B.fa \
+ | samtools sort -O BAM - > A_B.bam
+samtools index A_B.bam
+minimap2 -ax asm5 -t 4 --eqx B.fa C.fa \
+ | samtools sort -O BAM - > B_C.bam
+samtools index B_C.bam
+minimap2 -ax asm5 -t 4 --eqx C.fa D.fa \
+ | samtools sort -O BAM - > C_D.bam
+samtools index C_D.bam
 ```
 
 #### Step 2: Finding structural annotations between genomes
-* We use SyRI to get structural annotations between the genomes.
+* We use [SyRI](https://github.com/schneebergerlab/syri) to get structural annotations between the genomes.
 ```
-# Running syri for finding structural rearrangements between Col-0 and Ler
-syri -c col_ler.bam -r TAIR10.filtered.fa -q ler.filtered.fa -F B --prefix col_ler &
-# Running syri for finding structural rearrangements between Ler and Cvi
-syri -c ler_cvi.bam -r ler.filtered.fa -q cvi.filtered.fa -F B --prefix ler_cvi &
+# Running syri for finding structural rearrangements between A and B
+syri -c A_B.bam -r A.fa -q B.fa -F B --prefix A_B &
+# Running syri for finding structural rearrangements between B and C
+syri -c B_C.bam -r B.fa -q C.fa -F B --prefix B_C &
+# Running syri for finding structural rearrangements between C and D
+syri -c C_D.bam -r C.fa -q D.fa -F B --prefix C_D &
 ```
-This will generate col_lersyri.out and ler_cvisyri.out files that contain the structural annotations between genomes and will be the input to plotsr.
+This will generate A_Bsyri.out, B_Csyri.out, and C_Dsyri.out files that contain the structural annotations between genomes and will be used as input to plotsr.
 
 If other methods are used for finding structural annotations, then their output can be parsed to plotsr using the BEDPE format which should have the following columns:
 ```
@@ -117,17 +125,18 @@ Acceptable values for annotation type: SYN, INV, TRA, INVTR, DUP, INVDP. Here:
 | DUP | Duplication |
 | INVDP | Inverted duplication |
 
-<b><i>NOTE</b>: The BEDPE file must have syntenic region annotations. These are required to group homologous chromosomes from different genomes. Syntenic regions can only be between homologous chromosomes. </i>
+<b><i>NOTE</b>: The BEDPE file must have syntenic region annotations. These are required to group homologous chromosomes from different genomes. Syntenic regions can only be between homologous chromosomes. In case, syntenic regions between homologous chromosomes are not available, then entire homologous chromosomes can be added as syntenic in the BEDPE file to allow clustering of homologous chromosomes. While plotting, use the `--nosyn` option to skip plotting of these manually added syntenic regions.  </i>
 
 
 #### Step 3: Running plotsr
 Plotsr can be run using the following command: 
 ```
 plotsr \
-    --sr col_lersyri.out \
-    --sr ler_cvisyri.out \
+    --sr A_Bsyri.out \
+    --sr B_Csyri.out \
+    --sr C_Dsyri.out \
     --genomes genomes.txt \
-    -o ampril_horizon.png
+    -o output_plot.png
 ```
 
 <a name="genomes">
@@ -137,30 +146,29 @@ Here, genomes.txt is a tab-separated file containing the path and names for the 
 ```
 $genomes.txt
 #file	name	tags
-TAIR10.filetered.fa	col-0	lw:1.5
-ler.filtered.fa	ler	lw:1.5
-cvi.filtered.fa	cvi	lw:1.5
+A.fa	A	lw:1.5
+B.fa	B	lw:1.5
+C.fa	C	lw:1.5
+D.fa	D	lw:1.5
 ```
 
 Currently, the following tags are available for genomes.
 
 ```
-ft = File type (fa/cl for fasta/chromosome_length, default = fa); cl files must be in tsv format with chromosome name in column 1 and chromosome length in column 2
+ft = File type (fa/cl for fasta/chromosome_length, default = fa); cl files must be in tsv format with chromosome name in column 1 and chromosome length in column 2; using cl files is much faster than using fa files
 lw = line width
 lc = line colour
 ```
 
-<b><i>NOTE</b>: It is required that the order of the genomes is the same as the order in which genomes are compared. For example, if the first genome annotation file uses GenomeA as a reference and GenomeB as query, and the second genome annotation file uses GenomeB as a reference and GenomeC as query, then the genomes file should list the genomes in the order GenomeA, GenomeB, GenomeC.</i>
+<b><i>NOTE</b>: It is required that the order of the genomes is the same as the order in which genomes are compared. For example, if the first genome annotation file uses A as a reference and B as query, and the second genome annotation file uses B as a reference and C as query, then the genomes.txt file should list the genomes in the order A, B, C.</i>
 
 ## Tracks and markers
 In addition to structural annotations, plotsr can also be used for visualising tracks for genomics features as well as for marking specific positions in the genomes.
 
 #### Visualising tracks
 
-[//]: # (<a name="tracks">)
-Feature track information should be in BED or bedGraph format and should correspond to the first genome in visualisation (here for an example: col-0). Plotsr would then calculate and plot the relative frequency of these features in bins along the chromosomes.
+Feature track information should be in BED or bedGraph format and should correspond to the first genome in visualisation. For example, the [example tracks.txt](./example/tracks.txt) contains tracks corresponding to the col-0 genome. Plotsr would then calculate and plot the relative frequency of these features in bins along the chromosomes.
 Feature tracks are parsed to plotsr as a tab-separated file containing the path and names for the tracks. The visualisation properties of the tracks can be adjusted by providing a third column containing different tags and corresponding values.
-</a>
 
 ```
 $tracks.txt
@@ -183,18 +191,14 @@ ba = background alpha
 ```
 
 #### Visualising Markers
-<a name="markers">
 Plotsr can mark positions of interest in the genomes. Markers are provided as an extended BED file with five columns: chromosome name, start position, end position, genome name, tags (optional).
-</a>
 
 ```
 $markers.bed
 #chr	start	end genome_id	tags
-Chr3	7354325	7354326	cvi	mt:v;mc:black;ms:3;tt:Inv3;tp:0.02;ts:8;tf:Arial;tc:black
-Chr4	4571491	4571492	cvi	mt:v;mc:black;ms:3;tt:Inv1;tp:0.02;ts:8;tf:Arial;tc:black
-Chr5	5991438	5991439	c24	mt:^;mc:black;ms:3;tt:Inv2;tp:-0.07;ts:8;tf:Arial;tc:black
-Chr3	8792851	8792852	col-0	mt:.;mc:red;ms:10;tt:Notal1;tp:0.02;ts:8;tf:Arial;tc:black
-Chr3	8682034	8682035	sha	mt:.;mc:red;ms:10;tt:Notal2;tp:0.02;ts:8;tf:Arial;tc:black
+Chr3	4035330	4035331	eri	mt:v;mc:black;ms:3;tt:Inversion 1;tp:0.02;ts:8;tf:Arial;tc:black
+Chr4	2322547	2322548	ler	mt:^;mc:black;ms:3;tt:Inversion 2;tp:-0.07;ts:8;tf:Arial;tc:black
+Chr3	8792851	8792852	col-0	mt:.;mc:red;ms:10;tt:Notal aligned;tp:0.02;ts:8;tf:Arial;tc:black
 ```
 The visualisation properties of the markers can be adjusted by adjusting tag values. Currently, the following tags are available for tracks.
 ```
@@ -207,12 +211,12 @@ ts = text size
 tf = text font
 tp = text position
 ```
-Check [markers.txt](config/marker_point_type.txt) for the list of available markers.
+Check [markers.txt](./config/marker_point_type.txt) for the list of available markers.
 
 ## Adjusting other parameters
 Additional parameters (colors, spacing, legends) of the plot can be adjusted by parsing a config file to the `--cfg` parameter. Description and default values present in the example [base.cfg](./example/base.cfg) file.   
 
 ## Citation:
-If you find plotsr helpful, please cite:
+If you find plotsr helpful, please [cite](https://www.biorxiv.org/content/10.1101/2022.01.24.477489v1):
 
 `Goel, M., Schneeberger, K., plotsr: Visualising structural similarities and rearrangements between multiple genomes. bioRxiv 2022.01.24.477489, doi.org/10.1101/2022.01.24.477489`
