@@ -129,9 +129,11 @@ plotsr \
     --genomes genomes.txt \
     -o ampril_horizon.png
 ```
+
 <a name="genomes">
 Here, genomes.txt is a tab-separated file containing the path and names for the genomes. A third column can also be added to customise the visualisation of genomes.
 </a>
+
 ```
 $genomes.txt
 #file	name	tags
@@ -139,12 +141,15 @@ TAIR10.filetered.fa	col-0	lw:1.5
 ler.filtered.fa	ler	lw:1.5
 cvi.filtered.fa	cvi	lw:1.5
 ```
+
 Currently, the following tags are available for genomes.
+
 ```
 ft = File type (fa/cl for fasta/chromosome_length, default = fa); cl files must be in tsv format with chromosome name in column 1 and chromosome length in column 2
 lw = line width
 lc = line colour
 ```
+
 <b><i>NOTE</b>: It is required that the order of the genomes is the same as the order in which genomes are compared. For example, if the first genome annotation file uses GenomeA as a reference and GenomeB as query, and the second genome annotation file uses GenomeB as a reference and GenomeC as query, then the genomes file should list the genomes in the order GenomeA, GenomeB, GenomeC.</i>
 
 ## Tracks and markers
@@ -153,7 +158,7 @@ In addition to structural annotations, plotsr can also be used for visualising t
 #### Visualising tracks
 Feature track information should be in BED or bedGraph format and should correspond to the first genome in visualisation (here for an example: col-0). Plotsr would then calculate and plot the relative frequency of these features in bins along the chromosomes.
 Feature tracks are parsed to plotsr as a tab-separated file containing the path and names for the tracks. The visualisation properties of the tracks can be adjusted by providing a third column containing different tags and corresponding values.
-![tracks.txt]
+
 ```
 $tracks.txt
 # file	name	tags
