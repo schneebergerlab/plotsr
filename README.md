@@ -47,8 +47,8 @@ As example, we would visualise structural rearrangements between four accessions
 |----|--------|
 | `*.chrlen` | Table containing chromosome lengths |
 | `*syri.filtered.out` | Pairwise structural annotation information between genomes |
-| `genomes.txt` | [Genomes information file](genomes.txt) |
-| `markers.bed` | [Markers information file](markers.bed) |
+| `genomes.txt` | [Genomes information file](#genomes) |
+| `markers.bed` | [Markers information file](#markers.bed) |
 | `tracks.txt` | [Tracks information file](tracks.txt) |
 | `plotsr.sh` | Bash script containing commands to generate different visualisations for the four genomes |
 | `base.cfg` | Configuration file for adjusting visual properties of the plot |
@@ -129,8 +129,8 @@ plotsr \
     --genomes genomes.txt \
     -o ampril_horizon.png
 ```
+<a name="genomes">
 Here, genomes.txt is a tab-separated file containing the path and names for the genomes. A third column can also be added to customise the visualisation of genomes.
-<a name="genomes.txt"></a>
 ```
 $genomes.txt
 #file	name	tags
@@ -144,7 +144,7 @@ ft = File type (fa/cl for fasta/chromosome_length, default = fa); cl files must 
 lw = line width
 lc = line colour
 ```
-
+</a>
 <b><i>NOTE</b>: It is required that the order of the genomes is the same as the order in which genomes are compared. For example, if the first genome annotation file uses GenomeA as a reference and GenomeB as query, and the second genome annotation file uses GenomeB as a reference and GenomeC as query, then the genomes file should list the genomes in the order GenomeA, GenomeB, GenomeC.</i>
 
 ## Tracks and markers
