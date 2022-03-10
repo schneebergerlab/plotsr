@@ -44,7 +44,7 @@ For example, if genomes A, B, and C are to be visualised in this order, then str
 
 
 
-Following are the steps for a typical pipeline to visualise structural annotations between genomes. For this, we would use the data available in the ![example](./example/) folder.
+Following are the steps for a typical pipeline to visualise structural annotations between genomes. For this, we would use the data available in the [example](./example/) folder.
 
 #### Step 1: Aligning genomes
 * In the ```example``` folder, assemblies for three strains of _Arabidopsis thaliana_ are available (Col-0: TAIR10.filtered.fa.gz, L<i>er</i>: ler.filtered.fa.gz, C<i>vi</i>: cvi.filtered.fa.gz).
