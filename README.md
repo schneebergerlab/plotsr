@@ -160,6 +160,7 @@ In addition to structural annotations, plotsr can also be used for visualising t
 Feature track information should be in BED or bedGraph format and should correspond to the first genome in visualisation (here for an example: col-0). Plotsr would then calculate and plot the relative frequency of these features in bins along the chromosomes.
 Feature tracks are parsed to plotsr as a tab-separated file containing the path and names for the tracks. The visualisation properties of the tracks can be adjusted by providing a third column containing different tags and corresponding values.
 </a>
+
 ```
 $tracks.txt
 # file	name	tags
@@ -184,6 +185,7 @@ ba = background alpha
 <a name="markers">
 Plotsr can mark positions of interest in the genomes. Markers are provided as an extended BED file with five columns: chromosome name, start position, end position, genome name, tags (optional).
 </a>
+
 ```
 $markers.bed
 #chr	start	end genome_id	tags
