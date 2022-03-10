@@ -127,7 +127,7 @@ Valid values for annotation type: SYN, INV, TRA, INVTR, DUP, INVDP. Here:
 | DUP | Duplication |
 | INVDP | Inverted duplication |
 
-<b><i>NOTE</b>: The BEDPE file must have syntenic region annotations. These are required to group homologous chromosomes from different genomes. Syntenic regions can only be between homologous chromosomes. In case, syntenic regions between homologous chromosomes are not available, then entire homologous chromosomes can be added as syntenic in the BEDPE file to allow clustering of homologous chromosomes. While plotting, use the `--nosyn` option to skip plotting of these manually added syntenic regions.  </i>
+<b><i>NOTE</b>: The BEDPE file must have syntenic region annotations. These are required to group homologous chromosomes from different genomes. Syntenic regions can only be between homologous chromosomes. In case, syntenic regions between homologous chromosomes are not available, then entire homologous chromosomes can be added as syntenic in the BEDPE file manually to allow clustering of homologous chromosomes by plotsr. While plotting, use the `--nosyn` option to skip plotting of these manually added syntenic regions.  </i>
 
 
 #### Step 3: Running plotsr
@@ -161,6 +161,8 @@ ft = File type (fa/cl for fasta/chromosome_length, default = fa); cl files must 
 lw = line width
 lc = line colour
 ```
+Check the [genomes.txt](./example/genomes.txt) for a working example.
+
 
 <b><i>NOTE</b>: It is required that the order of the genomes is the same as the order in which genomes are compared. For example, if the first genome annotation file uses A as a reference and B as query, and the second genome annotation file uses B as a reference and C as query, then the genomes.txt file should list the genomes in the order A, B, C.</i>
 
@@ -169,7 +171,7 @@ In addition to structural annotations, plotsr can also be used for visualising t
 
 #### Visualising tracks
 
-Feature track information should be in BED or bedGraph format and should correspond to the first genome in visualisation. For example, the [example tracks.txt](./example/tracks.txt) contains tracks corresponding to the col-0 genome. Plotsr would then calculate and plot the relative frequency of these features in bins along the chromosomes.
+Feature track information should be in BED or bedGraph format and should correspond to the first genome in visualisation. For example, the [tracks.txt](./example/tracks.txt) contains tracks corresponding to the col-0 genome. Plotsr would then calculate and plot the relative frequency of these features in bins along the chromosomes.
 Feature tracks are parsed to plotsr as a tab-separated file containing the path and names for the tracks. The visualisation properties of the tracks can be adjusted by providing a third column containing different tags and corresponding values.
 
 ```
