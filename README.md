@@ -130,7 +130,7 @@ plotsr \
     -o ampril_horizon.png
 ```
 Here, genomes.txt is a tab-separated file containing the path and names for the genomes. A third column can also be added to customise the visualisation of genomes.
-![genomes.txt]
+<a name="genomes.txt"></a>
 ```
 $genomes.txt
 #file	name	tags
