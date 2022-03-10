@@ -92,8 +92,8 @@ def plotsr(args):
     ## Set matplotlib backend
 
     try :
-        matplotlib.use(args.b)
-        # matplotlib.use('Qt5Agg')    # TODO: Delete this line
+        # matplotlib.use(args.b)
+        matplotlib.use('Qt5Agg')    # TODO: Delete this line
     except :
         sys.exit('Matplotlib backend cannot be selected')
 

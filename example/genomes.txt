@@ -1,7 +1,8 @@
-##ft    =   File type (fa/cl for fasta/chromosome_length, default = fa)
+##ft	=   File type (fa:fasta/cl:chromosome_length, default = fa. cl files are fasters)
 ##lc	=	line colour
 ##lw	=	line width
 #file	name	tags
-TAIR10_Filtered.fasta	col-0	lw:1.5
-ler.filtered.fa	ler	lw:1.5
-cvi.filtered.fa	cvi	lw:1.5
+TAIR10_Filtered.chrlen	col-0	ft:cl;lw:1.5
+ler.chrlen	ler	ft:cl;lw:1.5
+cvi.chrlen	cvi	ft:cl;lw:1.5
+eri.chrlen	eri	ft:cl;lw:1.5

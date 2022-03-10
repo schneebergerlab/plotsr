@@ -3,7 +3,7 @@
 [![Anaconda-Server Badge](https://anaconda.org/bioconda/plotsr/badges/latest_release_date.svg)](https://anaconda.org/bioconda/plotsr)
 
 ## Introduction
-Plotsr generates high-quality visualisation of synteny and structural rearrangements between multiple genomes. For this it uses the genomic structural annotations between multiple chromosome-level assemblies.
+Plotsr generates high-quality visualisation of synteny and structural rearrangements between multiple genomes. For this, it uses the genomic structural annotations between multiple chromosome-level assemblies.
 ![example](./example/ampril_col0_chr3_6600000_10000000.png)
 
 ## Installation:
@@ -34,7 +34,7 @@ plotsr -h
 1. Chromosome-level assemblies of the genomes to be compared 
 2. Pairwise structural annotations between genomes
 
-For example, if genomes A, B, and C are to be visualised in this order, then structural annotations of A vs B and B vs C would be required.
+For example, if genomes A, B, and C are to be visualised in this order, then structural annotations of A vs B and B vs C genome comparisons would be required.
 
 #### Additional inputs
 * GFF/BED/bedGraph files for adding tracks to the visualisation, like the tracks for genes and SNPs in the [example](Example) plot above.
@@ -71,7 +71,7 @@ syri -c ler_cvi.bam -r ler.filtered.fa -q cvi.filtered.fa -F B --prefix ler_cvi 
 ```
 This will generate col_lersyri.out and ler_cvisyri.out files that contain the structural annotations between genomes and will be the input to plotsr.
 
-If other methods are used for finding structural annotations, then their output can be parsed to plotsr using the BEDPE format which should have the following coloumns:
+If other methods are used for finding structural annotations, then their output can be parsed to plotsr using the BEDPE format which should have the following columns:
 ```
 Reference chromosome name
 Reference start position
@@ -104,7 +104,7 @@ plotsr \
     --genomes genomes.txt \
     -o ampril_horizon.png
 ```
-Here, genomes.txt is a tab-separated file containing path and names for the genomes. A third column can alse be added to customisation visualtion properties of genomes. 
+Here, genomes.txt is a tab-separated file containing the path and names for the genomes. A third column can also be added to customise the visualisation of genomes.
 ```
 $genomes.txt
 #file	name	tags
@@ -112,21 +112,21 @@ TAIR10.filetered.fa	col-0	lw:1.5
 ler.filtered.fa	ler	lw:1.5
 cvi.filtered.fa	cvi	lw:1.5
 ```
-Currently, following tags are available for genomes.
+Currently, the following tags are available for genomes.
 ```
 ft = File type (fa/cl for fasta/chromosome_length, default = fa); cl files must be in tsv format with chromosome name in column 1 and chromosome length in column 2
 lw = line width
 lc = line colour
 ```
 
-<b><i>NOTE</b>: It is required that the order of the genomes is same as the order in which genomes are compared. For example, if the first genome annotation file uses GenomeA as reference and GenomeB as query, and the second genome annotation file uses GenomeB as reference and GenomeC as query, then the genomes file should list the genomes in the order GenomeA, GenomeB, GenomeC.</i>
+<b><i>NOTE</b>: It is required that the order of the genomes is the same as the order in which genomes are compared. For example, if the first genome annotation file uses GenomeA as a reference and GenomeB as query, and the second genome annotation file uses GenomeB as a reference and GenomeC as query, then the genomes file should list the genomes in the order GenomeA, GenomeB, GenomeC.</i>
 
 ## Tracks and markers
 In addition to structural annotations, plotsr can also be used for visualising tracks for genomics features as well as for marking specific positions in the genomes.
 
 #### Visualising tracks
-Feature track information should in BED or bedGraph format and should correspond to the first genome in visualisation (here for example: col-0). Plotsr would then calculate and plot the relative frequency of these features in bins along the chromosomes.
-Feature tracks are parsed to plotsr as a tab-separated file containing the path and names for the tracks. The visualisation properties of the tracks can be adjusted by providing a third-column containing different tags and corresponding values.
+Feature track information should be in BED or bedGraph format and should correspond to the first genome in visualisation (here for an example: col-0). Plotsr would then calculate and plot the relative frequency of these features in bins along the chromosomes.
+Feature tracks are parsed to plotsr as a tab-separated file containing the path and names for the tracks. The visualisation properties of the tracks can be adjusted by providing a third column containing different tags and corresponding values.
 ```
 $tracks.txt
 # file	name	tags
@@ -134,7 +134,7 @@ TAIR10_GFF3_genes.gff   Genes   ft:gff;bw:10000;nc:black;ns:8;nf:Arial;lc:blue;l
 1001genomes.snps.sorted.bed     SNPs    bw:10000;nc:black;ns:8;nf:Arial;lc:sienna;lw:1;bc:peachpuff;ba:0.5
 Giraut2011_centromeres.bed     Centromeres     bw:10000;nc:black;ns:8;nf:Arial;lc:olive;lw:1;bc:palegreen;ba:0.5
 ```
-Currently, following tags are available for tracks.
+Currently, the following tags are available for tracks.
 ```
 ft = File type (bed/bedgraph/gff, default = bed)
 bw = bin width (default=100000)
@@ -158,7 +158,7 @@ Chr5	5991438	5991439	c24	mt:^;mc:black;ms:3;tt:Inv2;tp:-0.07;ts:8;tf:Arial;tc:bl
 Chr3	8792851	8792852	col-0	mt:.;mc:red;ms:10;tt:Notal1;tp:0.02;ts:8;tf:Arial;tc:black
 Chr3	8682034	8682035	sha	mt:.;mc:red;ms:10;tt:Notal2;tp:0.02;ts:8;tf:Arial;tc:black
 ```
-The visualisation properties of the markers can be adjusted by adjusting tag values. Currently, following tags are available for tracks.
+The visualisation properties of the markers can be adjusted by adjusting tag values. Currently, the following tags are available for tracks.
 ```
 mt = marker type
 mc = marker colour

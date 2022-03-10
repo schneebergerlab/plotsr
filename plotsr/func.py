@@ -1536,13 +1536,13 @@ def drawmarkers(ax, b, v, chrlengths, indents, chrs, chrgrps, S, itx, minl=0, ma
             chrid = chrid[0]
             step = S/(len(chrlengths)-1)
             if not v:
-                ax.plot(m.start+buff[chrid], S - (step*ind), marker=m.mt, color=m.mc, markersize=m.ms)
+                ax.plot(m.start+buff[chrgrps[chrid][ind]], S - (step*ind), marker=m.mt, color=m.mc, markersize=m.ms)
                 if m.tt != '':
-                    ax.text(m.start+buff[chrid], S - (step*ind) + m.tp, m.tt, color=m.tc, fontsize=m.ts, fontfamily=m.tf, ha='center', va='bottom')
+                    ax.text(m.start+buff[chrgrps[chrid][ind]], S - (step*ind) + m.tp, m.tt, color=m.tc, fontsize=m.ts, fontfamily=m.tf, ha='center', va='bottom')
             elif v:
-                ax.plot(1 - S + (step*ind), m.start+buff[chrid], marker=m.mt, color=m.mc, markersize=m.ms)
+                ax.plot(1 - S + (step*ind), m.start+buff[chrgrps[chrid][ind]], marker=m.mt, color=m.mc, markersize=m.ms)
                 if m.tt != '':
-                    ax.text(1 - S + (step*ind)-m.tp, m.start+buff[chrid], m.tt, color=m.tc, fontsize=m.ts, fontfamily=m.tf, ha='left', va='center', rotation='vertical')
+                    ax.text(1 - S + (step*ind)-m.tp, m.start+buff[chrgrps[chrid][ind]], m.tt, color=m.tc, fontsize=m.ts, fontfamily=m.tf, ha='left', va='center', rotation='vertical')
     return ax
 # END
 
