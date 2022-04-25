@@ -223,4 +223,4 @@ Additional parameters (colors, spacing, legends) of the plot can be adjusted by 
 ## Citation:
 If you find plotsr helpful, please [cite](https://www.biorxiv.org/content/10.1101/2022.01.24.477489v1):
 
-`Goel, M., Schneeberger, K., plotsr: Visualising structural similarities and rearrangements between multiple genomes. bioRxiv 2022.01.24.477489, doi.org/10.1101/2022.01.24.477489`
+`Manish Goel, Korbinian Schneeberger, plotsr: visualizing structural similarities and rearrangements between multiple genomes, Bioinformatics, 2022; btac196, https://doi.org/10.1093/bioinformatics/btac196`
