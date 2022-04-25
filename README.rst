@@ -221,6 +221,6 @@ Check [markers.txt](./config/marker_point_type.txt) for the list of available ma
 Additional parameters (colors, spacing, legends) of the plot can be adjusted by parsing a config file to the `--cfg` parameter. Description and default values present in the example [base.cfg](./example/base.cfg) file.   
 
 ## Citation:
-If you find plotsr helpful, please [cite](https://www.biorxiv.org/content/10.1101/2022.01.24.477489v1):
+If you find plotsr helpful, please [cite](https://doi.org/10.1093/bioinformatics/btac196):
 
 `Manish Goel, Korbinian Schneeberger, plotsr: visualizing structural similarities and rearrangements between multiple genomes, Bioinformatics, 2022; btac196, https://doi.org/10.1093/bioinformatics/btac196`
