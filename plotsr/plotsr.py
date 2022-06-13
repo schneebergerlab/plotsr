@@ -261,5 +261,6 @@ def plotsr(args):
     # Save the plot
     try:
         fig.savefig(O, dpi=D, bbox_inches='tight', pad_inches=0.01)
+        logger.warning("Plot {O} generated.\nFinished".format(O=O))
     except Exception as e:
         sys.exit('Error in saving the figure. Try using a different backend.' + '\n' + e.with_traceback())

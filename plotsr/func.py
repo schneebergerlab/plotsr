@@ -135,7 +135,8 @@ def readbasecfg(f, v):
     ## Set legend properties
     cfg['legend'] = True
     cfg['genlegcol'] = -1
-    cfg['bbox'] = [0, 1.01, 0.5, 0.3] if not v else [0, 1.1, 0.5, 0.3]
+    cfg['bbox'] = [0, 1.01, 0.5, 0.3]
+    cfg['bbox_v'] = [0, 1.1, 0.5, 0.3]
     cfg['bboxmar'] = 0.5
 
     if f == '':
@@ -177,7 +178,8 @@ def readbasecfg(f, v):
                     logger.error("BBOX requires four values ({} provided: {}). Using default values.".format(len(line[1]), line[1]))
                     continue
                 try:
-                    cfg['bbox'] = [float(i) for i in line[1]]
+                    cfg[line[0]] = [float(i) for i in line[1]]
+                    cfg['bbox'] = cfg['bbox_v'] if v else cfg['bbox']
                 except ValueError:
                     logger.error("Non-numerical values {} provided for {}. Using default value.".format(line[1], line[0]))
                     continue
@@ -882,7 +884,7 @@ def validalign2fasta(als, genf):
                 for c in bchr:
                     if c not in list(glen.keys()):
                         raise ImportError(errmess1.format(c, als[i-1][0], os.path.basename(line[1])))
-                    if np.max(np.max(df.loc[df['bchr'] == c, ['bstart', 'bend']])) > glen[c]:
+                    if df.loc[df['bchr'] == c, ['bstart', 'bend']].max().max() > glen[c]:
                         raise ImportError(errmess2.format(c, os.path.basename(genf), als[i-1][0]))
             # Check cases when the genome is the reference-genome
             if i < len(als):
@@ -894,7 +896,7 @@ def validalign2fasta(als, genf):
                 for c in achr:
                     if c not in list(glen.keys()):
                         raise ImportError(errmess1.format(c, als[i][0], os.path.basename(line[1])))
-                    if np.max(np.max(df.loc[df['achr'] == c, ['astart', 'aend']])) > glen[c]:
+                    if df.loc[df['achr'] == c, ['astart', 'aend']].max().max() > glen[c]:
                         raise ImportError(errmess2.format(c, os.path.basename(genf), als[i][0]))
             out.append((line[1], {c: glen[c] for c in set(achr).union(set(bchr))}))
             i += 1
