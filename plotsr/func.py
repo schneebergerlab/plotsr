@@ -445,6 +445,7 @@ class track():
         self.nc = 'black'
         self.ns = matplotlib.rcParams['font.size']
         self.nf = 'Arial'
+        self.nm = 0
         self.lc = 'black'
         self.lw = 1
         self.bc = 'lightgrey'
@@ -473,7 +474,7 @@ class track():
                         sys.exit()
                     setattr(self, n, v)
                 ## Numerical parameters
-                elif n in ['ns', 'bw', 'lw', 'ba']:
+                elif n in ['ns', 'bw', 'lw', 'ba', 'nm']:
                     try: float(v)
                     except ValueError:
                         self.logger.error("Non-numerical value {} for {} in track{}".format(v, n, self.n))
@@ -1656,13 +1657,13 @@ def drawtracks(ax, tracks, s, chrgrps, chrlengths, v, itx, cfg, minl=0, maxl=-1)
                 axt = partial(ax.text, s=tracks[i].n, color=tracks[i].nc, fontsize=tracks[i].ns, fontfamily=tracks[i].nf, ha='center', va='bottom', rotation='vertical')
             if not itx:
                 for j in range(cl):
-                    pos = chrlengths[0][1][chrs[j]] + margin if maxl == -1 else maxl + margin
+                    pos = chrlengths[0][1][chrs[j]] + margin + (tracks[i].nm*chrlengths[0][1][chrs[j]]) if maxl == -1 else maxl + margin + (tracks[i].nm*maxl)
                     if not v:
                         axt(pos, float(pd.unique(anno.loc[anno['chr']==chrs[j], 'fixed'])))
                     else:
                         axt(float(pd.unique(anno.loc[anno['chr']==chrs[j], 'fixed'])), pos)
             else:
-                pos = maxl + margin
+                pos = maxl + margin + (tracks[i].nm*maxl)
                 if not v:
                     axt(pos, float(pd.unique(anno['fixed'])))
                 else:

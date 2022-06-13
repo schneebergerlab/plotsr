@@ -3,11 +3,12 @@
 ##nc = name colour
 ##ns = name size
 ##nf = name font
+##nm = name margin      # Additional margin between name and track. Fraction between [0,1]
 ##lc = line colour
 ##lw = line width
 ##bc = background colour
 ##ba = background alpha
 #file	name	tags
-TAIR10_GFF3_genes.gff	Genes	ft:gff;bw:10000;nc:black;ns:8;nf:Arial;lc:blue;lw:4;bc:lightblue;ba:0.5
+TAIR10_GFF3_genes.gff	Genes	ft:gff;bw:10000;nc:black;ns:8;nf:Arial;lc:blue;lw:4;bc:lightblue;ba:0.5;nm:0.05
 1001genomes.snps.sorted.bed	SNPs	bw:10000;nc:black;ns:8;nf:Arial;lc:sienna;lw:1;bc:peachpuff;ba:0.5
 Giraut2011_centromeres.bed	Centromeres	bw:10000;nc:black;ns:8;nf:Arial;lc:olive;lw:1;bc:palegreen;ba:0.5
