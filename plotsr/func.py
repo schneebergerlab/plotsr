@@ -862,7 +862,7 @@ def validalign2fasta(als, genf):
             if line[0] == '#':
                 continue
             line = line.strip().split("\t")
-            if len(line) == 0:
+            if len(line) == 1 and not line[0]:
                 continue
             if len(line) < 2:
                 raise ImportError("Incomplete genomic information.\nExpected format for the genome file:\npath_to_genome1\tgenome1_id\ttags\npath_to_genome2\tgenome2_id\ttags\n\nMake sure that the columns are separated by tabs (and not spaces).")
