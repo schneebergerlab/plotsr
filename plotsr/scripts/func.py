@@ -1524,28 +1524,49 @@ def drawmarkers(ax, b, v, chrlengths, indents, chrs, chrgrps, S, itx, minl=0, ma
             if m.start < minl or m.end > maxl:
                 logger.warning("Cannot draw marker at {}:{}-{} on genome {} because the marker position is out of the selected range. Skipping it.".format(m.chr, m.start, m.end, m.genome))
                 continue
+
         if not itx:
             indent = indents[ind]
             if not v:
-                ax.plot(m.start, indent-offset, marker=m.mt, color=m.mc, markersize=m.ms)
-                if m.tt != '':
+                if m.mt != '_':
+                    ax.plot(m.start, indent-offset, marker=m.mt, color=m.mc, markersize=m.ms)
                     ax.text(m.start, indent-offset+m.tp, m.tt, color=m.tc, fontsize=m.ts, fontfamily=m.tf, ha='center', va='bottom')
+                else:
+                    ax.axhline(y=indent-offset, xmin=m.start/ax.get_xlim()[1], xmax=m.end/ax.get_xlim()[1], color=m.mc, linewidth=m.ms)
+                    ax.text((m.start + m.end)/2, indent-offset+m.tp, m.tt, color=m.tc, fontsize=m.ts, fontfamily=m.tf, ha='center', va='bottom')
+                # if m.tt != '':
+                #     ax.text(m.start, indent-offset+m.tp, m.tt, color=m.tc, fontsize=m.ts, fontfamily=m.tf, ha='center', va='bottom')
             elif v:
-                ax.plot(indent+offset, m.start, marker=m.mt, color=m.mc, markersize=m.ms)
-                if m.tt != '':
+                if m.mt != '|':
+                    ax.plot(indent+offset, m.start, marker=m.mt, color=m.mc, markersize=m.ms)
                     ax.text(indent+offset-m.tp, m.start, m.tt, color=m.tc, fontsize=m.ts, fontfamily=m.tf, ha='left', va='center', rotation='vertical')
+                else:
+                    ax.axvline(x=indent+offset, ymin=m.start/ax.get_ylim()[1], ymax=m.end/ax.get_ylim()[1], color=m.mc, linewidth=m.ms)
+                    ax.text(indent+offset-m.tp, (m.start+m.end)/2, m.tt, color=m.tc, fontsize=m.ts, fontfamily=m.tf, ha='left', va='center', rotation='vertical')
+                # if m.tt != '':
+                #     ax.text(indent+offset-m.tp, m.start, m.tt, color=m.tc, fontsize=m.ts, fontfamily=m.tf, ha='left', va='center', rotation='vertical')
         elif itx:
             buff = genbuff(ind, chrlengths, chrgrps, chrs, maxl, v)
             chrid = chrid[0]
             step = S/(len(chrlengths)-1)
             if not v:
-                ax.plot(m.start+buff[chrgrps[chrid][ind]], S - (step*ind), marker=m.mt, color=m.mc, markersize=m.ms)
-                if m.tt != '':
+                if m.mt != '_':
+                    ax.plot(m.start+buff[chrgrps[chrid][ind]], S - (step*ind), marker=m.mt, color=m.mc, markersize=m.ms)
                     ax.text(m.start+buff[chrgrps[chrid][ind]], S - (step*ind) + m.tp, m.tt, color=m.tc, fontsize=m.ts, fontfamily=m.tf, ha='center', va='bottom')
+                else:
+                    ax.axhline(y=S - (step*ind), xmin=(m.start+buff[chrgrps[chrid][ind]])/ax.get_xlim()[1], xmax=(m.end+buff[chrgrps[chrid][ind]])/ax.get_xlim()[1], color=m.mc, linewidth=m.ms)
+                    ax.text(((m.start+m.end)/2)+buff[chrgrps[chrid][ind]], S - (step*ind) + m.tp, m.tt, color=m.tc, fontsize=m.ts, fontfamily=m.tf, ha='center', va='bottom')
+                # if m.tt != '':
+                #     ax.text(m.start+buff[chrgrps[chrid][ind]], S - (step*ind) + m.tp, m.tt, color=m.tc, fontsize=m.ts, fontfamily=m.tf, ha='center', va='bottom')
             elif v:
-                ax.plot(1 - S + (step*ind), m.start+buff[chrgrps[chrid][ind]], marker=m.mt, color=m.mc, markersize=m.ms)
-                if m.tt != '':
+                if m.mt != '|':
+                    ax.plot(1 - S + (step*ind), m.start+buff[chrgrps[chrid][ind]], marker=m.mt, color=m.mc, markersize=m.ms)
                     ax.text(1 - S + (step*ind)-m.tp, m.start+buff[chrgrps[chrid][ind]], m.tt, color=m.tc, fontsize=m.ts, fontfamily=m.tf, ha='left', va='center', rotation='vertical')
+                else:
+                    ax.axvline(x=1 - S + (step*ind), ymin=(m.start+buff[chrgrps[chrid][ind]])/ax.get_ylim()[1], ymax=(m.end+buff[chrgrps[chrid][ind]])/ax.get_ylim()[1], color=m.mc, linewidth=m.ms)
+                    ax.text(1 - S + (step*ind)-m.tp, ((m.start+m.end)/2)+buff[chrgrps[chrid][ind]], m.tt, color=m.tc, fontsize=m.ts, fontfamily=m.tf, ha='left', va='center', rotation='vertical')
+                # if m.tt != '':
+                #     ax.text(1 - S + (step*ind)-m.tp, m.start+buff[chrgrps[chrid][ind]], m.tt, color=m.tc, fontsize=m.ts, fontfamily=m.tf, ha='left', va='center', rotation='vertical')
     return ax
 # END
 
