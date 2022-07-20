@@ -1,11 +1,11 @@
-##mt = bin width (default=100000)
-##mc = name colour
-##ms = name size
-##tt = name font
-##tc = line colour
-##ts = line width
-##tf = background colour
-##tp = background colour
+##mt = marker type
+##mc = marker colour
+##ms = marker size
+##tt = text
+##tc = text colour
+##ts = text size
+##tf = text font
+##tp = text position
 #chr	start	end genome_id	tags
 Chr3	4035330	4035331	eri	mt:v;mc:black;ms:3;tt:Inversion 1;tp:0.02;ts:8;tf:Arial;tc:black
 Chr4	2322547	2322548	ler	mt:^;mc:black;ms:3;tt:Inversion 2;tp:-0.07;ts:8;tf:Arial;tc:black
