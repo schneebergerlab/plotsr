@@ -11,9 +11,9 @@ setup(
     license='MIT License',
     license_files=('LICENSE',),
     packages=["plotsr", "plotsr.scripts"],
-    # py_modules=["plotsr.main",
-    #             # "plotsr.plotsr",
-    #             "plotsr.func"],
+    py_modules=["plotsr.scripts.plotsr",
+                # "plotsr.scripts.plotsr",
+                "plotsr.scripts.func"],
     scripts=['bin/plotsr'],
     long_description=open('README.rst').read(),
 )
