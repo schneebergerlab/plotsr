@@ -39,7 +39,7 @@ MARKERS = {".": "point",
            "i9": "caretright (centered at base)",
            "i10": "caretup (centered at base)",
            "i11": "caretdown"}
-VARS = ['SYN', 'INV', 'TRANS', 'INVTR', 'DUP', 'INVDP']
+VARS = ['SYN', 'INV', 'TRANS', 'INVTR', 'DUP', 'INVDP', 'CONN']
 COLORS = ['#DEDEDE', '#FFA500', '#9ACD32', '#00BBFF']
 
 FONT_NAMES = []
@@ -431,6 +431,285 @@ def readbedout(f):
         chrid_dict[i] = np.unique(df.loc[(df[0] == i) & (df[6] == 'SYN'), 3])[0]
     df.columns = ['achr', 'astart', 'aend', 'bchr', 'bstart', 'bend',  'type']
     return df, chrid_dict
+# END
+
+
+def swapsrchrom(al):
+    """
+    Reads a dataframe containing SRs (achr, astart, aend, bchr, bstart, bend, type) (bstart < bend) and swaps the genomes ref <--> qry
+    :param al:
+    :return:
+    """
+    alout = al[['bchr', 'bstart', 'bend', 'achr', 'astart', 'aend',  'type']].copy()
+    alout.columns = ['achr', 'astart', 'aend', 'bchr', 'bstart', 'bend', 'type']
+    return alout
+# END
+
+
+def impute_alignments(cl, cc, refsize):
+    from intervaltree import Interval, IntervalTree
+    import numpy as np
+    # Get reference genome markers: divide the chromosomes into 1000 segments
+    refmarkers = {v[0]: np.concatenate((np.arange(1, v[2], 1000), [v[2]])) for v in refsize}
+
+    refmatches = defaultdict(dict)
+    chrmatch = defaultdict()
+    for k, v in refmarkers.items():
+        df1 = cl.loc[(cl['achr'] == k) & (cl['type'] == 'SYN')]
+        df2 = cc.loc[(cc['achr'] == k) & (cc['type'] == 'SYN')]
+        chrmatch[k] = (list(set(df1.bchr))[0], list(set(df2.bchr))[0])
+        iv1 = IntervalTree([Interval(row.astart, row.aend, row) for row in df1.itertuples(index=False)])
+        iv2 = IntervalTree([Interval(row.astart, row.aend, row) for row in df2.itertuples(index=False)])
+        for p in v:
+            try:
+                # s1 = df1.loc[(df1['astart'] <= p) & (df1['aend'] >= p)].iloc[0]
+                # s2 = df2.loc[(df2['astart'] <= p) & (df2['aend'] >= p)].iloc[0]
+                s1 = list(iv1[p])[0].data
+                s2 = list(iv2[p])[0].data
+            except IndexError as e:
+                refmatches[k][p] = [None, None]
+                continue
+
+            # a1 = (p - s1['astart'])/(s1['aend'] - s1['astart'])
+            # a2 = (p - s2['astart'])/(s2['aend'] - s2['astart'])
+            # p1 = int(s1['bstart'] + a1*(s1['bend'] - s1['bstart']))
+            # p2 = int(s2['bstart'] + a2*(s2['bend'] - s2['bstart']))
+
+            a1 = (p - s1[1])/(s1[2] - s1[1])
+            a2 = (p - s2[1])/(s2[2] - s2[1])
+            p1 = int(s1[4] + a1*(s1[5] - s1[4]))
+            p2 = int(s2[4] + a2*(s2[5] - s2[4]))
+            refmatches[k][p] = [p1, p2]
+
+    syncoords = deque()
+    s1, e1, s2, e2 = [None]*4
+    for k, v in refmatches.items():
+        for p, pos in v.items():
+            if pos[0] == None:
+                if s1 != None:
+                    syncoords.append([chrmatch[k][0], s1, e1, chrmatch[k][1], s2, e2])
+                    s1, e1, s2, e2 = [None]*4
+            elif s1 == None:
+                s1, e1, s2, e2 = pos[0], pos[0], pos[1], pos[1]
+            else:
+                e1, e2 = pos[0], pos[1]
+        if s1 != None:
+            syncoords.append([chrmatch[k][0], s1, e1, chrmatch[k][1], s2, e2])
+
+    invmatches = defaultdict(dict)
+    for k, v in refmarkers.items():
+        df1 = cl.loc[(cl['achr'] == k) & (cl['type'] == 'INV')]
+        df2 = cc.loc[(cc['achr'] == k) & (cc['type'] == 'INV')]
+        iv1 = IntervalTree([Interval(row.astart, row.aend, row) for row in df1.itertuples(index=False)])
+        iv2 = IntervalTree([Interval(row.astart, row.aend, row) for row in df2.itertuples(index=False)])
+        # chrmatch[k] = (list(set(df1.bchr))[0], list(set(df2.bchr))[0])
+
+        for p in v:
+            try:
+                # s1 = df1.loc[(df1['astart'] <= p) & (df1['aend'] >= p)].iloc[0]
+                # s2 = df2.loc[(df2['astart'] <= p) & (df2['aend'] >= p)].iloc[0]
+                s1 = list(iv1[p])[0].data
+                s2 = list(iv2[p])[0].data
+            except IndexError as e:
+                invmatches[k][p] = [None, None]
+                continue
+
+            # a1 = (p - s1['astart'])/(s1['aend'] - s1['astart'])
+            # a2 = (p - s2['astart'])/(s2['aend'] - s2['astart'])
+            # p1 = int(s1['bstart'] + (1-a1)*(s1['bend'] - s1['bstart']))
+            # p2 = int(s2['bstart'] + (1-a2)*(s2['bend'] - s2['bstart']))
+            a1 = (p - s1[1])/(s1[2] - s1[1])
+            a2 = (p - s2[1])/(s2[2] - s2[1])
+            p1 = int(s1[4] + (1-a1)*(s1[5] - s1[4]))
+            p2 = int(s2[4] + (1-a2)*(s2[5] - s2[4]))
+            invmatches[k][p] = [p1, p2]
+
+    s1, e1, s2, e2 = [None]*4
+    for k, v in invmatches.items():
+        for p, pos in v.items():
+            if pos[0] == None:
+                if s1 != None:
+                    syncoords.append([chrmatch[k][0], e1, s1, chrmatch[k][1], e2, s2])
+                    s1, e1, s2, e2 = [None]*4
+            elif s1 == None:
+                s1, e1, s2, e2 = pos[0], pos[0], pos[1], pos[1]
+            else:
+                e1, e2 = pos[0], pos[1]
+        if s1 != None:
+            # Use inverted coordinates because original positions were inversion
+            syncoords.append([chrmatch[k][0], e1, s1, chrmatch[k][1], e2, s2])
+
+    syncoords = pd.DataFrame(syncoords)
+    syncoords[[1, 2, 4, 5]] = syncoords[[1, 2, 4, 5]].astype(int)
+    syncoords['type'] = 'SYN'
+    syncoords.sort_values([0, 1, 2], inplace=True)
+    # syncoords.to_csv("ler_cvi_imputed.out", sep='\t', index=False, header=None)
+
+
+    # Inversion
+    inv1 = defaultdict(dict)
+    for k, v in refmarkers.items():
+        df1 = cl.loc[(cl['achr'] == k) & (cl['type'] == 'INV')]
+        df2 = cc.loc[(cc['achr'] == k) & (cc['type'] == 'SYN')]
+        iv1 = IntervalTree([Interval(row.astart, row.aend, row) for row in df1.itertuples(index=False)])
+        iv2 = IntervalTree([Interval(row.astart, row.aend, row) for row in df2.itertuples(index=False)])
+        for p in v:
+            try:
+                # s1 = df1.loc[(df1['astart'] <= p) & (df1['aend'] >= p)].iloc[0]
+                # s2 = df2.loc[(df2['astart'] <= p) & (df2['aend'] >= p)].iloc[0]
+                s1 = list(iv1[p])[0].data
+                s2 = list(iv2[p])[0].data
+            except IndexError as e:
+                inv1[k][p] = [None, None]
+                continue
+            # print(s1, s2)
+            # a1 = (p - s1[1])/(s1['aend'] - s1[1])
+            # a2 = (p - s2[1])/(s2['aend'] - s2['astart'])
+            # p1 = int(s1['bstart'] + (1-a1)*(s1['bend'] - s1['bstart']))
+            # p2 = int(s2['bstart'] + a2*(s2['bend'] - s2['bstart']))
+
+            a1 = (p - s1[1])/(s1[2] - s1[1])
+            a2 = (p - s2[1])/(s2[2] - s2[1])
+            p1 = int(s1[4] + (1-a1)*(s1[5] - s1[4]))
+            p2 = int(s2[4] + a2*(s2[5] - s2[4]))
+
+            inv1[k][p] = [p1, p2]
+
+
+    invcoords = deque()
+    s1, e1, s2, e2 = [None]*4
+    for k, v in inv1.items():
+        for p, pos in v.items():
+            if pos[0] == None:
+                if s1 != None:
+                    invcoords.append([chrmatch[k][0], e1, s1, chrmatch[k][1], s2, e2])
+                    s1, e1, s2, e2 = [None]*4
+            elif s1 == None:
+                s1, e1, s2, e2 = pos[0], pos[0], pos[1], pos[1]
+            elif pos[0] < e1 and pos[1] > e2:   # Update the current Inversion if the coordinates follow correct patter
+                e1, e2 = pos[0], pos[1]
+            else:
+                invcoords.append([chrmatch[k][0], e1, s1, chrmatch[k][1], s2, e2])
+                s1, e1, s2, e2 = pos[0], pos[0], pos[1], pos[1]
+        if s1 != None:
+            # Use inverted coordinates because original positions were inversion
+            invcoords.append([chrmatch[k][0], e1, s1, chrmatch[k][1], s2, e2])
+
+
+    inv2 = defaultdict(dict)
+    for k, v in refmarkers.items():
+        df1 = cl.loc[(cl['achr'] == k) & (cl['type'] == 'SYN')]
+        df2 = cc.loc[(cc['achr'] == k) & (cc['type'] == 'INV')]
+        iv1 = IntervalTree([Interval(row.astart, row.aend, row) for row in df1.itertuples(index=False)])
+        iv2 = IntervalTree([Interval(row.astart, row.aend, row) for row in df2.itertuples(index=False)])
+        for p in v:
+            try:
+                # s1 = df1.loc[(df1['astart'] <= p) & (df1['aend'] >= p)].iloc[0]
+                # s2 = df2.loc[(df2['astart'] <= p) & (df2['aend'] >= p)].iloc[0]
+                s1 = list(iv1[p])[0].data
+                s2 = list(iv2[p])[0].data
+
+            except IndexError as e:
+                inv2[k][p] = [None, None]
+                continue
+            # print(s1, s2)
+            # a1 = (p - s1['astart'])/(s1['aend'] - s1['astart'])
+            # a2 = (p - s2['astart'])/(s2['aend'] - s2['astart'])
+            # p1 = int(s1['bstart'] + a1*(s1['bend'] - s1['bstart']))
+            # p2 = int(s2['bstart'] + (1-a2)*(s2['bend'] - s2['bstart']))
+
+            a1 = (p - s1[1])/(s1[2] - s1[1])
+            a2 = (p - s2[1])/(s2[2] - s2[1])
+            p1 = int(s1[4] + a1*(s1[5] - s1[4]))
+            p2 = int(s2[4] + (1-a2)*(s2[5] - s2[4]))
+
+            inv2[k][p] = [p1, p2]
+
+    s1, e1, s2, e2 = [None]*4
+    for k, v in inv2.items():
+        for p, pos in v.items():
+            if pos[0] is None:
+                if s1 is not None:
+                    invcoords.append([chrmatch[k][0], s1, e1, chrmatch[k][1], e2, s2])
+                    s1, e1, s2, e2 = [None]*4
+            elif s1 == None:
+                s1, e1, s2, e2 = pos[0], pos[0], pos[1], pos[1]
+            elif pos[0] > e1 and pos[1] < e2:   # Update the current Inversion if the coordinates follow correct patter
+                e1, e2 = pos[0], pos[1]
+            else:
+                invcoords.append([chrmatch[k][0], s1, e1, chrmatch[k][1], e2, s2])
+                s1, e1, s2, e2 = pos[0], pos[0], pos[1], pos[1]
+        if s1 != None:
+            # Use inverted coordinates because original positions were inversion
+            invcoords.append([chrmatch[k][0], s1, e1, chrmatch[k][1], e2, s2])
+    invcoords = pd.DataFrame(invcoords)
+    invcoords[[1, 2, 4, 5]] = invcoords[[1, 2, 4, 5]].astype(int)
+    invcoords['type'] = 'INV'
+
+
+    tdcoords = deque()
+    INVS = {'INV', 'INVTR', 'INVDP'}
+    for k, v in refmarkers.items():
+        df1 = cl.loc[(cl['achr'] == k) & (cl['bchr'] == k) & (~ cl['type'].isin(['SYN', 'INV']))]
+        df2 = cc.loc[(cc['achr'] == k) & (cc['bchr'] == k)]
+        for al in df1.itertuples(index=False):
+            regions = df2.loc[(df2['astart'] <= al[2]) & (df2['aend'] >= al[1])]
+            for r in regions.itertuples(index=False):
+                # Start and end coordinates of the overlapping regions
+                s = max(al[1], r[1])
+                e = min(al[2], r[2])
+                # Get region in first genome
+                a1 = (s - al[1])/(al[2] - al[1])
+                a2 = (e - al[1])/(al[2] - al[1])
+                f1, f2 = (1-a1, 1-a2) if al[6] in INVS else (a1, a2)
+                r1s = int(al[4] + f1*(al[5] - al[4]))
+                r1e = int(al[4] + f2*(al[5] - al[4]))
+                r1s, r1e = min(r1s, r1e), max(r1s, r1e)
+                # print(r1s, r1e)
+                # Get region in second genome
+                a1 = (s - r[1])/(r[2] - r[1])
+                a2 = (e - r[1])/(r[2] - r[1])
+                f1, f2 = (1-a1, 1-a2) if r[6] in INVS else (a1, a2)
+                r2s = int(r[4] + f1*(r[5] - r[4]))
+                r2e = int(r[4] + f2*(r[5] - r[4]))
+                r2s, r2e = min(r2s, r2e), max(r2s, r2e)
+                # print(r2s, r2e)
+                tdcoords.append((k, r1s, r1e, k, r2s, r2e))
+
+
+    for k, v in refmarkers.items():
+        df1 = cl.loc[(cl['achr'] == k) & (cl['bchr'] == k)]
+        df2 = cc.loc[(cc['achr'] == k) & (cc['bchr'] == k) & (~ cc['type'].isin(['SYN', 'INV']))]
+        for al in df2.itertuples(index=False):
+            regions = df1.loc[(df1['astart'] <= al[2]) & (df1['aend'] >= al[1])]
+            for r in regions.itertuples(index=False):
+                # Start and end coordinates of the overlapping regions
+                s = max(al[1], r[1])
+                e = min(al[2], r[2])
+                # Get region in second genome
+                a1 = (s - al[1])/(al[2] - al[1])
+                a2 = (e - al[1])/(al[2] - al[1])
+                f1, f2 = (1-a1, 1-a2) if al[6] in INVS else (a1, a2)
+                r1s = int(al[4] + f1*(al[5] - al[4]))
+                r1e = int(al[4] + f2*(al[5] - al[4]))
+                r1s, r1e = min(r1s, r1e), max(r1s, r1e)
+                # print(r1s, r1e)
+                # Get region in first genome
+                a1 = (s - r[1])/(r[2] - r[1])
+                a2 = (e - r[1])/(r[2] - r[1])
+                f1, f2 = (1-a1, 1-a2) if r[6] in INVS else (a1, a2)
+                r2s = int(r[4] + f1*(r[5] - r[4]))
+                r2e = int(r[4] + f2*(r[5] - r[4]))
+                r2s, r2e = min(r2s, r2e), max(r2s, r2e)
+                # print(r2s, r2e)
+                tdcoords.append((k, r2s, r2e, k, r1s, r1e))
+    tdcoords = pd.DataFrame(tdcoords)
+    tdcoords[[1, 2, 4, 5]] = tdcoords[[1, 2, 4, 5]].astype(int)
+    tdcoords['type'] = 'CONN'
+
+    outcoords = pd.concat([syncoords, invcoords, tdcoords])
+    outcoords.sort_values([0, 1, 2], inplace=True)
+    return outcoords
 # END
 
 
@@ -888,17 +1167,19 @@ def validalign2fasta(als, genf):
                     if df.loc[df['bchr'] == c, ['bstart', 'bend']].max().max() > glen[c]:
                         raise ImportError(errmess2.format(c, os.path.basename(genf), als[i-1][0]))
             # Check cases when the genome is the reference-genome
-            if i < len(als):
-                try:
-                    df = als[i][1]
-                except IndexError:
-                    raise ImportError(errmess0.format(line[0]))
-                achr = np.unique(df['achr'])
-                for c in achr:
-                    if c not in list(glen.keys()):
-                        raise ImportError(errmess1.format(c, als[i][0], os.path.basename(line[1])))
-                    if df.loc[df['achr'] == c, ['astart', 'aend']].max().max() > glen[c]:
-                        raise ImportError(errmess2.format(c, os.path.basename(genf), als[i][0]))
+            else:
+            # if i < len(als):
+                for j in range(len(als)):
+                    try:
+                        df = als[j][1]
+                    except IndexError:
+                        raise ImportError(errmess0.format(line[0]))
+                    achr = np.unique(df['achr'])
+                    for c in achr:
+                        if c not in list(glen.keys()):
+                            raise ImportError(errmess1.format(c, als[j][0], os.path.basename(line[1])))
+                        if df.loc[df['achr'] == c, ['astart', 'aend']].max().max() > glen[c]:
+                            raise ImportError(errmess2.format(c, os.path.basename(genf), als[i][0]))
             out.append((line[1], {c: glen[c] for c in set(achr).union(set(bchr))}))
             i += 1
             genomes.append(gen)
@@ -1407,8 +1688,9 @@ def pltsv(ax, alignments, chrs, v, chrgrps, chrlengths, indents, S, cfg, itx, ma
     adinvlab = False
     adtralab = False
     adduplab = False
+    adconlab = False
     svlabels = dict()
-    legenddict = {'SYN': adsynlab, 'INV': adinvlab, 'TRANS': adtralab, 'DUP': adduplab}
+    legenddict = {'SYN': adsynlab, 'INV': adinvlab, 'TRANS': adtralab, 'DUP': adduplab, 'CONN': adconlab}
     for s in range(len(alignments)):
         df = deepcopy(alignments[s][1])
         df.loc[df['type'] == 'INVTR', 'type'] = 'TRANS'
@@ -1416,9 +1698,10 @@ def pltsv(ax, alignments, chrs, v, chrgrps, chrlengths, indents, S, cfg, itx, ma
         coldict = {'SYN': cfg['syncol'],
                    'INV': cfg['invcol'],
                    'TRANS': cfg['tracol'],
-                   'DUP': cfg['dupcol']}
+                   'DUP': cfg['dupcol'],
+                   'CONN': 'purple'}
         df['col'] = [coldict[c] for c in df['type']]
-        labdict = {'SYN': 'Syntenic', 'INV': 'Inversion', 'TRANS': 'Translocation', 'DUP': 'Duplication'}
+        labdict = {'SYN': 'Syntenic', 'INV': 'Inversion', 'TRANS': 'Translocation', 'DUP': 'Duplication', 'CONN': 'Connected'}
         df['lab'] = [labdict[c] for c in df['type']]
         df.loc[df.duplicated(['lab']), 'lab'] = ''
         df['lw'] = 0
@@ -1459,7 +1742,7 @@ def pltsv(ax, alignments, chrs, v, chrgrps, chrlengths, indents, S, cfg, itx, ma
                     if not legenddict[row.type]:
                         svlabels[row.type] = l
                         legenddict[row.type] = True
-    return ax, [svlabels[i] for i in ['SYN', 'INV', 'TRANS', 'DUP'] if i in svlabels]
+    return ax, [svlabels[i] for i in ['SYN', 'INV', 'TRANS', 'DUP', 'CONN'] if i in svlabels]
 # END
 
 

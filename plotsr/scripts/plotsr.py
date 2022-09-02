@@ -16,8 +16,8 @@ def plotsr(args):
     from pandas import concat as pdconcat
     from pandas import unique
     # from plotsr.scripts.func import *
-    from plotsr.scripts.func import setlogconfig, readbasecfg, readsyriout, readbedout, filterinput, validalign2fasta, selectchrom, selectregion, createribbon, drawax, pltchrom, pltsv, drawmarkers, readtrack, drawtracks
-    from collections import deque, OrderedDict
+    from plotsr.scripts.func import setlogconfig, readbasecfg, readsyriout, readbedout, filterinput, validalign2fasta, selectchrom, selectregion, createribbon, drawax, pltchrom, pltsv, drawmarkers, readtrack, drawtracks, swapsrchrom
+    from collections import deque, OrderedDict, defaultdict
     import os
     from math import ceil
     import matplotlib
@@ -105,8 +105,8 @@ def plotsr(args):
     ## Set matplotlib backend
 
     try :
-        matplotlib.use(args.b)
-        # matplotlib.use('Qt5Agg')    # TODO: Delete this line
+        # matplotlib.use(args.b)
+        matplotlib.use('Qt5Agg')    # TODO: Delete this line
     except :
         sys.exit('Matplotlib backend cannot be selected')
 
@@ -128,71 +128,143 @@ def plotsr(args):
             alignments.append([os.path.basename(fin), al])
             chrids.append((os.path.basename(fin), cid))
 
-    # Get groups of homologous chromosomes. Use the order from the user if provided.
-    cs = set(unique(alignments[0][1]['achr']))
-    if args.chrord is None:
-        chrs = [k for k in chrids[0][1].keys() if k in alignments[0][1]['achr'].unique()]
-    else:
-        chrs = deque()
-        with open(args.chrord.name, 'r') as fin:
-            for line in fin:
-                c = line.strip()
-                if c not in cs:
-                    logger.error("Chromosome {} in {} is not a chromosome in alignment file {}. Exiting.".format(c, args.chrord.name, alignments[0][0]))
-                    sys.exit()
-                chrs.append(c)
-        chrs = list(chrs)
-        # Check that the chrorder file contains all chromosomes
-        if len(chrs) != len(cs):
-            logger.error("Number of chromsomes in {} is less than the number of chromsomes in the alignment file {}. Either list the order of all chromosomes or use --chr if chromosome selection is requires. Exiting.".format(args.chrord.name, alignments[0][0]))
-            sys.exit()
 
+    # Check chromsome IDs and sizes
+    chrlengths, genomes = validalign2fasta(alignments, args.genomes.name)
+    # chrlengths, genomes = validalign2fasta(alignments, 'genomes.txt') # TODO: Delete this line
+
+    genomesname = [g.n for g in genomes]
+    refsize = [[k, 0, v] for k, v in chrlengths[0][1].items()]
+
+    # TODO: Merge order calculation to plotsr alignments
+    import pansyri.util as util
+    from pansyri.ordering import order_hierarchical, syn_score
+    from pansyri.classes.coords import Range
+    import sys
+    syns, alns = util.parse_input_tsv('full.tsv')
+    df = util.crosssyn_from_lists(syns, alns, SYNAL=False, cores=6)
+    # df2 = util.filter_multisyn_df(df, Range(None, 'Chr3', 'NaN', 2000000, 6000000))
+    chromorder = order_hierarchical(df, orgs=None, score_fn=syn_score)
+    chromorder = [c if c != 'ref' else genomesname[0] for c in chromorder]
+
+
+    # Get imputaed alignments
+    alignments_imputed = deque()
+    for i in range(len(chromorder) - 1):
+        ri = genomesname.index(chromorder[i])
+        qi = genomesname.index(chromorder[i+1])
+        print(ri, qi)
+        if ri == 0:
+            alignments_imputed.append([f"{genomesname[ri]}_{genomesname[qi]}", alignments[qi-1][1]].copy())
+        elif qi == 0:
+            alignments_imputed.append([f"{genomesname[ri]}_{genomesname[qi]}", swapsrchrom(alignments[ri-1][1])])
+        else:
+            alignments_imputed.append([f"{genomesname[ri]}_{genomesname[qi]}", impute_alignments(alignments[ri-1][1], alignments[qi-1][1], refsize)])
+
+    for i in range(len(alignments_imputed)):
+        alignments_imputed[i][1].columns = alignments[0][1].columns
+
+
+    # Update chrlengths to match imputed alignments
+    chrlengths = deque([c for g in chromorder for c in chrlengths if c[0] == g])
+    # Get groups of homologous chromosomes. Use the order from the user if provided.
+    cs = set(unique(alignments_imputed[0][1]['achr']))
+    # if args.chrord is None:
+    #     chrs = [k for k in chrids[0][1].keys() if k in alignments[0][1]['achr'].unique()]
+    # else:
+    #     chrs = deque()
+    #     with open(args.chrord.name, 'r') as fin:
+    #         for line in fin:
+    #             c = line.strip()
+    #             if c not in cs:
+    #                 logger.error("Chromosome {} in {} is not a chromosome in alignment file {}. Exiting.".format(c, args.chrord.name, alignments[0][0]))
+    #                 sys.exit()
+    #             chrs.append(c)
+    #     chrs = list(chrs)
+    #     # Check that the chrorder file contains all chromosomes
+    #     if len(chrs) != len(cs):
+    #         logger.error("Number of chromsomes in {} is less than the number of chromsomes in the alignment file {}. Either list the order of all chromosomes or use --chr if chromosome selection is requires. Exiting.".format(args.chrord.name, alignments[0][0]))
+    #         sys.exit()
+    #
+    # chrgrps = OrderedDict()
+    # for c in chrs:
+    #     cg = deque([c])
+    #     cur = c
+    #     for i in range(len(chrids)):
+    #         n = chrids[i][1][cur]
+    #         cg.append(n)
+    #         cur = n
+    #     chrgrps[c] = cg
+
+    chrs = [k for k in chrids[0][1].keys() if k in alignments_imputed[0][1]['achr'].unique()]
     chrgrps = OrderedDict()
     for c in chrs:
         cg = deque([c])
-        cur = c
         for i in range(len(chrids)):
-            n = chrids[i][1][cur]
+            n = chrids[i][1][c]
             cg.append(n)
-            cur = n
         chrgrps[c] = cg
 
-    # Filter alignments to select long alignments between homologous chromosomes
-    for i in range(len(alignments)):
-        alignments[i][1] = filterinput(args, alignments[i][1], chrids[i][1], ITX)
 
-        # Check chromsome IDs and sizes
-    chrlengths, genomes = validalign2fasta(alignments, args.genomes.name)
-    # chrlengths, genomes = validalign2fasta(alignments, 'genomes.txt') # TODO: Delete this line
+    # Filter alignments to select long alignments between homologous chromosomes
+    for i in range(len(alignments_imputed)):
+        alignments_imputed[i][1] = filterinput(args, alignments_imputed[i][1], chrids[i][1], ITX)
+
 
 
     # Select only chromosomes selected by --chr
     if CHRS is not None:
-        alignments, chrs, chrgrps, chrlengths = selectchrom(CHRS, cs, chrgrps, alignments, chrlengths, chrids)
+        alignments_imputed, chrs, chrgrps, chrlengths = selectchrom(CHRS, cs, chrgrps, alignments_imputed, chrlengths, chrids)
 
+    # TODO: DELETE
+    REG = ['col-0', 'Chr3', '2000000-6000000']
 
     if REG is not None:
-        alignments, chrs, chrgrps = selectregion(REG, RTR, chrlengths, alignments, chrids)
+        alignments_imputed, chrs, chrgrps = selectregion(REG, RTR, chrlengths, alignments_imputed, chrids)
 
     # Combine Ribbon is selected than combine rows
     if R:
         for i in range(len(alignments)):
             alignments[i][1] = createribbon(alignments[i][1])
 
+    # # invert coord for inverted query genome
+    # for i in range(len(alignments)):
+    #     df = alignments[i][1].copy()
+    #     invindex = ['INV' in i for i in df['type']]
+    #     g = set(df.loc[invindex, 'bstart'] < df.loc[invindex, 'bend'])
+    #     if len(g) == 2:
+    #         logger.error("Inconsistent coordinates in input file {}. For INV, INVTR, INVDUP annotations, either bstart < bend for all annotations or bstart > bend for all annotations. Mixing is not permitted.".format(alignments[i][0]))
+    #         sys.exit()
+    #     elif False in g:
+    #         continue
+    #     df.loc[invindex, 'bstart'] = df.loc[invindex, 'bstart'] + df.loc[invindex, 'bend']
+    #     df.loc[invindex, 'bend'] = df.loc[invindex, 'bstart'] - df.loc[invindex, 'bend']
+    #     df.loc[invindex, 'bstart'] = df.loc[invindex, 'bstart'] - df.loc[invindex, 'bend']
+    #     alignments[i][1] = df.copy()
+    #
+
     # invert coord for inverted query genome
-    for i in range(len(alignments)):
-        df = alignments[i][1].copy()
+    for i in range(len(alignments_imputed)):
+        df = alignments_imputed[i][1].copy()
+        # df = alignments[i][1].copy()
+
         invindex = ['INV' in i for i in df['type']]
-        g = set(df.loc[invindex, 'bstart'] < df.loc[invindex, 'bend'])
+        # print(df.loc[invindex])
+        # df.loc[invindex, 'bstart'] <= df.loc[invindex, 'bend']
+        g = set(df.loc[invindex, 'bstart'] <= df.loc[invindex, 'bend'])
+        # print(g)
         if len(g) == 2:
+            # print("Error")
+            # break
+
             logger.error("Inconsistent coordinates in input file {}. For INV, INVTR, INVDUP annotations, either bstart < bend for all annotations or bstart > bend for all annotations. Mixing is not permitted.".format(alignments[i][0]))
-            sys.exit()
+            # sys.exit()
         elif False in g:
             continue
         df.loc[invindex, 'bstart'] = df.loc[invindex, 'bstart'] + df.loc[invindex, 'bend']
         df.loc[invindex, 'bend'] = df.loc[invindex, 'bstart'] - df.loc[invindex, 'bend']
         df.loc[invindex, 'bstart'] = df.loc[invindex, 'bstart'] - df.loc[invindex, 'bend']
-        alignments[i][1] = df.copy()
+        alignments_imputed[i][1] = df.copy()
 
 
     # from matplotlib import pyplot as plt
@@ -214,7 +286,7 @@ def plotsr(args):
         sys.exit()
     ax = fig.add_subplot(111, frameon=False)
 
-    allal = pdconcat([alignments[i][1] for i in range(len(alignments))])
+    allal = pdconcat([alignments_imputed[i][1] for i in range(len(alignments_imputed))])
     if ITX:
         minl = 0
         MCHR = 0.01     # TODO : read spacing between neighbouring chromosome from config file
@@ -236,7 +308,7 @@ def plotsr(args):
         labelcnt += 1
 
     ## Draw Axes
-    ax  = drawax(ax, chrgrps, chrlengths, V, S, cfg, ITX, minl=minl, maxl=maxl, chrname=CHRNAME)
+    ax = drawax(ax, chrgrps, chrlengths, V, S, cfg, ITX, minl=minl, maxl=maxl, chrname=CHRNAME)
 
     ## Draw Chromosomes
     ax, indents, chrlabels = pltchrom(ax, chrs, chrgrps, chrlengths, V, S, genomes, cfg, ITX, minl=minl, maxl=maxl)
@@ -254,8 +326,9 @@ def plotsr(args):
             l1._legend_box.align = "left"
             plt.gca().add_artist(l1)
 
-    # Plot structural annotations
-    ax, svlabels = pltsv(ax, alignments, chrs, V, chrgrps, chrlengths, indents, S, cfg, ITX, maxl)
+
+
+    ax, svlabels = pltsv(ax, alignments_imputed, chrs, V, chrgrps, chrlengths, indents, S, cfg, ITX, maxl)
 
     if cfg['legend']:
         bbox_to_anchor[0] += cfg['bboxmar']
@@ -320,6 +393,9 @@ def main(cmd):
     parser._action_groups.append(other)
 
     # args = parser.parse_args([]) # TODO: Delete this line
-    args = parser.parse_args(cmd)
+    # args = parser.parse_args(cmd)
+
+    args = parser.parse_args('--sr col_lersyri.out --sr col_cvisyri.out --sr col_erisyri.out --sr col_shasyri.out --sr col_kyosyri.out --sr col_an1syri.out --sr col_c24syri.out --genomes genomes_all.txt'.split())
+
     plotsr(args)
 # END
