@@ -93,7 +93,7 @@ def plotsr(args):
     ## Get config
     cfg = readbasecfg('', V) if args.cfg is None else readbasecfg(args.cfg.name, V)
     if S < 0.1 or S > 0.75:
-        sys.exit('Out of range value for S. Please provide a value in the range 0.1-0.75')
+        logger.warning('Value for S outside the range 0.1-0.75.')
 
     ## Check output file extension
     if len(O.split('.')) == 1:
@@ -397,7 +397,7 @@ def main(cmd):
     # args = parser.parse_args([]) # TODO: Delete this line
     # args = parser.parse_args(cmd)
 
-    args = parser.parse_args('--sr col_lersyri.out --sr col_cvisyri.out --sr col_erisyri.out --sr col_shasyri.out --sr col_kyosyri.out --sr col_an1syri.out --sr col_c24syri.out --genomes genomes_all.txt --cfg base.cfg -W 8 -H 6 -f 8 -S 0.75'.split())
+    args = parser.parse_args('--sr col_lersyri.out --sr col_cvisyri.out --sr col_erisyri.out --sr col_shasyri.out --sr col_kyosyri.out --sr col_an1syri.out --sr col_c24syri.out --genomes genomes_all.txt --cfg base.cfg -W 5 -H 3 -f 8 -S 1 --chr Chr3'.split())
 
     plotsr(args)
 # END
