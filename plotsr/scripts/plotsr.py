@@ -22,6 +22,7 @@ def plotsr(args):
     from math import ceil
     import matplotlib
     import sys
+    import pandas as pd
 
     ## Define logger
     setlogconfig(args.log)
@@ -143,8 +144,8 @@ def plotsr(args):
     import sys
     syns, alns = util.parse_input_tsv('full.tsv')
     df = util.crosssyn_from_lists(syns, alns, SYNAL=False, cores=6)
-    # df2 = util.filter_multisyn_df(df, Range(None, 'Chr3', 'NaN', 2000000, 6000000))
-    chromorder = order_hierarchical(df, orgs=None, score_fn=syn_score)
+    df2 = util.filter_multisyn_df(df, Range(None, 'Chr3', 'NaN', 1, 23459829))
+    chromorder = order_hierarchical(df2, orgs=None, score_fn=syn_score)
     chromorder = [c if c != 'ref' else genomesname[0] for c in chromorder]
 
 
@@ -217,7 +218,8 @@ def plotsr(args):
         alignments_imputed, chrs, chrgrps, chrlengths = selectchrom(CHRS, cs, chrgrps, alignments_imputed, chrlengths, chrids)
 
     # TODO: DELETE
-    REG = ['col-0', 'Chr3', '2000000-6000000']
+    # REG = ['col-0', 'Chr3', '2000000-6000000']
+    # REG = ['col-0', 'Chr3', '1-23459829']
 
     if REG is not None:
         alignments_imputed, chrs, chrgrps = selectregion(REG, RTR, chrlengths, alignments_imputed, chrids)
@@ -395,7 +397,7 @@ def main(cmd):
     # args = parser.parse_args([]) # TODO: Delete this line
     # args = parser.parse_args(cmd)
 
-    args = parser.parse_args('--sr col_lersyri.out --sr col_cvisyri.out --sr col_erisyri.out --sr col_shasyri.out --sr col_kyosyri.out --sr col_an1syri.out --sr col_c24syri.out --genomes genomes_all.txt'.split())
+    args = parser.parse_args('--sr col_lersyri.out --sr col_cvisyri.out --sr col_erisyri.out --sr col_shasyri.out --sr col_kyosyri.out --sr col_an1syri.out --sr col_c24syri.out --genomes genomes_all.txt --cfg base.cfg -W 8 -H 6 -f 8 -S 0.75'.split())
 
     plotsr(args)
 # END
