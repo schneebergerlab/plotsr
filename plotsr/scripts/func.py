@@ -138,6 +138,9 @@ def readbasecfg(f, v):
     cfg['bbox'] = [0, 1.01, 0.5, 0.3]
     cfg['bbox_v'] = [0, 1.1, 0.5, 0.3]
     cfg['bboxmar'] = 0.5
+    ## Set ITX margin
+    cfg['marginchr'] = 0.01
+
 
     if f == '':
         return cfg
@@ -161,7 +164,7 @@ def readbasecfg(f, v):
                     logger.error("Error in using colour: {} for {}. Use correct hexadecimal colours or named colours defined in matplotlib (https://matplotlib.org/stable/gallery/color/named_colors.html). Using default value.".format(line[1], line[0]))
                     continue
                 cfg[line[0]] = line[1]
-            elif line[0] in ['alpha', 'chrmar', 'exmar', 'bboxmar', 'genlegcol']:
+            elif line[0] in ['alpha', 'chrmar', 'exmar', 'bboxmar', 'genlegcol', 'marginchr']:
                 try:
                     float(line[1])
                 except ValueError:
@@ -1274,7 +1277,8 @@ def drawax(ax, chrgrps, chrlengths, v, s, cfg, itx, minl=0, maxl=-1, chrname=Non
             ax.yaxis.grid(True, which='both', linestyle='--')
             ax.set_axisbelow(True)
     elif itx:
-        MCHR = 0.01     # TODO : read spacing between neighbouring chromosome from config file
+        MCHR = cfg['marginchr']
+        # MCHR = 0.01     # TODO : read spacing between neighbouring chromosome from config file
         maxchr = max([sum(chrlengths[i][1].values()) for i in range(len(chrlengths))])
         maxl = int(maxchr/(MCHR + 1 - (MCHR*len(chrgrps))))
         mchr = MCHR*maxl
@@ -1363,7 +1367,8 @@ def pltchrom(ax, chrs, chrgrps, chrlengths, v, S, genomes, cfg, itx, minl=0, max
                            linewidth=genome.lw,
                            zorder=2)
     elif itx:
-        MCHR = 0.01     # TODO: read spacing between neighbouring chromosome from config file
+        MCHR = cfg['marginchr']
+        # MCHR = 0.01     # TODO: read spacing between neighbouring chromosome from config file
         step = S/(len(chrlengths)-1)
         for s in range(len(chrlengths)):
             start = 0
@@ -1383,8 +1388,9 @@ def pltchrom(ax, chrs, chrgrps, chrlengths, v, S, genomes, cfg, itx, minl=0, max
 # END
 
 
-def genbuff(s, chrlengths, chrgrps, chrs, maxl, v):
-    MCHR = 0.01     # TODO: read spacing between neighbouring chromosome from config file
+def genbuff(s, chrlengths, chrgrps, chrs, maxl, v, cfg):
+    MCHR = cfg['marginchr']
+    # MCHR = 0.01     # TODO: read spacing between neighbouring chromosome from config file
     rchrlen = [chrlengths[s][1][chrgrps[c][s]] for c in chrs]
     rbuff = [0]
     if not v:
@@ -1442,11 +1448,11 @@ def pltsv(ax, alignments, chrs, v, chrgrps, chrlengths, indents, S, cfg, itx, ma
         elif itx:
             step = S/(len(chrlengths)-1)
             S - (step*s) if not v else 1 - S + (step*s)
-            rbuff = genbuff(s, chrlengths, chrgrps, chrs, maxl, v)
+            rbuff = genbuff(s, chrlengths, chrgrps, chrs, maxl, v, cfg)
             rbuff = [rbuff[c] for c in df['achr']]
             df['astart'] += rbuff
             df['aend'] += rbuff
-            qbuff = genbuff(s+1, chrlengths, chrgrps, chrs, maxl, v)
+            qbuff = genbuff(s+1, chrlengths, chrgrps, chrs, maxl, v, cfg)
             qbuff = [qbuff[c] for c in df['bchr']]
             df['bstart'] += qbuff
             df['bend'] += qbuff
@@ -1546,7 +1552,7 @@ def drawmarkers(ax, b, v, chrlengths, indents, chrs, chrgrps, S, itx, minl=0, ma
                 # if m.tt != '':
                 #     ax.text(indent+offset-m.tp, m.start, m.tt, color=m.tc, fontsize=m.ts, fontfamily=m.tf, ha='left', va='center', rotation='vertical')
         elif itx:
-            buff = genbuff(ind, chrlengths, chrgrps, chrs, maxl, v)
+            buff = genbuff(ind, chrlengths, chrgrps, chrs, maxl, v, cfg)
             chrid = chrid[0]
             step = S/(len(chrlengths)-1)
             if not v:
@@ -1592,7 +1598,7 @@ def drawtracks(ax, tracks, s, chrgrps, chrlengths, v, itx, cfg, minl=0, maxl=-1)
     if itx:
         if maxl < 1:
             raise ValueError("Incorrect value for maxl. This is a bug. Contact developers.")
-        rbuff = genbuff(0, chrlengths, chrgrps, chrs, maxl, v)
+        rbuff = genbuff(0, chrlengths, chrgrps, chrs, maxl, v, cfg)
     for i in range(len(tracks)):
         # Plot background rectangles for the tracks
         for j in range(cl):

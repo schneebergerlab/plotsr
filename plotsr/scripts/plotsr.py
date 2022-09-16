@@ -92,7 +92,7 @@ def plotsr(args):
     ## Get config
     cfg = readbasecfg('', V) if args.cfg is None else readbasecfg(args.cfg.name, V)
     if S < 0.1 or S > 0.75:
-        sys.exit('Out of range value for S. Please provide a value in the range 0.1-0.75')
+        logger.warning('Value for S outside of normal range 0.1-0.75.')
 
     ## Check output file extension
     if len(O.split('.')) == 1:
@@ -308,8 +308,8 @@ def main(cmd):
     plotting.add_argument('--cfg', help='Path to config file containing parameters to adjust plot.', type=argparse.FileType('r'))
     plotting.add_argument('-R', help='Join adjacent syntenic blocks if they are not interrupted by SRs. Using this would decrease gaps in the visualisation.', default=False, action="store_true")
     plotting.add_argument('-f', help='font size', type=int, default=6)
-    plotting.add_argument('-H', help='height of the plot', type=int)
-    plotting.add_argument('-W', help='width of the plot', type=int)
+    plotting.add_argument('-H', help='height of the plot', type=float)
+    plotting.add_argument('-W', help='width of the plot', type=float)
     plotting.add_argument('-S', help='Space for homologous chromosome (0.1-0.75). Adjust this to make more space for annotation markers/texts and tracks.', default=0.7, type=float)
     plotting.add_argument('-d', help='DPI for the final image', default="300", type=int)
     plotting.add_argument('-b', help='Matplotlib backend to use', default="agg", type=str, choices=bklist)
