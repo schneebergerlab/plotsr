@@ -815,7 +815,7 @@ class genome():
                         self.logger.error("Incomplete input. Genome:{} chromosome:{} has no chromosome length. Exiting.".format(self.n, line[0]))
                         sys.exit()
                     except ValueError:
-                        self.logger.error("Incorrect input. Genome:{} chromosome:{} has no-numerical chromosome length. Exiting.")
+                        self.logger.error("Incorrect input. Genome:{} chromosome:{} has no-numerical chromosome length. Exiting.".format(self.n, line[0]))
                         sys.exit()
             self.glen = glen
 # END
