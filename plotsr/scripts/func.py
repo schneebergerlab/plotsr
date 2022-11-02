@@ -753,7 +753,7 @@ class genome():
         self.lw = 1
         self.ft = 'fa'          # Input file type: "fa"=fasta, "cl"="chromosome length
         self.glen = None
-        self.logger = logging.getLogger("track")
+        self.logger = logging.getLogger("genome")
 
     # Add tags
     def addtags(self, tags):
@@ -808,10 +808,11 @@ class genome():
             with open(self.f, 'r') as fin:
                 for line in fin:
                     line = line.strip().split()
+                    if len(line) == 0: continue
                     try:
                         glen[line[0]] = int(line[1])
                     except IndexError:
-                        self.logger.error("Incomplete input. Genome:{} chromosome:{} has no chromosome length. Exiting.")
+                        self.logger.error("Incomplete input. Genome:{} chromosome:{} has no chromosome length. Exiting.".format(self.n, line[0]))
                         sys.exit()
                     except ValueError:
                         self.logger.error("Incorrect input. Genome:{} chromosome:{} has no-numerical chromosome length. Exiting.")
