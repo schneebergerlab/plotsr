@@ -119,13 +119,13 @@ Annotation type
 Valid values for annotation type: SYN, INV, TRA, INVTR, DUP, INVDP. Here:
 
 | <!-- --> |  <!-- -->   |
-|----|--------|
-| SYN | Syntenic |
-| INV | Inversion |
-| TRA | Translocation |
-| INVTR | Inverted translocation |
-| DUP | Duplication |
-| INVDP | Inverted duplication |
+|----------|--------|
+| SYN      | Syntenic |
+| INV      | Inversion |
+| TRANS    | Translocation |
+| INVTR    | Inverted translocation |
+| DUP      | Duplication |
+| INVDP    | Inverted duplication |
 
 <b><i>NOTE</b>: The BEDPE file must have syntenic region annotations. These are required to group homologous chromosomes from different genomes. Syntenic regions can only be between homologous chromosomes. In case, syntenic regions between homologous chromosomes are not available, then entire homologous chromosomes can be added as syntenic in the BEDPE file manually to allow clustering of homologous chromosomes by plotsr. While plotting, use the `--nosyn` option to skip plotting of these manually added syntenic regions.  </i>
 
