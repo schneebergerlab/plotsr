@@ -581,7 +581,7 @@ class track():
             for line in fin:
                 line = line.strip().split()
                 try:
-                    v = int(line[3])
+                    v = float(line[3])
                 except ValueError:
                     if len(line) < 4:
                         self.logger.warning("Incomplete information in bedgraph file at line: {}. Skipping it.".format("\t".join(line)))
