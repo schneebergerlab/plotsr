@@ -85,6 +85,7 @@ def plotsr(args):
     CHRS = args.chr
     ITX = args.itx
     CHRNAME= args.chrname.name if args.chrname is not None else None
+    # AC = args.aligncolour
 
     # print(ITX)
     # sys.exit()
@@ -263,7 +264,7 @@ def plotsr(args):
 
     # Plot markers
     if B is not None:
-        ax = drawmarkers(ax, B, V, chrlengths, indents, chrs, chrgrps, S, ITX, minl=minl, maxl=maxl)
+        ax = drawmarkers(ax, B, V, chrlengths, indents, chrs, chrgrps, S, cfg, ITX, minl=minl, maxl=maxl)
 
     # Draw tracks
     if TRACKS is not None:
@@ -314,6 +315,8 @@ def main(cmd):
     plotting.add_argument('-d', help='DPI for the final image', default="300", type=int)
     plotting.add_argument('-b', help='Matplotlib backend to use', default="agg", type=str, choices=bklist)
     plotting.add_argument('-v', help='Plot vertical chromosome', default=False, action='store_true')
+    # plotting.add_argument('--aligncolour', help='Alignment colours are provided in the input alignments file', default=False, action='store_true')
+
 
     other.add_argument('--log', help='Log-level', choices=['DEBUG', 'INFO', 'WARN'], default='WARN', type=str)
     other.add_argument('--version', action='version', version='{version}'.format(version=__version__))

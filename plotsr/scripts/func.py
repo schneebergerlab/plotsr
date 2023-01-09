@@ -46,6 +46,7 @@ FONT_NAMES = []
 for fn in matplotlib.font_manager.findSystemFonts():
     try: FONT_NAMES.append(matplotlib.font_manager.get_font(fn).family_name)
     except RuntimeError: pass
+FONT_NAMES = sorted(set(FONT_NAMES))
 
 
 """
@@ -1124,7 +1125,7 @@ def createribbon(df):
     Combine continuous syntenic regions to get larger ribbons for syntenic blocks
     """
     import numpy as np
-    from pandas import DataFrame
+    from pandas import DataFrame, concat
     from collections import deque
     df.sort_values(['bchr', 'bstart', 'bend'], inplace=True)
     df['b'] = list(range(df.shape[0]))
@@ -1138,7 +1139,7 @@ def createribbon(df):
     issyn = list(df['type'] == 'SYN')
     a = list(df['a'])
     b = list(df['b'])
-    chrchange = np.where((np.array(df['achr'][1:]) == np.array(df['achr'][0:-1])) == False)[0] + 1
+    chrchange = np.where((np.array(df['achr'].iloc[1:]) == np.array(df['achr'].iloc[0:-1])) == False)[0] + 1
     for i in range(df.shape[0]):
         if i in chrchange:
             if len(cg) > 0:
@@ -1186,7 +1187,7 @@ def createribbon(df):
 
     df = df.drop(['a', 'b'], axis=1)
     df = df.loc[-(df['type'] == 'SYN')]
-    df = df.append(newsyn)
+    df = concat([df, newsyn])
     df.sort_values(['achr', 'astart', 'aend'], inplace=True)
     return df
 # END
@@ -1515,7 +1516,7 @@ def bezierpath(rs, re, qs, qe, ry, qy, v, col, alpha, label='', lw=0, zorder=0):
 # END
 
 
-def drawmarkers(ax, b, v, chrlengths, indents, chrs, chrgrps, S, itx, minl=0, maxl=-1):
+def drawmarkers(ax, b, v, chrlengths, indents, chrs, chrgrps, S, cfg, itx, minl=0, maxl=-1):
     import logging
     logger = logging.getLogger('drawmarkers')
     mdata = readannobed(b, v, chrlengths)
