@@ -657,6 +657,7 @@ class track():
             self.logger.warning("Reading GFF file {}. Overlapping transcripts would be plotted as such without any filtering.".format(self.f))
             model = None
             for line in fin:
+                if line.strip() == '': continue
                 line = line.strip().split()
                 if line[0] not in chrs:
                     if line[0] not in skipchr:
@@ -1192,7 +1193,6 @@ def createribbon(df):
     return df
 # END
 
-################################################################################
 ################################################################################
 ################################################################################
 """
