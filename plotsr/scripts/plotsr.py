@@ -16,20 +16,24 @@ def plotsr(args):
     from pandas import concat as pdconcat
     from pandas import unique
     # from plotsr.scripts.func import *
-    from plotsr.scripts.func import setlogconfig, readbasecfg, readsyriout, readbedout, filterinput, validalign2fasta, selectchrom, selectregion, createribbon, drawax, pltchrom, pltsv, drawmarkers, readtrack, drawtracks
+    from plotsr.scripts.func import setlogconfig, readbasecfg, readsyriout, readbedout, filterinput, validalign2fasta, selectchrom, selectregion, createribbon, drawax, pltchrom, pltsv, drawmarkers, readtrack, drawtracks, getfilehandler, definelogger
     from collections import deque, OrderedDict
     import os
     from math import ceil
     import matplotlib
     import sys
 
-    ## Define logger
+    ## Define loggers
     setlogconfig(args.log)
-    logger = logging.getLogger("Plotsr")
+    filehandler = getfilehandler(args.logfin.name, args.log)
+    global getlogger
+    getlogger = definelogger(filehandler)
+    logger = getlogger("Plotsr")
 
     ###################################################################
     # Check python and pandas version. Add other checks (if required!!)
     ###################################################################
+    logger.debug('checking arguments')
     try:
         assert sys.version_info.major == 3
         assert sys.version_info.minor >= 8
@@ -70,6 +74,7 @@ def plotsr(args):
     ###################################################################
 
     # Set Figure height and width. Change later based on chromosome number and size
+    logger.info('Starting')
     FS = args.f             # Font size
     H = args.H              # Height
     W = args.W              # Width
@@ -237,7 +242,7 @@ def plotsr(args):
         labelcnt += 1
 
     ## Draw Axes
-    ax  = drawax(ax, chrgrps, chrlengths, V, S, cfg, ITX, minl=minl, maxl=maxl, chrname=CHRNAME)
+    ax = drawax(ax, chrgrps, chrlengths, V, S, cfg, ITX, minl=minl, maxl=maxl, chrname=CHRNAME)
 
     ## Draw Chromosomes
     ax, indents, chrlabels = pltchrom(ax, chrs, chrgrps, chrlengths, V, S, genomes, cfg, ITX, minl=minl, maxl=maxl)
@@ -275,9 +280,10 @@ def plotsr(args):
     # Save the plot
     try:
         fig.savefig(O, dpi=D, bbox_inches='tight', pad_inches=0.01)
-        logger.warning("Plot {O} generated.\nFinished".format(O=O))
+        logger.info("Plot {O} generated.".format(O=O))
     except Exception as e:
         sys.exit('Error in saving the figure. Try using a different backend.' + '\n' + e.with_traceback())
+    logger.info('Finished')
 # END
 
 def main(cmd):
@@ -317,7 +323,7 @@ def main(cmd):
     plotting.add_argument('-v', help='Plot vertical chromosome', default=False, action='store_true')
     # plotting.add_argument('--aligncolour', help='Alignment colours are provided in the input alignments file', default=False, action='store_true')
 
-
+    other.add_argument("--lf", dest="logfin", help="Name of log file", type=argparse.FileType("w"), default="plotsr.log")
     other.add_argument('--log', help='Log-level', choices=['DEBUG', 'INFO', 'WARN'], default='WARN', type=str)
     other.add_argument('--version', action='version', version='{version}'.format(version=__version__))
     parser._action_groups.append(other)
