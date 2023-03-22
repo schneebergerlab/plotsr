@@ -433,7 +433,6 @@ def readsyriout(f):
                 if l[10] not in skipvartype:
                     skipvartype.append(l[10])
                     logger.warning("{} is not a valid annotation for alignments in file {}. Alignments should belong to the following classes {}. Skipping alignment.".format(l[10], f, VARS))
-
     try:
         df = DataFrame(list(syri_regs))
     except KeyError:
@@ -479,9 +478,15 @@ def readbedout(f):
             else:
                 if l[6] not in skipvartype:
                     skipvartype.append(l[6])
-                    logger.warning("{} is not a valid annotation for alignments in file {}. Alignments should belong to the following classes {}. Skipping alignment.".format(l[10], f, VARS))
+                    logger.warning("{} is not a valid annotation for alignments in file {}. Alignments should belong to the following classes {}. Skipping alignment.".format(l[6], f, VARS))
 
     df = DataFrame(list(bed_regs))
+    if df.shape[1] == 8:
+        logger.warning(f'{f} have extra annotation column dedicated for alignment customisation. Using it.')
+    else:
+        logger.warning(f'{f} does have extra annotation column dedicated for alignment customisation. Using default values.')
+        df[7] = '-'
+    colnames = ['achr', 'astart', 'aend', 'bchr', 'bstart', 'bend',  'type', 'anno']
     try:
         df[[0, 3, 6]] = df[[0, 3, 6]].astype(str)
     except KeyError:
@@ -498,7 +503,7 @@ def readbedout(f):
     for i in np.unique(df[0]):
         chrid.append((i, np.unique(df.loc[(df[0] == i) & (df[6] == 'SYN'), 3])[0]))
         chrid_dict[i] = np.unique(df.loc[(df[0] == i) & (df[6] == 'SYN'), 3])[0]
-    df.columns = ['achr', 'astart', 'aend', 'bchr', 'bstart', 'bend',  'type']
+    df.columns = colnames
     return df, chrid_dict
 # END
 
