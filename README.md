@@ -166,6 +166,32 @@ Check the [genomes.txt](./example/genomes.txt) for a working example.
 
 <b><i>NOTE</b>: It is required that the order of the genomes is the same as the order in which genomes are compared. For example, if the first genome annotation file uses A as a reference and B as query, and the second genome annotation file uses B as a reference and C as query, then the genomes.txt file should list the genomes in the order A, B, C.</i>
 
+## Customisation alignments
+Additional column can be added in the input structural annotation files to customise specific alignments. Currently, following tags are available:  
+```
+cl = colour
+lw = line width
+z  = vertical location (higher value would plot the alignment over other plot elements)
+```
+
+Examples:
+```
+# Example modified syri.out. Inversions on Chr3 would be black. Inversions on Chr4 would be red and have thick line width 
+Chr3	18112802	18114029	-	-	Chr3	18084583	18085805	INV662	-	INV	-	cl:black
+Chr3	20464781	20466696	-	-	Chr3	20458463	20460390	INV663	-	INV	-	cl:black
+Chr4	1347612	1353808	-	-	Chr4	1437445	1445482	INV664	-	INV	-	cl:red;lw:5;z:4
+Chr4	1612606	2782621	-	-	Chr4	1746533	2898561	INV665	-	INV	-	cl:red;lw:5;z:4
+
+# Example BEDPE file
+Chr1	1771291	1771585	Chr1	1774045	1774339	INV	cl:black;lw:2;z:4
+Chr1	2294260	2296795	Chr1	2297217	2299752	INV	cl:black;lw:2;z:4
+Chr1	2455543	2464808	Chr1	2458652	2467917	INV	cl:black;lw:2;z:4
+```
+
+
+<b><i>NOTE</b>: If using alignment customisation, then each row should either have one (or more) of the available tags or have an ```-``` </i>
+
+
 ## Tracks and markers
 In addition to structural annotations, plotsr can also be used for visualising tracks for genomics features as well as for marking specific positions in the genomes.
 

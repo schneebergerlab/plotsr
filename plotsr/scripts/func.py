@@ -1,7 +1,7 @@
 import sys
 import logging
 import matplotlib.font_manager
-## Constants
+# Constants
 MARKERS = {".": "point",
            ",": "pixel",
            "o": "circle",
@@ -44,16 +44,19 @@ COLORS = ['#DEDEDE', '#FFA500', '#9ACD32', '#00BBFF']
 
 FONT_NAMES = []
 for fn in matplotlib.font_manager.findSystemFonts():
-    try: FONT_NAMES.append(matplotlib.font_manager.get_font(fn).family_name)
-    except RuntimeError: pass
+    try:
+        FONT_NAMES.append(matplotlib.font_manager.get_font(fn).family_name)
+    except RuntimeError:
+        pass
 FONT_NAMES = sorted(set(FONT_NAMES))
 
 
-"""
+'''
 ################################################################################
-SUPPORT FUNCTIONS
+# SUPPORT FUNCTIONS
 ################################################################################
-"""
+'''
+
 
 def setlogconfig(lg):
     import logging.config
@@ -83,14 +86,13 @@ def setlogconfig(lg):
             },
         },
     })
-#END
+# END
 
 
 class CustomFormatter(logging.Formatter):
-    '''
+    """
     https://betterstack.com/community/questions/how-to-color-python-logging-output/
-    '''
-
+    """
     grey = "\x1b[0;49;90m"
     green = "\x1b[0;49;32m"
     yellow = "\x1b[0;49;93m"
@@ -105,6 +107,7 @@ class CustomFormatter(logging.Formatter):
         logging.ERROR: red + format + reset,
         logging.CRITICAL: bold_red + format + reset
     }
+
     def format(self, record):
         log_fmt = self.FORMATS.get(record.levelno)
         formatter = logging.Formatter(log_fmt)
@@ -114,6 +117,7 @@ class CustomFormatter(logging.Formatter):
 
 def getfilehandler(fin, level):
     logformat = "%(asctime)s - %(name)s - %(levelname)s - %(funcName)s:%(lineno)d - %(message)s"
+
     def filehandler():
         fhandle = logging.FileHandler(fin)
         fhandle.setLevel(level)
@@ -130,7 +134,8 @@ def streamhandler():
     return shandler
 # END
 
-def definelogger(fhandler, name=''):
+
+def definelogger(fhandler):
     def getlogger(name):
         logger = logging.getLogger(name)
         logger.setLevel(logging.INFO)
@@ -142,7 +147,7 @@ def definelogger(fhandler, name=''):
 # END
 
 
-def mergeRanges(ranges):
+def mergeranges(ranges):
     """
     Take a 2D numpy array, with each row as a range and return merged ranges
     i.e. ranges which are overlapping would be combined.
@@ -169,34 +174,37 @@ def mergeRanges(ranges):
             max_value = i[1]
     out_range.append([min_value, max_value])
     return np.array(out_range)
-#END
+# END
+
+
 """
 ################################################################################
 DEFINE READERS/PARSERS
 ################################################################################
 """
 
+
 def readbasecfg(f, v):
     import logging
     import matplotlib
     logger = logging.getLogger('readbasecfg')
     cfg = {}
-    ## Set alignment parameters
+    # Set alignment parameters
     cfg['syncol'] = '#DEDEDE'
     cfg['invcol'] = '#FFA500'
     cfg['tracol'] = '#9ACD32'
     cfg['dupcol'] = '#00BBFF'
     cfg['alpha'] = 0.8
-    ## Set chromosome margins
+    # Set chromosome margins
     cfg['chrmar'] = 0.1
     cfg['exmar'] = 0.1
-    ## Set legend properties
+    # Set legend properties
     cfg['legend'] = True
     cfg['genlegcol'] = -1
     cfg['bbox'] = [0, 1.01, 0.5, 0.3]
     cfg['bbox_v'] = [0, 1.1, 0.5, 0.3]
     cfg['bboxmar'] = 0.5
-    ## Set ITX margin
+    # Set ITX margin
     cfg['marginchr'] = 0.01
 
 
@@ -611,7 +619,7 @@ class track():
                         self.logger.error("BED file: {} is not sorted. For plotting tracks, sorted bed file is required. Exiting.".format(self.f))
                         sys.exit()
                     if len(pos) > 1:
-                        rngs = mergeRanges(np.array(pos))
+                        rngs = mergeranges(np.array(pos))
                     else:
                         rngs = pos
                     chrpos = np.array(list(set([i for r in rngs for i in range(r[0], r[1])])))
@@ -624,7 +632,7 @@ class track():
                     curchr = line[0]
                     pos = deque([[int(line[1]), int(line[2])]])
             if len(pos) > 1:
-                rngs = mergeRanges(np.array(pos))
+                rngs = mergeranges(np.array(pos))
             else:
                 rngs = pos
             chrpos = np.array(list(set([i for r in rngs for i in range(r[0], r[1])])))
@@ -1788,9 +1796,9 @@ def drawtracks(ax, tracks, s, chrgrps, chrlengths, v, itx, cfg, minl=0, maxl=-1)
                 for j in range(cl):
                     pos = chrlengths[0][1][chrs[j]] + margin + (tracks[i].nm*chrlengths[0][1][chrs[j]]) if maxl == -1 else maxl + margin + (tracks[i].nm*maxl)
                     if not v:
-                        axt(pos, float(pd.unique(anno.loc[anno['chr']==chrs[j], 'fixed'])))
+                        axt(pos, float(pd.unique(anno.loc[anno['chr'] == chrs[j], 'fixed'])))
                     else:
-                        axt(float(pd.unique(anno.loc[anno['chr']==chrs[j], 'fixed'])), pos)
+                        axt(float(pd.unique(anno.loc[anno['chr'] == chrs[j], 'fixed'])), pos)
             else:
                 pos = maxl + margin + (tracks[i].nm*maxl)
                 if not v:
