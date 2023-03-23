@@ -1529,7 +1529,7 @@ def pltsv(ax, alignments, chrs, v, chrgrps, chrlengths, indents, S, cfg, itx, ma
                 except KeyError:
                     newcol.append(coldict[row.type])
                 try:
-                    newlw.append(anno['lw'])
+                    newlw.append(float(anno['lw']))
                 except KeyError:
                     newlw.append(0 if row.type == 'SYN' else 0.1)
                 try:
