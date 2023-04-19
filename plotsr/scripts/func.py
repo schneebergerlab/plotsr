@@ -448,7 +448,7 @@ def readsyriout(f):
     if df.shape[1] == 13:
         logger.warning(f'{f} have extra annotation column dedicated for alignment customisation. Using it.')
     else:
-        logger.warning(f'{f} does have extra annotation column dedicated for alignment customisation. Using default values.')
+        logger.info(f'{f} does not have extra annotation column dedicated for alignment customisation. Using default values.')
         df[12] = '-'
     df = df[[0, 1, 2, 5, 6, 7, 10, 12]]
     colnames = ['achr', 'astart', 'aend', 'bchr', 'bstart', 'bend',  'type', 'anno']
@@ -1248,7 +1248,7 @@ def createribbon(df):
                 cg.append(i)
                 ca = i
                 cb = i
-    if len(cg)>0:
+    if len(cg) > 0:
         groups.append(list(cg))
     newsyn = deque()
     for i in groups:
@@ -1262,6 +1262,7 @@ def createribbon(df):
             list(tmpdf['bend'])[-1]
         ])
     newsyn = DataFrame(list(newsyn), columns=['achr', 'astart', 'aend', 'bchr', 'bstart', 'bend'])
+    newsyn['anno'] = '-'
     newsyn['type'] = 'SYN'
 
     df = df.drop(['a', 'b'], axis=1)
