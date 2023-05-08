@@ -535,6 +535,9 @@ class track():
         self.logger = logging.getLogger("track")
         self.bincnt = {}
         self.gff = ''
+        self.ti = -1
+        self.tt = 'f'
+        self.ta = 1
 
     # Add tags
     def addtags(self, tags):
@@ -555,13 +558,27 @@ class track():
                         # continue
                         sys.exit()
                     setattr(self, n, v)
-                ## Numerical parameters
-                elif n in ['ns', 'bw', 'lw', 'ba', 'nm']:
+                ## Integer parameters
+                elif n in ['ti']:
+                    try: int(v)
+                    except ValueError:
+                        self.logger.error("Non-integer value {} for {} in track{}".format(v, n, self.n))
+                        sys.exit()
+                    setattr(self, n, int(v))
+                ## float parameters
+                elif n in ['ns', 'bw', 'lw', 'ba', 'nm', 'ta']:
                     try: float(v)
                     except ValueError:
                         self.logger.error("Non-numerical value {} for {} in track{}".format(v, n, self.n))
                         sys.exit()
                     setattr(self, n, float(v))
+                ## text parameters
+                elif n in ['tt']:
+                    if n == 'tt':
+                        if v not in ['f', 'l']:
+                            self.logger.error("Invalid value {} for {} in track{}. Allowed values: 'f' and 'l'.".format(v, n, self.n))
+                            sys.exit()
+                    setattr(self, n, v)
                 ## Font parameters
                 elif n in ['nf']:
                     if v not in FONT_NAMES:
@@ -585,13 +602,6 @@ class track():
         import numpy as np
         bw = int(self.bw)
         # Read the BED file
-        # chrpos = {k: np.zeros(v, dtype=np.int0) for k, v in chrlengths[0][1].items()}
-        # Create bins
-        # bins = {}
-        # for k, v in chrlengths[0][1].items():
-        #     s = np.array(range(0, v, bw))
-        #     e = np.concatenate((s[1:], [v]))
-        #     bins[k] = np.array(list(zip(s, e)))
         _chrs = set([c for c in chrlengths[0][1].keys()])
         bincnt = defaultdict(deque)
         skipchrs = []
@@ -660,40 +670,54 @@ class track():
             for line in fin:
                 line = line.strip().split()
                 try:
-                    v = float(line[3])
+                    val = float(line[3])
                 except ValueError:
                     if len(line) < 4:
                         self.logger.warning("Incomplete information in bedgraph file at line: {}. Skipping it.".format("\t".join(line)))
                         continue
-                if line[0] not in _chrs:
+                if curchr == line[0]:
+                    s.append(int(line[1]))
+                    e.append(int(line[2]))
+                    v.append(val)
+                elif line[0] not in _chrs:
                     if line[0] == '#': continue
                     if line[0] == 'track': continue
                     if line[0] not in skipchrs:
                         self.logger.warning("Chromosome in BEDGRAPH is not present in FASTA or not selected for plotting. Skipping it. BED line: {}".format("\t".join(line)))
                         skipchrs.append(line[0])
                     continue
-                if curchr == '':
+                elif curchr == '':
                     curchr = line[0]
                     binv = np.zeros(ceil(chrlengths[0][1][curchr]/bw), dtype=int)
-                    s = int(line[1])
-                    e = int(line[2])
-                    if s//bw == e//bw:
-                        binv[s//bw] += (e-s)*v
-                    else:
-                        binv[s//bw] += (bw-(s%bw))*v
-                        binv[e//bw] += (e%bw)*v
-                elif curchr == line[0]:
-                    s = int(line[1])
-                    e = int(line[2])
-                    if s//bw == e//bw:
-                        binv[s//bw] += (e-s)*v
-                    else:
-                        binv[s//bw] += (bw-(s%bw))*v
-                        binv[e//bw] += (e%bw)*v
+                    s = deque([int(line[1])])
+                    e = deque([int(line[2])])
+                    v = deque([int(val)])
                 else:
                     if line[0] in added_chrs:
                         self.logger.error("BedGraph file: {} is not sorted. For plotting tracks, sorted BedGraph file is required. Exiting.".format(self.f))
                         sys.exit()
+
+                    s = np.array(list(s))
+                    e = np.array(list(e))
+                    v = np.array(list(v))
+                    spos = s//bw
+                    epos = e//bw
+                    ## Update bin value for rows which are in one BW
+                    idx = np.where(np.equal(spos, epos))[0]
+                    values = (e-s)*v
+                    np.add.at(binv, spos[idx], values[idx])
+                    ## Update bin value for rows which are in more than one BW
+                    idx = np.where(np.not_equal(spos, epos))[0]
+                    values_s = (bw-(s % bw))*v
+                    values_e = (e % bw)*v
+                    np.add.at(binv, spos[idx], values_s[idx])
+                    np.add.at(binv, epos[idx], values_e[idx])
+                    ### Update bin value for bins overlapped by rows
+                    idx2 = np.where(np.not_equal(spos[idx]+1, epos[idx]))[0]
+                    idx_to_add = [i for j in idx2 for i in range(spos[idx[j]]+1, epos[idx[j]])]
+                    value_to_add = [v[idx[j]]*bw for j in idx2 for i in range(spos[idx[j]]+1, epos[idx[j]])]
+                    np.add.at(binv, idx_to_add, value_to_add)
+
                     bins = np.concatenate((np.arange(0, chrlengths[0][1][curchr], bw), np.array([chrlengths[0][1][curchr]])), axis=0)
                     bins = [(bins[i] + bins[i+1])/2 for i in range(len(bins) - 1)]
                     bincnt[curchr] = deque([(bins[i], binv[i]) for i in range(len(bins))])
@@ -701,13 +725,31 @@ class track():
                     # Set the new chromosome
                     curchr = line[0]
                     binv = np.zeros(ceil(chrlengths[0][1][curchr]/bw), dtype=int)
-                    s = int(line[1])
-                    e = int(line[2])
-                    if s//bw == e//bw:
-                        binv[s//bw] += (e-s)*v
-                    else:
-                        binv[s//bw] += (bw-(s%bw))*v
-                        binv[e//bw] += (e%bw)*v
+                    s = deque([int(line[1])])
+                    e = deque([int(line[2])])
+                    v = deque([int(val)])
+
+        s = np.array(list(s))
+        e = np.array(list(e))
+        v = np.array(list(v))
+        spos = s//bw
+        epos = e//bw
+        ## Update bin value for rows which are in one BW
+        idx = np.where(np.equal(spos, epos))[0]
+        values = (e-s)*v
+        np.add.at(binv, spos[idx], values[idx])
+        ## Update bin value for rows which are in more than one BW
+        idx = np.where(np.not_equal(spos, epos))[0]
+        values_s = (bw-(s % bw))*v
+        values_e = (e % bw)*v
+        np.add.at(binv, spos[idx], values_s[idx])
+        np.add.at(binv, epos[idx], values_e[idx])
+        ### Update bin value for bins overlapped by rows
+        idx2 = np.where(np.not_equal(spos[idx]+1, epos[idx]))[0]
+        idx_to_add = [i for j in idx2 for i in range(spos[idx[j]]+1, epos[idx[j]])]
+        value_to_add = [v[idx[j]]*bw for j in idx2 for i in range(spos[idx[j]]+1, epos[idx[j]])]
+        np.add.at(binv, idx_to_add, value_to_add)
+
         bins = np.concatenate((np.arange(0, chrlengths[0][1][curchr], bw), np.array([chrlengths[0][1][curchr]])), axis=0)
         bins = [(bins[i] + bins[i+1])/2 for i in range(len(bins) - 1)]
         bincnt[curchr] = deque([(bins[i], binv[i]) for i in range(len(bins))])
@@ -814,6 +856,29 @@ def readtrack(f, chrlengths):
             # Reads BED
             t.readdata(chrlengths)
             tdata.append(t)
+    # add track index for tracks without index
+    ## Get list of used index
+    tiused = set([t.ti for t in tdata])
+    tiused = tiused.difference(set([-1]))
+    ## Set tracks names
+    for ti in tiused:
+        tnames = [t.n for t in tdata if t.ti == ti]
+        tn = ','.join(tnames)
+        first = True
+        for t in tdata:
+            if t.ti == ti:
+                if first:
+                    setattr(t, 'n', tn)
+                    first = False
+                else:
+                    setattr(t, 'n', '')
+    timax = max(tiused)
+    if any([i not in tiused for i in range(1, timax+1)]):
+        raise ValueError("Used track indices are not sequential. The input track indices should be a consecutive list of numbers.")
+    for t in tdata:
+        if t.ti == -1:
+            setattr(t, 'ti', timax+1)
+            timax += 1
     return tdata
 # END
 
@@ -1694,7 +1759,8 @@ def drawtracks(ax, tracks, s, chrgrps, chrlengths, v, itx, cfg, minl=0, maxl=-1)
     from collections import deque
     from functools import partial
     import pandas as pd
-    th = (1 - s - 2*cfg['chrmar'])/len(tracks)
+    # th = (1 - s - 2*cfg['chrmar'])/len(tracks)
+    th = (1 - s - 2*cfg['chrmar'])/max([t.ti for t in tracks])
     if th < 0.01:
         raise RuntimeError("Decrease the value of -S to plot tracks correctly. Exiting.")
     cl = len(chrgrps.keys())
@@ -1712,13 +1778,15 @@ def drawtracks(ax, tracks, s, chrgrps, chrlengths, v, itx, cfg, minl=0, maxl=-1)
         rbuff = genbuff(0, chrlengths, chrgrps, chrs, maxl, v, cfg)
     for i in range(len(tracks)):
         # Plot background rectangles for the tracks
+        ti = tracks[i].ti   # tranck index
         for j in range(cl):
             if not v:
                 x0 = 0 if not itx else 0 + rbuff[chrs[j]]
-                y0 = cl - j - th*(i+1) if not itx else 1 - th*(i+1)
+                # y0 = cl - j - th*(i+1) if not itx else 1 - th*(i+1)
+                y0 = cl - j - th*(ti) if not itx else 1 - th*(ti)
                 ax.add_patch(Rectangle((x0, y0), chrlengths[0][1][chrs[j]], diff,  linewidth=0, facecolor=tracks[i].bc, alpha=tracks[i].ba, zorder=1))
             else:
-                x0 = j + (i+1)*th - diff if not itx else (i+1)*th - diff
+                x0 = j + (ti)*th - diff if not itx else (ti)*th - diff
                 y0 = 0 if not itx else 0 + rbuff[chrs[j]]
                 ax.add_patch(Rectangle((x0, y0), diff, chrlengths[0][1][chrs[j]], linewidth=0, facecolor=tracks[i].bc, alpha=tracks[i].ba, zorder=1))
 
@@ -1734,17 +1802,29 @@ def drawtracks(ax, tracks, s, chrgrps, chrlengths, v, itx, cfg, minl=0, maxl=-1)
                     tpos = [k[1] for k in bedbin[chrs[j]]]
                 # print(cl, len(tpos))
                 tposmax = max(tpos)
+                tvars = {'color': tracks[i].lc, 'lw': tracks[i].lw, 'zorder': 2, 'alpha': tracks[i].ta}
                 if not v:
-                    y0 = cl - j - th*(i+1) if not itx else 1 - th*(i+1)
+                    y0 = cl - j - th*(ti) if not itx else 1 - th*(ti)
                     ypos = [(t*diff/tposmax)+y0 for t in tpos]
-                    ax.fill_between(chrpos, ypos, y0, color=tracks[i].lc, lw=tracks[i].lw, zorder=2)
+                    if tracks[i].tt == 'f':
+                        ax.fill_between(chrpos, ypos, y0, **tvars)
+                    elif tracks[i].tt == 'l':
+                        ax.plot(chrpos, ypos, **tvars)
+                    else:
+                        raise ValueError(f"Invalid value for track type for track {tracks[i].n}")
                     if not itx:
                         xpos = chrlengths[0][1][chrs[j]] + margin if maxl == -1 else maxl + margin
                         ax.text(xpos, y0 + diff/2, tracks[i].n, color=tracks[i].nc, fontsize=tracks[i].ns, fontfamily=tracks[i].nf, ha='left', va='center', rotation='horizontal')
                 else:
-                    x0 = j + (i+1)*th - diff if not itx else (i+1)*th - diff
+                    x0 = j + (ti)*th - diff if not itx else (ti)*th - diff
                     xpos = [x0 + diff - (t*diff/tposmax) for t in tpos]
-                    ax.fill_betweenx(chrpos, xpos, x0+diff, color=tracks[i].lc, lw=tracks[i].lw, zorder=2)
+                    if tracks[i].tt == 'f':
+                        ax.fill_betweenx(chrpos, xpos, x0+diff, **tvars)
+                    elif tracks[i].tt == 'l':
+                        ax.plot(xpos, chrpos, **tvars)
+                    else:
+                        raise ValueError(f"Invalid value for track type for track {tracks[i].n}")
+
                     if not itx:
                         ypos = chrlengths[0][1][chrs[j]] + margin if maxl == -1 else maxl + margin
                         ax.text(x0 + diff/2, ypos, tracks[i].n, color=tracks[i].nc, fontsize=tracks[i].ns, fontfamily=tracks[i].nf, ha='center', va='bottom', rotation='vertical')
@@ -1775,10 +1855,10 @@ def drawtracks(ax, tracks, s, chrgrps, chrlengths, v, itx, cfg, minl=0, maxl=-1)
             anno['lw'] = tracks[i].lw
             anno.loc[anno['type'] == 'cds', 'lw'] = 2*tracks[i].lw
             anno['colour'] = tracks[i].lc
-            anno['fixed'] = round(1 - th*(i+1) + diff/2, 4) if not v else round((i+1)*th - diff/2, 4)
+            anno['fixed'] = round(1 - th*(ti) + diff/2, 4) if not v else round((ti)*th - diff/2, 4)
             if not itx:
                 # Update fixed coordinate when not using ITX mode
-                anno['fixed'] = [round(cl-chrs.index(c)-th*(i+1) + diff/2, 4) if not v else round(chrs.index(c) + (i+1)*th - diff/2, 4) for c in anno['chr']]
+                anno['fixed'] = [round(cl-chrs.index(c)-th*(ti) + diff/2, 4) if not v else round(chrs.index(c) + (ti)*th - diff/2, 4) for c in anno['chr']]
             if itx:
                 # Update genome coordinate when using the ITX mode
                 for c in chrs:

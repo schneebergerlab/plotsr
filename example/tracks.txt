@@ -8,7 +8,10 @@
 ##lw = line width
 ##bc = background colour
 ##ba = background alpha
+##ti = track index      # Numbers starting from 1. Tracks with same index are plotted on top of each other. Tracks with index will be plotted above tracks without index
+##tt = track type       # f: for plotting a filled plot , l: for plotting a line plot
+##ta = track alpha      # track transparency. Fraction between [0,1]
 #file	name	tags
 TAIR10_GFF3_genes.gff	Genes	ft:gff;bw:10000;nc:black;ns:8;nf:Arial;lc:blue;lw:4;bc:lightblue;ba:0.5;nm:0.05
-1001genomes.snps.sorted.bed	SNPs	bw:10000;nc:black;ns:8;nf:Arial;lc:sienna;lw:1;bc:peachpuff;ba:0.5
+1001genomes.snps.sorted.bed	SNPs	bw:10000;nc:black;ns:8;nf:Arial;lc:sienna;lw:1;bc:peachpuff;ba:0.5;tt:l;ti:1
 Giraut2011_centromeres.bed	Centromeres	bw:10000;nc:black;ns:8;nf:Arial;lc:olive;lw:1;bc:palegreen;ba:0.5
