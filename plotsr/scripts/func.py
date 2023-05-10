@@ -859,7 +859,7 @@ def readtrack(f, chrlengths):
     # add track index for tracks without index
     ## Get list of used index
     tiused = set([t.ti for t in tdata])
-    tiused = tiused.difference(set([-1]))
+    tiused = list(tiused.difference(set([-1])))
     ## Set tracks names
     for ti in tiused:
         tnames = [t.n for t in tdata if t.ti == ti]
@@ -872,7 +872,7 @@ def readtrack(f, chrlengths):
                     first = False
                 else:
                     setattr(t, 'n', '')
-    timax = max(tiused)
+    timax = max(tiused) if tiused != [] else 0
     if any([i not in tiused for i in range(1, timax+1)]):
         raise ValueError("Used track indices are not sequential. The input track indices should be a consecutive list of numbers.")
     for t in tdata:
