@@ -446,9 +446,9 @@ def readsyriout(f):
     except KeyError:
         raise ImportError("Incomplete input file {}, syri.out file should have 11 columns.".format(f))
     if df.shape[1] == 13:
-        logger.warning(f'{f} have extra annotation column dedicated for alignment customisation. Using it.')
+        logger.warning(f'{f} has an extra annotation column dedicated for alignment customisation. Using it.')
     else:
-        logger.info(f'{f} does not have extra annotation column dedicated for alignment customisation. Using default values.')
+        logger.info(f'{f} does not have an extra annotation column dedicated for alignment customisation. Using default values.')
         df[12] = '-'
     df = df[[0, 1, 2, 5, 6, 7, 10, 12]]
     colnames = ['achr', 'astart', 'aend', 'bchr', 'bstart', 'bend',  'type', 'anno']
