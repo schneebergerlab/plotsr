@@ -219,7 +219,7 @@ lc = line colour
 lw = line width
 bc = background colour
 ba = background alpha
-ti = track index      # Numbers starting from 1. Tracks with same index are plotted on top of each other. Tracks with smaller index will be plotted above tracks without index
+ti = track index      # Numbers starting from 1. Tracks with same index are plotted on top of each other. Tracks with index will be plotted above tracks without index
 tt = track type       # f: for plotting a filled plot, l: for plotting a line plot
 ta = track alpha      # track transparency. Fraction between [0,1]
 ```
