@@ -1801,11 +1801,11 @@ def drawtracks(ax, tracks, s, chrgrps, chrlengths, v, itx, cfg, minl=0, maxl=-1)
                     chrpos = [k[0] if not itx else k[0] + rbuff[chrs[j]] for k in bedbin[chrs[j]]]
                     tpos = [k[1] for k in bedbin[chrs[j]]]
                 # print(cl, len(tpos))
-                tposmax = max(tpos)
+                tposmax = max(tpos) if len(tpos) > 0 else 0
                 tvars = {'color': tracks[i].lc, 'lw': tracks[i].lw, 'zorder': 2, 'alpha': tracks[i].ta}
                 if not v:
                     y0 = cl - j - th*(ti) if not itx else 1 - th*(ti)
-                    ypos = [(t*diff/tposmax)+y0 for t in tpos]
+                    ypos = [(t*diff/tposmax)+y0 for t in tpos] if len(tpos) > 0 else y0
                     if tracks[i].tt == 'f':
                         ax.fill_between(chrpos, ypos, y0, **tvars)
                     elif tracks[i].tt == 'l':
@@ -1817,7 +1817,7 @@ def drawtracks(ax, tracks, s, chrgrps, chrlengths, v, itx, cfg, minl=0, maxl=-1)
                         ax.text(xpos, y0 + diff/2, tracks[i].n, color=tracks[i].nc, fontsize=tracks[i].ns, fontfamily=tracks[i].nf, ha='left', va='center', rotation='horizontal')
                 else:
                     x0 = j + (ti)*th - diff if not itx else (ti)*th - diff
-                    xpos = [x0 + diff - (t*diff/tposmax) for t in tpos]
+                    xpos = [x0 + diff - (t*diff/tposmax) for t in tpos] if len(tpos) > 0 else x0
                     if tracks[i].tt == 'f':
                         ax.fill_betweenx(chrpos, xpos, x0+diff, **tvars)
                     elif tracks[i].tt == 'l':
