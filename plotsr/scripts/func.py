@@ -177,11 +177,7 @@ def mergeranges(ranges):
 # END
 
 
-"""
-################################################################################
-DEFINE READERS/PARSERS
-################################################################################
-"""
+# <editor-fold desc="readers and parsres">
 
 
 def readbasecfg(f, v):
@@ -205,6 +201,7 @@ def readbasecfg(f, v):
     cfg['bbox_v'] = [0, 1.1, 0.5, 0.3]
     cfg['bboxmar'] = 0.5
     # Set ITX margin
+    # TODO: Add marginchr to base.cfg in the repo
     cfg['marginchr'] = 0.01
 
 
@@ -883,6 +880,44 @@ def readtrack(f, chrlengths):
 # END
 
 
+def readagp(f):
+    """
+    Reads an .agp file and returns the contig-breakpoints in the scaffolds
+    :param f: Input file name
+    :return: Dictionary with scaffold ids as keys and breakpoints as values
+    """
+    from collections import defaultdict
+    outdict = defaultdict(list)
+    with open(f, 'r') as fin:
+        for line in fin:
+            if line[0] == '#':
+                continue
+            line = line.strip().split()
+            if line[4] not in 'W':
+                continue
+            outdict[line[0]].append([int(line[1]), int(line[2])])
+    return outdict
+# END
+
+
+def readbedasdict(f):
+    """
+    Reads a bed file and return a dict where the keys are chromosomes in bed and values are ranges
+    :param f: Filename
+    :return: Bed as dict
+    """
+    from collections import defaultdict, deque
+    beddict = defaultdict(deque)
+    with open(f, 'r') as fin:
+        for line in fin:
+            line = line.strip().split()
+            #TODO: ADD checks to ensure the correctness of BED file
+            beddict[line[0]].append([line[1], line[2]])
+    return beddict
+# END
+
+# </editor-fold>
+
 """
 ################################################################################
 Validation and filtering
@@ -1477,12 +1512,52 @@ def drawax(ax, chrgrps, chrlengths, v, s, cfg, itx, minl=0, maxl=-1, chrname=Non
 # END
 
 
+def pltchrbox(ax, regions, centroms, loc, col, cw, minl=0, lab=None):
+    """
+    Plot chromosomes as rectangle. This rectangle can consist of chromosome specific
+    tracks.
+    :return:
+    """
+    from matplotlib.patches import Rectangle
+    from matplotlib import colors as mc
+    chrlabel = None
+    col = mc.rgb_to_hsv(mc.to_rgb(col))
+    col1 = mc.to_hex(mc.hsv_to_rgb((col[0], 1, col[2])))
+    col2 = mc.to_hex(mc.hsv_to_rgb((col[0], 0.75, col[2])))
+    maxv = regions[-1][1]
+    if lab is not None:
+        chrlabel = ax.hlines(0, 0, 0, color=col1, linewidth=1, label=lab, zorder=2)
+    # Add track for AGP. Currently overdrawn on the chromsome
+    ax.add_patch(Rectangle((minl+1, loc-(cw/2)), maxv, cw,  linewidth=0, facecolor=col1, alpha=1, zorder=2))
+    for i, v in enumerate(regions[1::2]):
+        ax.add_patch(Rectangle((int(v[0])+minl, loc-cw), int(v[1]) - int(v[0]), cw*2,  linewidth=0, facecolor=col2, alpha=1, zorder=2))
+    # Add centromere track
+    for v in centroms:
+        ax.add_patch(Rectangle((int(v[0])+minl, loc-(cw/4)), int(v[1]) - int(v[0]), cw/2,  linewidth=0, facecolor='black', alpha=1, zorder=2))
+    return ax, chrlabel
+# END
+
+
 def pltchrom(ax, chrs, chrgrps, chrlengths, v, S, genomes, cfg, itx, minl=0, maxl=-1):
     chrlabs = [False]*len(chrlengths)
     # Set chromosome direction
     pltchr = ax.hlines if not v else ax.vlines
     chrlabels = []
     indents = []
+    # read agp data
+    agpdata = dict()
+    with open('agps.txt', 'r') as fin:
+        for line in fin:
+            line = line.strip().split()
+            agpdata[line[1]] = readagp(line[0])
+    # Read centromere data
+    centrodata = dict()
+    with open('centromeres.txt', 'r') as fin:
+        for line in fin:
+            line = line.strip().split()
+            centrodata[line[1]] = readbedasdict(line[0])
+
+    cw = 0.025          # Chromosome width
     if not itx:
         # Define indents
         step = S/(len(chrlengths)-1)
@@ -1500,21 +1575,27 @@ def pltchrom(ax, chrs, chrgrps, chrlengths, v, S, genomes, cfg, itx, minl=0, max
                 else:
                     maxcoord = maxl
                 genome = [gen for gen in genomes if gen.n == chrlengths[s][0]][0]
+                # print(vars(genome))
+
                 if not chrlabs[s]:
-                    chrlabels.append(pltchr(indents[s]-offset, minl, maxcoord,
-                                            color=genome.lc,
-                                            linewidth=genome.lw,
-                                            label=chrlengths[s][0],
-                                            zorder=2))
+                    # chrlabels.append(pltchr(indents[s]-offset, minl, maxcoord,
+                    #                         color=genome.lc,
+                    #                         linewidth=genome.lw,
+                    #                         label=chrlengths[s][0],
+                    #                         zorder=2))
+                    # print(agpdata[genome.n][chrgrps[chrs[i]][s]])
+                    ax, c = pltchrbox(ax, agpdata[genome.n][chrgrps[chrs[i]][s]], centrodata[genome.n][chrgrps[chrs[i]][s]], indents[s]-offset, genome.lc, cw, minl=minl, lab=chrlengths[s][0])
+                    chrlabels.append(c)
                     chrlabs[s] = True
                 else:
-                    pltchr(indents[s]-offset, minl, maxcoord,
-                           color=genome.lc,
-                           linewidth=genome.lw,
-                           zorder=2)
+                    # pltchr(indents[s]-offset, minl, maxcoord,
+                    #        color=genome.lc,
+                    #        linewidth=genome.lw,
+                    #        zorder=2)
+                    ax, c = pltchrbox(ax, agpdata[genome.n][chrgrps[chrs[i]][s]], centrodata[genome.n][chrgrps[chrs[i]][s]], indents[s]-offset, genome.lc, cw, minl=minl)
     elif itx:
-        MCHR = cfg['marginchr']
-        # MCHR = 0.01     # TODO: read spacing between neighbouring chromosome from config file
+        # TODO: Optimise this for chromosomes as ITX
+        mchr = cfg['marginchr']
         step = S/(len(chrlengths)-1)
         for s in range(len(chrlengths)):
             start = 0
@@ -1525,11 +1606,12 @@ def pltchrom(ax, chrs, chrgrps, chrlengths, v, S, genomes, cfg, itx, minl=0, max
                     end = start + chrlengths[s][1][chrgrps[chrs[i]][s]]
                 else:
                     end = start + chrlengths[s][1][chrgrps[chrs[len(chrs)-1-i]][s]]
-                pltchr(fixed, start, end,
-                       color=genome.lc,
-                       linewidth=genome.lw,
-                       zorder=2)
-                start = end + (MCHR*maxl)
+                # pltchr(fixed, start, end,
+                #        color=genome.lc,
+                #        linewidth=genome.lw,
+                #        zorder=2)
+                ax, c = pltchrbox(ax, agpdata[genome.n][chrgrps[chrs[i]][s]], centrodata[genome.n][chrgrps[chrs[i]][s]], fixed, genome.lc, cw, minl=start)
+                start = end + (mchr*maxl)
     return ax, indents, chrlabels
 # END
 
