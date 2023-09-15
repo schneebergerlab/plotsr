@@ -51,13 +51,7 @@ for fn in matplotlib.font_manager.findSystemFonts():
 FONT_NAMES = sorted(set(FONT_NAMES))
 
 
-'''
-################################################################################
-# SUPPORT FUNCTIONS
-################################################################################
-'''
-
-
+# <editor-fold desc="SUPPORT FUNCTIONS">
 def setlogconfig(lg):
     import logging.config
     logging.config.dictConfig({
@@ -176,9 +170,10 @@ def mergeranges(ranges):
     return np.array(out_range)
 # END
 
+# </editor-fold>
+
 
 # <editor-fold desc="readers and parsres">
-
 
 def readbasecfg(f, v):
     import logging
@@ -203,7 +198,7 @@ def readbasecfg(f, v):
     # Set ITX margin
     # TODO: Add marginchr to base.cfg in the repo
     cfg['marginchr'] = 0.01
-
+    cfg['itxleft'] = False
 
     if f == '':
         return cfg
@@ -250,11 +245,11 @@ def readbasecfg(f, v):
                     logger.error("Non-numerical values {} provided for {}. Using default value.".format(line[1], line[0]))
                     continue
                 cfg['bboxmar'] = [float(i) for i in line[1]]
-            elif line[0] == 'legend':
+            elif line[0] in ['legend', 'itxleft']:
                 if line[1] not in ['T', 'F']:
                     logger.warning("Invalid value {} for legend in base.cfg. Valid values: T/F".format(line[1]))
                     continue
-                cfg['legend'] = line[1] == 'T'
+                cfg[line[0]] = line[1] == 'T'
     return cfg
 # END
 
@@ -1459,9 +1454,8 @@ def drawax(ax, chrgrps, chrlengths, v, s, cfg, itx, minl=0, maxl=-1, chrname=Non
             ax.set_axisbelow(True)
     elif itx:
         MCHR = cfg['marginchr']
-        # MCHR = 0.01     # TODO : read spacing between neighbouring chromosome from config file
         maxchr = max([sum(chrlengths[i][1].values()) for i in range(len(chrlengths))])
-        maxl = int(maxchr/(MCHR + 1 - (MCHR*len(chrgrps))))
+        maxl = int(maxchr/(1 - (MCHR*(len(chrgrps) - 1))))
         mchr = MCHR*maxl
         step = s/(len(chrlengths)-1)
         if not v:
@@ -1470,10 +1464,13 @@ def drawax(ax, chrgrps, chrlengths, v, s, cfg, itx, minl=0, maxl=-1, chrname=Non
             tick_pos = deque()
             tick_lab = deque()
             offset = 0
-            ## For x-tick position, get the middle position of the bottom most chromosome
-            for k in chrgrps:
-                c = chrgrps[k]
-                maxchr = chrlengths[-1][1][c[-1]]
+            for k, c in chrgrps.items():
+                if not cfg['itxleft']:
+                    ## If not left aligned: For x-tick position, get the middle position of the bottom most chromosome
+                    maxchr = chrlengths[-1][1][c[-1]]
+                elif cfg['itxleft']:
+                    ## If left aligned: For x-tick position, get the middle position of the longest chromosome
+                    maxchr = max([chrlengths[i][1][cid] for i, cid in enumerate(c)])
                 tick_pos.append(offset + (maxchr/2))
                 tick_lab.append(chrnamedict[k])
                 offset += maxchr + mchr
@@ -1488,6 +1485,7 @@ def drawax(ax, chrgrps, chrlengths, v, s, cfg, itx, minl=0, maxl=-1, chrname=Non
             ax.set_xlabel('Reference Chromosome ID')
             ax.set_ylabel('Genome')
         else:
+            # TODO: Adjust for itxleft config
             ax.set_ylim(0, maxl)
             ax.set_xlim(bottom_limit, 1+upper_limit)
             tick_pos = deque()
@@ -1556,7 +1554,6 @@ def pltchrom(ax, chrs, chrgrps, chrlengths, v, S, genomes, cfg, itx, minl=0, max
         for line in fin:
             line = line.strip().split()
             centrodata[line[1]] = readbedasdict(line[0])
-
     cw = 0.025          # Chromosome width
     if not itx:
         # Define indents
@@ -1597,20 +1594,25 @@ def pltchrom(ax, chrs, chrgrps, chrlengths, v, S, genomes, cfg, itx, minl=0, max
         # TODO: Optimise this for chromosomes as ITX
         mchr = cfg['marginchr']
         step = S/(len(chrlengths)-1)
-        for s in range(len(chrlengths)):
+        for s, chrl in enumerate(chrlengths):
             start = 0
-            genome = [gen for gen in genomes if gen.n == chrlengths[s][0]][0]
+            genome = [gen for gen in genomes if gen.n == chrl[0]][0]
             fixed = S - (step*s) if not v else 1 - S + (step*s)
-            for i in range(len(chrs)):
-                if not v:
-                    end = start + chrlengths[s][1][chrgrps[chrs[i]][s]]
-                else:
-                    end = start + chrlengths[s][1][chrgrps[chrs[len(chrs)-1-i]][s]]
+            for i, cid in enumerate(chrs):
                 # pltchr(fixed, start, end,
                 #        color=genome.lc,
                 #        linewidth=genome.lw,
                 #        zorder=2)
-                ax, c = pltchrbox(ax, agpdata[genome.n][chrgrps[chrs[i]][s]], centrodata[genome.n][chrgrps[chrs[i]][s]], fixed, genome.lc, cw, minl=start)
+                ax, c = pltchrbox(ax, agpdata[genome.n][chrgrps[cid][s]], centrodata[genome.n][chrgrps[cid][s]], fixed, genome.lc, cw, minl=start)
+
+                if not v:
+                    if cfg['itxleft']:
+                        end = max([start + c[1][chrgrps[cid][j]] for j, c in enumerate(chrlengths)])
+                    else:
+                        end = start + chrl[1][chrgrps[cid][s]]
+                else:
+                    # TODO: Optimise when using left-align
+                    end = start + chrl[1][chrgrps[chrs[len(chrs)-1-i]][s]]
                 start = end + (mchr*maxl)
     return ax, indents, chrlabels
 # END
@@ -1618,8 +1620,10 @@ def pltchrom(ax, chrs, chrgrps, chrlengths, v, S, genomes, cfg, itx, minl=0, max
 
 def genbuff(s, chrlengths, chrgrps, chrs, maxl, v, cfg):
     MCHR = cfg['marginchr']
-    # MCHR = 0.01     # TODO: read spacing between neighbouring chromosome from config file
-    rchrlen = [chrlengths[s][1][chrgrps[c][s]] for c in chrs]
+    if cfg['itxleft']:
+        rchrlen = [max([chrlengths[i][1][cid] for i, cid in enumerate(cg)]) for cg in chrgrps.values()]
+    else:
+        rchrlen = [chrlengths[s][1][chrgrps[c][s]] for c in chrs]
     rbuff = [0]
     if not v:
         for i in range(0, len(rchrlen)-1):

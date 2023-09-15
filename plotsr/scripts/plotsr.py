@@ -109,14 +109,12 @@ def plotsr(args):
         O = O.rsplit(".", 1)[0] + ".pdf"
 
     ## Set matplotlib backend
-
     try :
         matplotlib.use(args.b)
         # matplotlib.use('Qt5Agg')    # TODO: Delete this line
     except :
         sys.exit('Matplotlib backend cannot be selected')
 
-    # fins = ['col_lersyri.out', 'ler_cvisyri.out', 'cvi_erisyri.out', 'eri_shasyri.out', 'sha_kyosyri.out', 'kyo_an1syri.out', 'an1_c24syri.out'] #TODO: Delete this line
     # Read alignment coords
     alignments = deque()
     chrids = deque()
@@ -153,6 +151,7 @@ def plotsr(args):
             logger.error("Number of chromsomes in {} is less than the number of chromsomes in the alignment file {}. Either list the order of all chromosomes or use --chr if chromosome selection is requires. Exiting.".format(args.chrord.name, alignments[0][0]))
             sys.exit()
 
+    # chrgrps: dict. key=reference chromosome id. value=homolougous chromosomes in all genomes
     chrgrps = OrderedDict()
     for c in chrs:
         cg = deque([c])
@@ -223,9 +222,12 @@ def plotsr(args):
     allal = pdconcat([alignments[i][1] for i in range(len(alignments))])
     if ITX:
         minl = 0
-        MCHR = 0.01     # TODO : read spacing between neighbouring chromosome from config file
-        maxchr = max([sum(chrlengths[i][1].values()) for i in range(len(chrlengths))])
-        maxl = int(maxchr/(MCHR + 1 - (MCHR*len(chrgrps))))
+        MCHR = cfg['marginchr']
+        if cfg['itxleft']:
+            maxchr = sum([max([chrlengths[i][1][cid] for i, cid in enumerate(cg)]) for cg in chrgrps.values()])
+        else:
+            maxchr = max([sum(chrlengths[i][1].values()) for i in range(len(chrlengths))])
+        maxl = int(maxchr/(1 - (MCHR*(len(chrgrps) - 1))))
     elif REG is None:
         minl, maxl = 0, -1
     else:
