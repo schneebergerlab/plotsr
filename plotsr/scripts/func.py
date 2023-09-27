@@ -1454,7 +1454,10 @@ def drawax(ax, chrgrps, chrlengths, v, s, cfg, itx, minl=0, maxl=-1, chrname=Non
             ax.set_axisbelow(True)
     elif itx:
         MCHR = cfg['marginchr']
-        maxchr = max([sum(chrlengths[i][1].values()) for i in range(len(chrlengths))])
+        if cfg['itxleft']:
+            maxchr = sum([max([chrlengths[i][1][cid] for i, cid in enumerate(cg)]) for cg in chrgrps.values()])
+        else:
+            maxchr = max([sum(chrlengths[i][1].values()) for i in range(len(chrlengths))])
         maxl = int(maxchr/(1 - (MCHR*(len(chrgrps) - 1))))
         mchr = MCHR*maxl
         step = s/(len(chrlengths)-1)
