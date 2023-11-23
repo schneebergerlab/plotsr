@@ -1714,7 +1714,10 @@ def drawmarkers(ax, b, v, chrlengths, indents, chrs, chrgrps, S, cfg, itx, minl=
                     ax.plot(m.start, indent-offset, marker=m.mt, color=m.mc, markersize=m.ms)
                     ax.text(m.start, indent-offset+m.tp, m.tt, color=m.tc, fontsize=m.ts, fontfamily=m.tf, ha='center', va='bottom')
                 else:
-                    ax.axhline(y=indent-offset, xmin=m.start/ax.get_xlim()[1], xmax=m.end/ax.get_xlim()[1], color=m.mc, linewidth=m.ms)
+                    # https://github.com/schneebergerlab/plotsr/issues/72
+                    # ax.axhline(y=indent-offset, xmin=m.start/ax.get_xlim()[1], xmax=m.end/ax.get_xlim()[1], color=m.mc, linewidth=m.ms)
+                    ax_xlim = ax.get_xlim()[1] - ax.get_xlim()[0]
+                    ax.axhline(y=indent-offset, xmin=(m.start-ax.get_xlim()[0])/ax_xlim, xmax=(m.end-ax.get_xlim()[0])/ax_xlim, color=m.mc, linewidth=m.ms, solid_capstyle='butt')
                     ax.text((m.start + m.end)/2, indent-offset+m.tp, m.tt, color=m.tc, fontsize=m.ts, fontfamily=m.tf, ha='center', va='bottom')
                 # if m.tt != '':
                 #     ax.text(m.start, indent-offset+m.tp, m.tt, color=m.tc, fontsize=m.ts, fontfamily=m.tf, ha='center', va='bottom')
@@ -1723,7 +1726,8 @@ def drawmarkers(ax, b, v, chrlengths, indents, chrs, chrgrps, S, cfg, itx, minl=
                     ax.plot(indent+offset, m.start, marker=m.mt, color=m.mc, markersize=m.ms)
                     ax.text(indent+offset-m.tp, m.start, m.tt, color=m.tc, fontsize=m.ts, fontfamily=m.tf, ha='left', va='center', rotation='vertical')
                 else:
-                    ax.axvline(x=indent+offset, ymin=m.start/ax.get_ylim()[1], ymax=m.end/ax.get_ylim()[1], color=m.mc, linewidth=m.ms)
+                    ax_ylim = ax.get_ylim()[1] - ax.get_ylim()[0]
+                    ax.axvline(x=indent+offset, ymin=(m.start - ax.get_ylim()[0])/ax_ylim, ymax=(m.end - ax.get_ylim()[0])/ax_ylim, color=m.mc, linewidth=m.ms, solid_capstyle='butt')
                     ax.text(indent+offset-m.tp, (m.start+m.end)/2, m.tt, color=m.tc, fontsize=m.ts, fontfamily=m.tf, ha='left', va='center', rotation='vertical')
                 # if m.tt != '':
                 #     ax.text(indent+offset-m.tp, m.start, m.tt, color=m.tc, fontsize=m.ts, fontfamily=m.tf, ha='left', va='center', rotation='vertical')
@@ -1736,6 +1740,7 @@ def drawmarkers(ax, b, v, chrlengths, indents, chrs, chrgrps, S, cfg, itx, minl=
                     ax.plot(m.start+buff[chrgrps[chrid][ind]], S - (step*ind), marker=m.mt, color=m.mc, markersize=m.ms)
                     ax.text(m.start+buff[chrgrps[chrid][ind]], S - (step*ind) + m.tp, m.tt, color=m.tc, fontsize=m.ts, fontfamily=m.tf, ha='center', va='bottom')
                 else:
+                    # TODO: Check and fix the issue reported in https://github.com/schneebergerlab/plotsr/issues/72
                     ax.axhline(y=S - (step*ind), xmin=(m.start+buff[chrgrps[chrid][ind]])/ax.get_xlim()[1], xmax=(m.end+buff[chrgrps[chrid][ind]])/ax.get_xlim()[1], color=m.mc, linewidth=m.ms)
                     ax.text(((m.start+m.end)/2)+buff[chrgrps[chrid][ind]], S - (step*ind) + m.tp, m.tt, color=m.tc, fontsize=m.ts, fontfamily=m.tf, ha='center', va='bottom')
                 # if m.tt != '':
@@ -1745,6 +1750,7 @@ def drawmarkers(ax, b, v, chrlengths, indents, chrs, chrgrps, S, cfg, itx, minl=
                     ax.plot(1 - S + (step*ind), m.start+buff[chrgrps[chrid][ind]], marker=m.mt, color=m.mc, markersize=m.ms)
                     ax.text(1 - S + (step*ind)-m.tp, m.start+buff[chrgrps[chrid][ind]], m.tt, color=m.tc, fontsize=m.ts, fontfamily=m.tf, ha='left', va='center', rotation='vertical')
                 else:
+                    # TODO: Check and fix the issue reported in https://github.com/schneebergerlab/plotsr/issues/72
                     ax.axvline(x=1 - S + (step*ind), ymin=(m.start+buff[chrgrps[chrid][ind]])/ax.get_ylim()[1], ymax=(m.end+buff[chrgrps[chrid][ind]])/ax.get_ylim()[1], color=m.mc, linewidth=m.ms)
                     ax.text(1 - S + (step*ind)-m.tp, ((m.start+m.end)/2)+buff[chrgrps[chrid][ind]], m.tt, color=m.tc, fontsize=m.ts, fontfamily=m.tf, ha='left', va='center', rotation='vertical')
                 # if m.tt != '':
