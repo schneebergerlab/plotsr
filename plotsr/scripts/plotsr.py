@@ -163,13 +163,13 @@ def plotsr(args):
             cur = n
         chrgrps[c] = cg
 
+    # Check chromsome IDs and sizes
+    chrlengths, genomes = validalign2fasta(alignments, args.genomes.name)
+    # chrlengths, genomes = validalign2fasta(alignments, 'genomes.txt') # TODO: Delete this line
+
     # Filter alignments to select long alignments between homologous chromosomes
     for i in range(len(alignments)):
         alignments[i][1] = filterinput(args, alignments[i][1], chrids[i][1], ITX)
-
-        # Check chromsome IDs and sizes
-    chrlengths, genomes = validalign2fasta(alignments, args.genomes.name)
-    # chrlengths, genomes = validalign2fasta(alignments, 'genomes.txt') # TODO: Delete this line
 
 
     # Select only chromosomes selected by --chr
