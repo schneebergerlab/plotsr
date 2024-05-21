@@ -194,6 +194,10 @@ def readbasecfg(f, v):
     cfg['invcol'] = '#FFA500'
     cfg['tracol'] = '#9ACD32'
     cfg['dupcol'] = '#00BBFF'
+    cfg['synlwd'] = 0
+    cfg['invlwd'] = 0.1
+    cfg['tralwd'] = 0.1
+    cfg['duplwd'] = 0.1
     cfg['alpha'] = 0.8
     # Set chromosome margins
     cfg['chrmar'] = 0.1
@@ -230,7 +234,7 @@ def readbasecfg(f, v):
                     logger.error("Error in using colour: {} for {}. Use correct hexadecimal colours or named colours defined in matplotlib (https://matplotlib.org/stable/gallery/color/named_colors.html). Using default value.".format(line[1], line[0]))
                     continue
                 cfg[line[0]] = line[1]
-            elif line[0] in ['alpha', 'chrmar', 'exmar', 'bboxmar', 'genlegcol', 'marginchr']:
+            elif line[0] in ['synlwd', 'invlwd', 'tralwd', 'duplwd', 'alpha', 'chrmar', 'exmar', 'bboxmar', 'genlegcol', 'marginchr']:
                 try:
                     float(line[1])
                 except ValueError:
@@ -1572,6 +1576,10 @@ def pltsv(ax, alignments, chrs, v, chrgrps, chrlengths, indents, S, cfg, itx, ma
                    'INV': cfg['invcol'],
                    'TRANS': cfg['tracol'],
                    'DUP': cfg['dupcol']}
+        lwddict = {'SYN': cfg['synlwd'],
+                   'INV': cfg['invlwd'],
+                   'TRANS': cfg['tralwd'],
+                   'DUP': cfg['duplwd']}
         # df['col'] = [coldict[c] for c in df['type']]
         labdict = {'SYN': 'Syntenic', 'INV': 'Inversion', 'TRANS': 'Translocation', 'DUP': 'Duplication'}
         df['lab'] = [labdict[c] for c in df['type']]
@@ -1586,7 +1594,7 @@ def pltsv(ax, alignments, chrs, v, chrgrps, chrlengths, indents, S, cfg, itx, ma
         for row in df.itertuples():
             if row.anno == '-':
                 newcol.append(coldict[row.type])
-                newlw.append(0 if row.type == 'SYN' else 0.1)
+                newlw.append(lwddict[row.type])
                 newz.append(0 if row.type == 'SYN' else 1)
             else:
                 anno = annotodict(row.anno)
