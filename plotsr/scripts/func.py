@@ -217,6 +217,7 @@ def readbasecfg(f, v):
 
     # axis properties
     cfg['maxl'] = -1
+    cfg['genname'] = 'T'
 
 
     if f == '':
@@ -264,7 +265,7 @@ def readbasecfg(f, v):
                     logger.error("Non-numerical values {} provided for {}. Using default value.".format(line[1], line[0]))
                     continue
                 cfg['bboxmar'] = [float(i) for i in line[1]]
-            elif line[0] in {'legend', 'norm'}:
+            elif line[0] in {'legend', 'norm', 'genname'}:
                 if line[1] not in ['T', 'F']:
                     logger.warning("Invalid value {} for {} in base.cfg. Valid values: T/F".format(line[1], line[0]))
                     continue
@@ -1523,6 +1524,17 @@ def pltchrom(ax, chrs, chrgrps, chrlengths, v, S, genomes, cfg, itx, minl=0, max
                            color=genome.lc,
                            linewidth=genome.lw,
                            zorder=2)
+                if cfg['genname'] == 'T':
+                    margin = (maxcoord - minl) * 0.01
+                    if not v:
+                        xpos = maxcoord + margin
+                        # TODO: add font size control
+                        ax.text(xpos, indents[s]-offset, genome.n, color='black', ha='left', va='center', rotation='horizontal')
+                    else:
+                        ypos = maxcoord + margin
+                        ax.text(indents[s]-offset, ypos, genome.n, color='black',
+                        ha='center', va='bottom', rotation='vertical')
+
     elif itx:
         MCHR = cfg['marginchr']
         # MCHR = 0.01     # TODO: read spacing between neighbouring chromosome from config file
