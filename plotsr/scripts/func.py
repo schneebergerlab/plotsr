@@ -215,6 +215,9 @@ def readbasecfg(f, v):
     # track properties
     cfg['norm'] = 'T'
 
+    # axis properties
+    cfg['maxl'] = -1
+
 
     if f == '':
         return cfg
@@ -238,7 +241,7 @@ def readbasecfg(f, v):
                     logger.error("Error in using colour: {} for {}. Use correct hexadecimal colours or named colours defined in matplotlib (https://matplotlib.org/stable/gallery/color/named_colors.html). Using default value.".format(line[1], line[0]))
                     continue
                 cfg[line[0]] = line[1]
-            elif line[0] in ['synlwd', 'invlwd', 'tralwd', 'duplwd', 'alpha', 'chrmar', 'exmar', 'bboxmar', 'genlegcol', 'marginchr']:
+            elif line[0] in ['synlwd', 'invlwd', 'tralwd', 'duplwd', 'alpha', 'chrmar', 'exmar', 'bboxmar', 'genlegcol', 'marginchr', 'maxl']:
                 try:
                     float(line[1])
                 except ValueError:

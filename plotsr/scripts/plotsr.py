@@ -226,6 +226,8 @@ def plotsr(args):
         MCHR = 0.01     # TODO : read spacing between neighbouring chromosome from config file
         maxchr = max([sum(chrlengths[i][1].values()) for i in range(len(chrlengths))])
         maxl = int(maxchr/(MCHR + 1 - (MCHR*len(chrgrps))))
+    elif cfg['maxl'] != -1:
+        minl, maxl = 0, cfg['maxl']
     elif REG is None:
         minl, maxl = 0, -1
     else:
