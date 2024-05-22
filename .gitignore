@@ -1,0 +1,50 @@
+# Compiled python modules
+*.pyc
+
+# Setuptools distribution folder
+/dist/
+
+# Python egg metadata, regenerated from source files by setuptools.
+/*.egg-info
+
+# Test python scripts
+/testScript/
+
+# Python build files
+/build/*
+
+# Unfinished scripts
+syri/bin/multiSV
+syri/bin/plotsr2
+
+#html
+*.html
+
+#IDE files
+.idea/*
+
+#sharedObjects
+syri/pyxFiles/*.so
+syri/pyxFiles/.nfs00*
+/syri/pyxFiles/*.c*
+
+#Random files
+*.log
+/plotsr/*.swp
+./conda.recipe
+/TODOs
+/example/1001genomes.snps.sorted.bed
+/example/TAIR10_GFF3_genes.gff
+/example/R7.png
+/example/plotsr_available_font_names.txt
+/example/R1.pdf
+/example/R2.pdf
+/example/R3.pdf
+/example/R4.pdf
+/example/R5.pdf
+/example/R6.pdf
+/example/R7.pdf
+/example/R7.png
+/example/R8.pdf
+/example/R9.pdf
+/example/R10.pdf
