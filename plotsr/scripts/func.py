@@ -344,6 +344,7 @@ class bedAnno():
         self.mt = '.'
         self.mc = 'black'
         self.ms = 8
+        self.mz = 1
         self.tt = ''
         self.tc = 'black'
         self.ts = matplotlib.rcParams['font.size']
@@ -368,7 +369,7 @@ class bedAnno():
                         self.logger.error("Error in using colour: {} for position {}:{}-{}. Use correct hexadecimal colours or named colours define in matplotlib (https://matplotlib.org/stable/gallery/color/named_colors.html)".format(v, self.chr, self.start, self.end))
                         sys.exit()
                     setattr(self, n, v)
-                elif n in ['ms', 'ts', 'tp']:
+                elif n in ['ms', 'ts', 'tp', 'mz']:
                     try: float(v)
                     except ValueError:
                         self.logger.error("Non-numerical value {} for {} at marker position: {}:{}-{}".format(v, n, self.chr, self.start, self.end))
@@ -1738,24 +1739,24 @@ def drawmarkers(ax, b, v, chrlengths, indents, chrs, chrgrps, S, cfg, itx, minl=
             indent = indents[ind]
             if not v:
                 if m.mt != '_':
-                    ax.plot(m.start, indent-offset, marker=m.mt, color=m.mc, markersize=m.ms)
-                    ax.text(m.start, indent-offset+m.tp, m.tt, color=m.tc, fontsize=m.ts, fontfamily=m.tf, ha='center', va='bottom')
+                    ax.plot(m.start, indent-offset, marker=m.mt, color=m.mc, markersize=m.ms, zorder=m.mz)
+                    ax.text(m.start, indent-offset+m.tp, m.tt, color=m.tc, fontsize=m.ts, fontfamily=m.tf, ha='center', va='bottom', zorder=m.mz)
                 else:
                     # https://github.com/schneebergerlab/plotsr/issues/72
                     # ax.axhline(y=indent-offset, xmin=m.start/ax.get_xlim()[1], xmax=m.end/ax.get_xlim()[1], color=m.mc, linewidth=m.ms)
                     ax_xlim = ax.get_xlim()[1] - ax.get_xlim()[0]
-                    ax.axhline(y=indent-offset, xmin=(m.start-ax.get_xlim()[0])/ax_xlim, xmax=(m.end-ax.get_xlim()[0])/ax_xlim, color=m.mc, linewidth=m.ms, solid_capstyle='butt')
-                    ax.text((m.start + m.end)/2, indent-offset+m.tp, m.tt, color=m.tc, fontsize=m.ts, fontfamily=m.tf, ha='center', va='bottom')
+                    ax.axhline(y=indent-offset, xmin=(m.start-ax.get_xlim()[0])/ax_xlim, xmax=(m.end-ax.get_xlim()[0])/ax_xlim, color=m.mc, linewidth=m.ms, solid_capstyle='butt', zorder=m.mz)
+                    ax.text((m.start + m.end)/2, indent-offset+m.tp, m.tt, color=m.tc, fontsize=m.ts, fontfamily=m.tf, ha='center', va='bottom', zorder=m.mz)
                 # if m.tt != '':
                 #     ax.text(m.start, indent-offset+m.tp, m.tt, color=m.tc, fontsize=m.ts, fontfamily=m.tf, ha='center', va='bottom')
             elif v:
                 if m.mt != '|':
-                    ax.plot(indent+offset, m.start, marker=m.mt, color=m.mc, markersize=m.ms)
-                    ax.text(indent+offset-m.tp, m.start, m.tt, color=m.tc, fontsize=m.ts, fontfamily=m.tf, ha='left', va='center', rotation='vertical')
+                    ax.plot(indent+offset, m.start, marker=m.mt, color=m.mc, markersize=m.ms, zorder=m.mz)
+                    ax.text(indent+offset-m.tp, m.start, m.tt, color=m.tc, fontsize=m.ts, fontfamily=m.tf, ha='left', va='center', rotation='vertical', zorder=m.mz)
                 else:
                     ax_ylim = ax.get_ylim()[1] - ax.get_ylim()[0]
-                    ax.axvline(x=indent+offset, ymin=(m.start - ax.get_ylim()[0])/ax_ylim, ymax=(m.end - ax.get_ylim()[0])/ax_ylim, color=m.mc, linewidth=m.ms, solid_capstyle='butt')
-                    ax.text(indent+offset-m.tp, (m.start+m.end)/2, m.tt, color=m.tc, fontsize=m.ts, fontfamily=m.tf, ha='left', va='center', rotation='vertical')
+                    ax.axvline(x=indent+offset, ymin=(m.start - ax.get_ylim()[0])/ax_ylim, ymax=(m.end - ax.get_ylim()[0])/ax_ylim, color=m.mc, linewidth=m.ms, solid_capstyle='butt', zorder=m.mz)
+                    ax.text(indent+offset-m.tp, (m.start+m.end)/2, m.tt, color=m.tc, fontsize=m.ts, fontfamily=m.tf, ha='left', va='center', rotation='vertical', zorder=m.mz)
                 # if m.tt != '':
                 #     ax.text(indent+offset-m.tp, m.start, m.tt, color=m.tc, fontsize=m.ts, fontfamily=m.tf, ha='left', va='center', rotation='vertical')
         elif itx:
@@ -1764,22 +1765,22 @@ def drawmarkers(ax, b, v, chrlengths, indents, chrs, chrgrps, S, cfg, itx, minl=
             step = S/(len(chrlengths)-1)
             if not v:
                 if m.mt != '_':
-                    ax.plot(m.start+buff[chrgrps[chrid][ind]], S - (step*ind), marker=m.mt, color=m.mc, markersize=m.ms)
-                    ax.text(m.start+buff[chrgrps[chrid][ind]], S - (step*ind) + m.tp, m.tt, color=m.tc, fontsize=m.ts, fontfamily=m.tf, ha='center', va='bottom')
+                    ax.plot(m.start+buff[chrgrps[chrid][ind]], S - (step*ind), marker=m.mt, color=m.mc, markersize=m.ms, zorder=m.mz)
+                    ax.text(m.start+buff[chrgrps[chrid][ind]], S - (step*ind) + m.tp, m.tt, color=m.tc, fontsize=m.ts, fontfamily=m.tf, ha='center', va='bottom', zorder=m.mz)
                 else:
                     # TODO: Check and fix the issue reported in https://github.com/schneebergerlab/plotsr/issues/72
-                    ax.axhline(y=S - (step*ind), xmin=(m.start+buff[chrgrps[chrid][ind]])/ax.get_xlim()[1], xmax=(m.end+buff[chrgrps[chrid][ind]])/ax.get_xlim()[1], color=m.mc, linewidth=m.ms)
-                    ax.text(((m.start+m.end)/2)+buff[chrgrps[chrid][ind]], S - (step*ind) + m.tp, m.tt, color=m.tc, fontsize=m.ts, fontfamily=m.tf, ha='center', va='bottom')
+                    ax.axhline(y=S - (step*ind), xmin=(m.start+buff[chrgrps[chrid][ind]])/ax.get_xlim()[1], xmax=(m.end+buff[chrgrps[chrid][ind]])/ax.get_xlim()[1], color=m.mc, linewidth=m.ms, zorder=m.mz)
+                    ax.text(((m.start+m.end)/2)+buff[chrgrps[chrid][ind]], S - (step*ind) + m.tp, m.tt, color=m.tc, fontsize=m.ts, fontfamily=m.tf, ha='center', va='bottom', zorder=m.mz)
                 # if m.tt != '':
                 #     ax.text(m.start+buff[chrgrps[chrid][ind]], S - (step*ind) + m.tp, m.tt, color=m.tc, fontsize=m.ts, fontfamily=m.tf, ha='center', va='bottom')
             elif v:
                 if m.mt != '|':
-                    ax.plot(1 - S + (step*ind), m.start+buff[chrgrps[chrid][ind]], marker=m.mt, color=m.mc, markersize=m.ms)
-                    ax.text(1 - S + (step*ind)-m.tp, m.start+buff[chrgrps[chrid][ind]], m.tt, color=m.tc, fontsize=m.ts, fontfamily=m.tf, ha='left', va='center', rotation='vertical')
+                    ax.plot(1 - S + (step*ind), m.start+buff[chrgrps[chrid][ind]], marker=m.mt, color=m.mc, markersize=m.ms, zorder=m.mz)
+                    ax.text(1 - S + (step*ind)-m.tp, m.start+buff[chrgrps[chrid][ind]], m.tt, color=m.tc, fontsize=m.ts, fontfamily=m.tf, ha='left', va='center', rotation='vertical', zorder=m.mz)
                 else:
                     # TODO: Check and fix the issue reported in https://github.com/schneebergerlab/plotsr/issues/72
-                    ax.axvline(x=1 - S + (step*ind), ymin=(m.start+buff[chrgrps[chrid][ind]])/ax.get_ylim()[1], ymax=(m.end+buff[chrgrps[chrid][ind]])/ax.get_ylim()[1], color=m.mc, linewidth=m.ms)
-                    ax.text(1 - S + (step*ind)-m.tp, ((m.start+m.end)/2)+buff[chrgrps[chrid][ind]], m.tt, color=m.tc, fontsize=m.ts, fontfamily=m.tf, ha='left', va='center', rotation='vertical')
+                    ax.axvline(x=1 - S + (step*ind), ymin=(m.start+buff[chrgrps[chrid][ind]])/ax.get_ylim()[1], ymax=(m.end+buff[chrgrps[chrid][ind]])/ax.get_ylim()[1], color=m.mc, linewidth=m.ms, zorder=m.mz)
+                    ax.text(1 - S + (step*ind)-m.tp, ((m.start+m.end)/2)+buff[chrgrps[chrid][ind]], m.tt, color=m.tc, fontsize=m.ts, fontfamily=m.tf, ha='left', va='center', rotation='vertical', zorder=m.mz)
                 # if m.tt != '':
                 #     ax.text(1 - S + (step*ind)-m.tp, m.start+buff[chrgrps[chrid][ind]], m.tt, color=m.tc, fontsize=m.ts, fontfamily=m.tf, ha='left', va='center', rotation='vertical')
     return ax
