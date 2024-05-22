@@ -1437,7 +1437,6 @@ def drawax(ax, chrgrps, chrlengths, v, s, cfg, itx, minl=0, maxl=-1, chrname=Non
             ax.set_axisbelow(True)
     elif itx:
         MCHR = cfg['marginchr']
-        # MCHR = 0.01     # TODO : read spacing between neighbouring chromosome from config file
         maxchr = max([sum(chrlengths[i][1].values()) for i in range(len(chrlengths))])
         maxl = int(maxchr/(MCHR + 1 - (MCHR*len(chrgrps))))
         mchr = MCHR*maxl
@@ -1538,7 +1537,6 @@ def pltchrom(ax, chrs, chrgrps, chrlengths, v, S, genomes, cfg, itx, minl=0, max
 
     elif itx:
         MCHR = cfg['marginchr']
-        # MCHR = 0.01     # TODO: read spacing between neighbouring chromosome from config file
         step = S/(len(chrlengths)-1)
         for s in range(len(chrlengths)):
             start = 0
@@ -1560,7 +1558,6 @@ def pltchrom(ax, chrs, chrgrps, chrlengths, v, S, genomes, cfg, itx, minl=0, max
 
 def genbuff(s, chrlengths, chrgrps, chrs, maxl, v, cfg):
     MCHR = cfg['marginchr']
-    # MCHR = 0.01     # TODO: read spacing between neighbouring chromosome from config file
     rchrlen = [chrlengths[s][1][chrgrps[c][s]] for c in chrs]
     rbuff = [0]
     if not v:
