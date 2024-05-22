@@ -223,7 +223,7 @@ def plotsr(args):
     allal = pdconcat([alignments[i][1] for i in range(len(alignments))])
     if ITX:
         minl = 0
-        MCHR = 0.01     # TODO : read spacing between neighbouring chromosome from config file
+        MCHR = cfg['marginchr']
         maxchr = max([sum(chrlengths[i][1].values()) for i in range(len(chrlengths))])
         maxl = int(maxchr/(MCHR + 1 - (MCHR*len(chrgrps))))
     elif cfg['maxl'] != -1:
