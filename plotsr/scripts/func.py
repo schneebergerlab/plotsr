@@ -199,17 +199,21 @@ def readbasecfg(f, v):
     cfg['tralwd'] = 0.1
     cfg['duplwd'] = 0.1
     cfg['alpha'] = 0.8
+
     # Set chromosome margins
     cfg['chrmar'] = 0.1
     cfg['exmar'] = 0.1
+    cfg['marginchr'] = 0.01     # Set ITX margin
+
     # Set legend properties
     cfg['legend'] = True
     cfg['genlegcol'] = -1
     cfg['bbox'] = [0, 1.01, 0.5, 0.3]
     cfg['bbox_v'] = [0, 1.1, 0.5, 0.3]
     cfg['bboxmar'] = 0.5
-    # Set ITX margin
-    cfg['marginchr'] = 0.01
+
+    # track properties
+    cfg['norm'] = 'T'
 
 
     if f == '':
@@ -257,11 +261,11 @@ def readbasecfg(f, v):
                     logger.error("Non-numerical values {} provided for {}. Using default value.".format(line[1], line[0]))
                     continue
                 cfg['bboxmar'] = [float(i) for i in line[1]]
-            elif line[0] == 'legend':
+            elif line[0] in {'legend', 'norm'}:
                 if line[1] not in ['T', 'F']:
-                    logger.warning("Invalid value {} for legend in base.cfg. Valid values: T/F".format(line[1]))
+                    logger.warning("Invalid value {} for {} in base.cfg. Valid values: T/F".format(line[1], line[0]))
                     continue
-                cfg['legend'] = line[1] == 'T'
+                cfg[line[0]] = line[1]
     return cfg
 # END
 
@@ -1792,7 +1796,7 @@ def drawtracks(ax, tracks, s, chrgrps, chrlengths, v, itx, cfg, minl=0, maxl=-1)
         rbuff = genbuff(0, chrlengths, chrgrps, chrs, maxl, v, cfg)
     for i in range(len(tracks)):
         # Plot background rectangles for the tracks
-        ti = tracks[i].ti   # tranck index
+        ti = tracks[i].ti   # track index
         for j in range(cl):
             if not v:
                 x0 = 0 if not itx else 0 + rbuff[chrs[j]]
@@ -1806,8 +1810,18 @@ def drawtracks(ax, tracks, s, chrgrps, chrlengths, v, itx, cfg, minl=0, maxl=-1)
 
         if tracks[i].ft in ['bed', 'bedgraph']:
             bedbin = tracks[i].bincnt
-            # Select positions that are within the limits
+            globaltposmax = None
+            if cfg['norm'] == 'F':
+                for j in range(cl):
+                    # Select positions that are within the limits
+                    if maxl != -1:
+                        tpos = [k[1] for k in bedbin[chrs[j]] if minl <= k[0] <= maxl]
+                    else:
+                        tpos = [k[1] for k in bedbin[chrs[j]]]
+                    globaltposmax = (max(tpos) if globaltposmax is None else max(tpos + [globaltposmax])) if len(tpos) > 0 else globaltposmax
+
             for j in range(cl):
+                # Select positions that are within the limits
                 if maxl != -1:
                     chrpos = [k[0] if not itx else k[0] + rbuff[chrs[j]] for k in bedbin[chrs[j]] if minl <= k[0] <= maxl]
                     tpos = [k[1] for k in bedbin[chrs[j]] if minl <= k[0] <= maxl]
@@ -1815,7 +1829,7 @@ def drawtracks(ax, tracks, s, chrgrps, chrlengths, v, itx, cfg, minl=0, maxl=-1)
                     chrpos = [k[0] if not itx else k[0] + rbuff[chrs[j]] for k in bedbin[chrs[j]]]
                     tpos = [k[1] for k in bedbin[chrs[j]]]
                 # print(cl, len(tpos))
-                tposmax = max(tpos) if len(tpos) > 0 else 0
+                tposmax = (max(tpos) if len(tpos) > 0 else 0) if cfg['norm'] == 'T' else globaltposmax
                 tvars = {'color': tracks[i].lc, 'lw': tracks[i].lw, 'zorder': 2, 'alpha': tracks[i].ta}
                 if not v:
                     y0 = cl - j - th*(ti) if not itx else 1 - th*(ti)
