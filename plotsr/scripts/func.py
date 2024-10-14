@@ -688,7 +688,13 @@ class track():
                     if len(line) < 4:
                         self.logger.warning("Incomplete information in bedgraph file at line: {}. Skipping it.".format("\t".join(line)))
                         continue
-                if curchr == line[0]:
+                if curchr == '':
+                    curchr = line[0]
+                    binv = np.zeros(ceil(chrlengths[0][1][curchr] / bw), dtype=int)
+                    s = deque([int(line[1])])
+                    e = deque([int(line[2])])
+                    v = deque([int(val)])
+                elif curchr == line[0]:
                     s.append(int(line[1]))
                     e.append(int(line[2]))
                     v.append(val)
@@ -699,12 +705,6 @@ class track():
                         self.logger.warning("Chromosome in BEDGRAPH is not present in FASTA or not selected for plotting. Skipping it. BED line: {}".format("\t".join(line)))
                         skipchrs.append(line[0])
                     continue
-                elif curchr == '':
-                    curchr = line[0]
-                    binv = np.zeros(ceil(chrlengths[0][1][curchr]/bw), dtype=int)
-                    s = deque([int(line[1])])
-                    e = deque([int(line[2])])
-                    v = deque([int(val)])
                 else:
                     if line[0] in added_chrs:
                         self.logger.error("BedGraph file: {} is not sorted. For plotting tracks, sorted BedGraph file is required. Exiting.".format(self.f))
