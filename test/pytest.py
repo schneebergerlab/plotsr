@@ -24,7 +24,6 @@ class TestHometools(unittest.TestCase):
         command = f'plotsr --sr syri.out --genomes genomes.txt -o {output}'.split()
         p = Popen(command, stdout=PIPE, stderr=PIPE)
         out = p.communicate()
-        print(out)
         assert os.path.isfile(output)
         os.remove(output)
         for f in glob(f"*log"):
