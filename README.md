@@ -1,5 +1,6 @@
-[![Anaconda-Server Badge](https://anaconda.org/bioconda/plotsr/badges/installer/conda.svg)](https://conda.anaconda.org/bioconda)
-[![Anaconda-Server Badge](https://anaconda.org/bioconda/plotsr/badges/downloads.svg)](https://anaconda.org/bioconda/plotsr)
+![python package](https://github.com/schneebergerlab/plotsr/actions/workflows/python-package.yml/badge.svg?event=push)
+[![Conda Downloads](https://img.shields.io/conda/dn/bioconda/plotsr.svg?label=Conda%20downloads)](
+https://anaconda.org/bioconda/plotsr)
 [![Anaconda-Server Badge](https://anaconda.org/bioconda/plotsr/badges/latest_release_date.svg)](https://anaconda.org/bioconda/plotsr)
 
 ## Introduction
