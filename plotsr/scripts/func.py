@@ -274,6 +274,7 @@ def readbasecfg(f, v):
 # END
 
 
+
 def readfasta(f):
     from gzip import open as gzopen
     from gzip import BadGzipFile
@@ -330,7 +331,6 @@ def readfasta(f):
             raise ValueError("Incorrect sequence for chromosome: {}. Genomic sequence can have only the following characters: {}".format(k, NUCBP))
     return out
 # END
-
 
 class bedAnno():
     def __init__(self, c, start, end, genome, v):
