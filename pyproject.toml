@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools", "numpy"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "plotsr"
+# project homepage: https://github.com/schneebergerlab/plotsr
+authors = [
+    {name = "Manish Goel", email="goel@mpipz.mpg.de"},
+]
+description = "visualizing structural similarities and rearrangements between multiple genomes"
+readme = "README.md"
+# Limit python version as pysam is not available for higher python versions
+requires-python = ">=3.8, <3.12"
+keywords = ["Structural Variation", "SV", "Pangenomics", "Bioinformatics"]
+license = {text = "MIT"}
+dependencies = [
+	"numpy",
+	"pandas",
+	"matplotlib",
+]
+dynamic = ["version"]
+
+
+[project.scripts]
+plotsr = "plotsr.scripts.plotsr:main"
+
+
+[tool.setuptools.dynamic]
+version = {attr = "plotsr.__version__"}
