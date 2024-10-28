@@ -26,3 +26,6 @@ If applicable, add screenshots to help explain your problem.
  - Python
  - pandas
  - matplotlib
+
+**Log file:**
+Please upload log-file from the plotsr run which is resulting in error.
