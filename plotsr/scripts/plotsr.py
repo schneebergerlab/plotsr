@@ -223,9 +223,11 @@ def plotsr(args):
     if ITX:
         minl = 0
         MCHR = cfg['marginchr']
-        if cfg['itxleft']:
+        if cfg['itxalign'] in ['L', 'R', 'C']:
+            # the sum of the longer chrom from each pair
             maxchr = sum([max([chrlengths[i][1][cid] for i, cid in enumerate(cg)]) for cg in chrgrps.values()])
         else:
+            # the larger genome (larger sum of all chrom lengths from each genome)
             maxchr = max([sum(chrlengths[i][1].values()) for i in range(len(chrlengths))])
         maxl = int(maxchr/(1 - (MCHR*(len(chrgrps) - 1))))
     elif REG is None:
