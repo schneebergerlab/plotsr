@@ -198,7 +198,7 @@ def readbasecfg(f, v):
     # Set ITX margin
     # TODO: Add marginchr to base.cfg in the repo
     cfg['marginchr'] = 0.01
-    cfg['itxleft'] = False
+    cfg['itxalign'] = 'D'
 
     if f == '':
         return cfg
@@ -245,11 +245,17 @@ def readbasecfg(f, v):
                     logger.error("Non-numerical values {} provided for {}. Using default value.".format(line[1], line[0]))
                     continue
                 cfg['bboxmar'] = [float(i) for i in line[1]]
-            elif line[0] in ['legend', 'itxleft']:
+            elif line[0] in ['legend', 'genname']:
                 if line[1] not in ['T', 'F']:
-                    logger.warning("Invalid value {} for legend in base.cfg. Valid values: T/F".format(line[1]))
+                    logger.warning("Invalid value {} for {} in base.cfg. Valid values: T/F".format(line[1], line[0]))
                     continue
                 cfg[line[0]] = line[1] == 'T'
+            elif line[0] == 'itxalign':
+                if line[1] not in ['L', 'R', 'C', 'D']:
+                    logger.error("Invalid value {} for {} in base.cfg. Valid values: L/R/C/D (left/right/center/default). Defaulting to equidistant.".format(line[1], line[0]))
+                    cfg[line[0]] = 'D'
+                    continue
+                cfg[line[0]] = line[1]
     return cfg
 # END
 
@@ -1513,6 +1519,7 @@ def drawax(ax, chrgrps, chrlengths, v, s, cfg, itx, minl=0, maxl=-1, chrname=Non
 # END
 
 
+'''
 def pltchrbox(ax, regions, centroms, loc, col, cw, minl=0, lab=None):
     """
     Plot chromosomes as rectangle. This rectangle can consist of chromosome specific
@@ -1537,6 +1544,33 @@ def pltchrbox(ax, regions, centroms, loc, col, cw, minl=0, lab=None):
         ax.add_patch(Rectangle((int(v[0])+minl, loc-(cw/4)), int(v[1]) - int(v[0]), cw/2,  linewidth=0, facecolor='black', alpha=1, zorder=2))
     return ax, chrlabel
 # END
+'''
+
+
+def pltchrbox(ax, loc, col, cw, maxl, minl=0, lab=None):
+    from matplotlib.patches import Rectangle
+    from matplotlib import colors as mc
+    chrlabel = None
+    col = mc.rgb_to_hsv(mc.to_rgb(col))
+    col1 = mc.to_hex(mc.hsv_to_rgb((col[0], 1, col[2])))
+    col2 = mc.to_hex(mc.hsv_to_rgb((col[0], 0.75, col[2])))
+    #maxv = regions[-1][1]
+    maxv = maxl
+    if lab is not None:
+        chrlabel = ax.hlines(0, 0, 0, color=col1, linewidth=1, label=lab, zorder=2)
+    ax.add_patch(Rectangle((minl+1, loc-(cw/2)), maxv, cw,  linewidth=0, facecolor=col1, alpha=1, zorder=2))
+    #ax.add_patch(Rectangle((minl + 100, loc - (cw / 2)), maxv, cw, linewidth=0, facecolor=col1, alpha=1, zorder=2))
+    '''
+    # Add track for AGP. Currently overdrawn on the chromsome
+    ax.add_patch(Rectangle((minl+1, loc-(cw/2)), maxv, cw,  linewidth=0, facecolor=col1, alpha=1, zorder=2))
+    for i, v in enumerate(regions[1::2]):
+        ax.add_patch(Rectangle((int(v[0])+minl, loc-cw), int(v[1]) - int(v[0]), cw*2,  linewidth=0, facecolor=col2, alpha=1, zorder=2))
+    # Add centromere track
+    for v in centroms:
+        ax.add_patch(Rectangle((int(v[0])+minl, loc-(cw/4)), int(v[1]) - int(v[0]), cw/2,  linewidth=0, facecolor='black', alpha=1, zorder=2))
+    '''
+    return ax, chrlabel
+
 
 
 def pltchrom(ax, chrs, chrgrps, chrlengths, v, S, genomes, cfg, itx, minl=0, maxl=-1):
@@ -1545,6 +1579,7 @@ def pltchrom(ax, chrs, chrgrps, chrlengths, v, S, genomes, cfg, itx, minl=0, max
     pltchr = ax.hlines if not v else ax.vlines
     chrlabels = []
     indents = []
+    '''
     # read agp data
     agpdata = dict()
     with open('agps.txt', 'r') as fin:
@@ -1557,6 +1592,7 @@ def pltchrom(ax, chrs, chrgrps, chrlengths, v, S, genomes, cfg, itx, minl=0, max
         for line in fin:
             line = line.strip().split()
             centrodata[line[1]] = readbedasdict(line[0])
+    '''
     cw = 0.025          # Chromosome width
     if not itx:
         # Define indents
@@ -1594,6 +1630,7 @@ def pltchrom(ax, chrs, chrgrps, chrlengths, v, S, genomes, cfg, itx, minl=0, max
                     #        zorder=2)
                     ax, c = pltchrbox(ax, agpdata[genome.n][chrgrps[chrs[i]][s]], centrodata[genome.n][chrgrps[chrs[i]][s]], indents[s]-offset, genome.lc, cw, minl=minl)
     elif itx:
+        itxalign = cfg['itxalign']
         # TODO: Optimise this for chromosomes as ITX
         mchr = cfg['marginchr']
         step = S/(len(chrlengths)-1)
@@ -1602,16 +1639,28 @@ def pltchrom(ax, chrs, chrgrps, chrlengths, v, S, genomes, cfg, itx, minl=0, max
             genome = [gen for gen in genomes if gen.n == chrl[0]][0]
             fixed = S - (step*s) if not v else 1 - S + (step*s)
             for i, cid in enumerate(chrs):
-                # pltchr(fixed, start, end,
-                #        color=genome.lc,
-                #        linewidth=genome.lw,
-                #        zorder=2)
-                ax, c = pltchrbox(ax, agpdata[genome.n][chrgrps[cid][s]], centrodata[genome.n][chrgrps[cid][s]], fixed, genome.lc, cw, minl=start)
-
+                #ax, c = pltchrbox(ax, agpdata[genome.n][chrgrps[cid][s]], centrodata[genome.n][chrgrps[cid][s]], fixed, genome.lc, cw, minl=start)
                 if not v:
-                    if cfg['itxleft']:
-                        end = max([start + c[1][chrgrps[cid][j]] for j, c in enumerate(chrlengths)])
+                    longer_chrom_length = max([c[1][chrgrps[cid][j]] for j, c in enumerate(chrlengths)])
+                    self_length = chrl[1][chrgrps[cid][s]]
+                    if itxalign == 'L':
+                        print('itx: left')
+                        # ax, c = pltchrbox(ax, agpdata[genome.n][chrgrps[cid][s]], centrodata[genome.n][chrgrps[cid][s]], fixed, genome.lc, cw, minl=start)
+                        ax, c = pltchrbox(ax, fixed, genome.lc, cw, maxl=self_length, minl=start)
+                        end = start + longer_chrom_length
+                    elif itxalign == 'R':
+                        print('itx: right')
+                        padding = longer_chrom_length - self_length
+                        ax, c = pltchrbox(ax, fixed, genome.lc, cw, maxl=self_length, minl=start + padding)
+                        end = start + longer_chrom_length
+                    elif itxalign == 'C':
+                        print('itx: center')
+                        padding = (1 / 2) * (longer_chrom_length - self_length)
+                        ax, c = pltchrbox(ax, fixed, genome.lc, cw, maxl=self_length, minl=start + padding)
+                        end = start + longer_chrom_length
                     else:
+                        print('itx: default/equidistant')
+                        ax, c = pltchrbox(ax, fixed, genome.lc, cw, maxl=self_length, minl=start)
                         end = start + chrl[1][chrgrps[cid][s]]
                 else:
                     # TODO: Optimise when using left-align
