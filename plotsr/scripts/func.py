@@ -1809,7 +1809,6 @@ def pltsv(ax, alignments, chrs, v, chrgrps, chrlengths, indents, S, cfg, itx, ch
             df['aend'] += rbuff
             qbuff = chr_plt_coord[chrlengths[s+1][0]]
             qbuff = [qbuff[c][0] for c in df['bchr']]# s here only works when there's one pair of alignments
-            print(qbuff)
             df['bstart'] += qbuff
             df['bend'] += qbuff
             df['ry'] = S - (step*s) if not v else 1 - S + (step*s) #   len(chrlengths) - s - 0.5 if not v else s + 0.5
