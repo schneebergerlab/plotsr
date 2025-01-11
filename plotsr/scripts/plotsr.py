@@ -249,7 +249,7 @@ def plotsr(args):
     ax = drawax(ax, chrgrps, chrlengths, V, S, cfg, ITX, minl=minl, maxl=maxl, chrname=CHRNAME)
 
     # chromosome plotting coordinates
-    chr_plt_coord = genbuff(chrlengths, chrgrps, chrs, maxl, v, cfg)
+    chr_plt_coord = genbuff(chrlengths, chrgrps, chrs, maxl, V, cfg)
 
     ## Draw Chromosomes
     ax, indents, chrlabels = pltchrom(ax, chrs, chrgrps, chrlengths, V, S, genomes, cfg, ITX, chr_plt_coord, minl=minl, maxl=maxl)
