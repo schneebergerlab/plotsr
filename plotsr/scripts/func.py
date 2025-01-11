@@ -1572,8 +1572,49 @@ def pltchrbox(ax, loc, col, cw, maxl, minl=0, lab=None):
     return ax, chrlabel
 
 
+def genbuff(chrlengths, chrgrps, chrs, maxl, v, cfg):
+    mchr = cfg['marginchr']
+    # chromosome plotting coordinates (start, end)
+    chr_plt_coord = {}
+    for s, chrl in enumerate(chrlengths):
+        # add genome_name as key
+        chr_plt_coord[chrl[0]] = {}
+        # initial start coordinate = 0
+        start = 0
+        # iterate chrs in genome
+        for i, cid in enumerate(chrs):
+            if not v:
+                longer_chrom_length = max([c[1][chrgrps[cid][j]] for j, c in enumerate(chrlengths)])
+                self_length = chrl[1][chrgrps[cid][s]]
 
-def pltchrom(ax, chrs, chrgrps, chrlengths, v, S, genomes, cfg, itx, minl=0, maxl=-1):
+                if cfg['itxalign'] == 'L':
+                    end = start + longer_chrom_length
+                    chr_plt_coord[chrl[0]][cid] = (start, end)
+
+                elif cfg['itxalign'] == 'R':
+                    padding = longer_chrom_length - self_length
+                    end = start + longer_chrom_length
+                    chr_plt_coord[chrl[0]][cid] = ((start + padding), end)
+
+                elif cfg['itxalign'] == 'C':
+                    padding = (1/2) * (longer_chrom_length - self_length)
+                    end = start + longer_chrom_length
+                    chr_plt_coord[chrl[0]][cid].append(((start + padding), end), )
+
+                else:# defaulting to cfg['itxalign'] == 'D'
+                    end = start + self_length
+                    chr_plt_coord[chrl[0]][cid].append((start, end), )
+                # update start
+                start = end + mchr * maxl
+
+            else:# elif v
+                pass
+
+    return chr_plt_coord
+# END
+
+
+def pltchrom(ax, chrs, chrgrps, chrlengths, v, S, genomes, cfg, itx, chr_plt_coord, minl=0, maxl=-1):
     chrlabs = [False]*len(chrlengths)
     # Set chromosome direction
     pltchr = ax.hlines if not v else ax.vlines
@@ -1630,47 +1671,46 @@ def pltchrom(ax, chrs, chrgrps, chrlengths, v, S, genomes, cfg, itx, minl=0, max
                     #        zorder=2)
                     ax, c = pltchrbox(ax, agpdata[genome.n][chrgrps[chrs[i]][s]], centrodata[genome.n][chrgrps[chrs[i]][s]], indents[s]-offset, genome.lc, cw, minl=minl)
     elif itx:
-        itxalign = cfg['itxalign']
+        #itxalign = cfg['itxalign']
         # TODO: Optimise this for chromosomes as ITX
-        mchr = cfg['marginchr']
+        #mchr = cfg['marginchr']
         step = S/(len(chrlengths)-1)
         for s, chrl in enumerate(chrlengths):
-            start = 0
+            #start = 0
             genome = [gen for gen in genomes if gen.n == chrl[0]][0]
             fixed = S - (step*s) if not v else 1 - S + (step*s)
             for i, cid in enumerate(chrs):
                 #ax, c = pltchrbox(ax, agpdata[genome.n][chrgrps[cid][s]], centrodata[genome.n][chrgrps[cid][s]], fixed, genome.lc, cw, minl=start)
                 if not v:
-                    longer_chrom_length = max([c[1][chrgrps[cid][j]] for j, c in enumerate(chrlengths)])
+                    #longer_chrom_length = max([c[1][chrgrps[cid][j]] for j, c in enumerate(chrlengths)])
                     self_length = chrl[1][chrgrps[cid][s]]
+                    ax, c = pltchrbox(ax, fixed, genome.lc, cw, maxl=self_length, minl=chr_plt_coord[chrl[0]][cid][0])
+                    '''
                     if itxalign == 'L':
-                        print('itx: left')
-                        # ax, c = pltchrbox(ax, agpdata[genome.n][chrgrps[cid][s]], centrodata[genome.n][chrgrps[cid][s]], fixed, genome.lc, cw, minl=start)
                         ax, c = pltchrbox(ax, fixed, genome.lc, cw, maxl=self_length, minl=start)
                         end = start + longer_chrom_length
                     elif itxalign == 'R':
-                        print('itx: right')
                         padding = longer_chrom_length - self_length
                         ax, c = pltchrbox(ax, fixed, genome.lc, cw, maxl=self_length, minl=start + padding)
                         end = start + longer_chrom_length
                     elif itxalign == 'C':
-                        print('itx: center')
                         padding = (1 / 2) * (longer_chrom_length - self_length)
                         ax, c = pltchrbox(ax, fixed, genome.lc, cw, maxl=self_length, minl=start + padding)
                         end = start + longer_chrom_length
                     else:
-                        print('itx: default/equidistant')
                         ax, c = pltchrbox(ax, fixed, genome.lc, cw, maxl=self_length, minl=start)
                         end = start + self_length
+                    '''
                 else:
                     # TODO: Optimise when using left-align
                     end = start + chrl[1][chrgrps[chrs[len(chrs)-1-i]][s]]
-                start = end + (mchr*maxl)
+                #start = end + (mchr*maxl)
     return ax, indents, chrlabels
 # END
 
 
-def genbuff(s, chrlengths, chrgrps, chrs, maxl, v, cfg):
+'''
+def genbuff(s, chrlengths, chrgrps, chrs, genomes, maxl, v, cfg):
     MCHR = cfg['marginchr']
     if cfg['itxalign'] in ['L', 'R', 'C']:
         rchrlen = [max([chrlengths[i][1][cid] for i, cid in enumerate(cg)]) for cg in chrgrps.values()]
@@ -1687,9 +1727,10 @@ def genbuff(s, chrlengths, chrgrps, chrs, maxl, v, cfg):
     rbuff = dict(zip([chrgrps[c][s] for c in chrs], rbuff))
     return rbuff
 # END
+'''
 
 
-def pltsv(ax, alignments, chrs, v, chrgrps, chrlengths, indents, S, cfg, itx, maxl):
+def pltsv(ax, alignments, chrs, v, chrgrps, chrlengths, indents, S, cfg, itx, chr_plt_coord):
     from collections import deque
     from copy import deepcopy
     def annotodict(anno):
@@ -1762,12 +1803,13 @@ def pltsv(ax, alignments, chrs, v, chrgrps, chrlengths, indents, S, cfg, itx, ma
         elif itx:
             step = S/(len(chrlengths)-1)
             S - (step*s) if not v else 1 - S + (step*s)
-            rbuff = genbuff(s, chrlengths, chrgrps, chrs, maxl, v, cfg)
-            rbuff = [rbuff[c] for c in df['achr']]
+            rbuff = chr_plt_coord[chrlengths[s][0]]
+            rbuff = [rbuff[c][0] for c in df['achr']]
             df['astart'] += rbuff
             df['aend'] += rbuff
-            qbuff = genbuff(s+1, chrlengths, chrgrps, chrs, maxl, v, cfg)
-            qbuff = [qbuff[c] for c in df['bchr']]
+            qbuff = chr_plt_coord[chrlengths[s+1][0]]
+            qbuff = [qbuff[c][0] for c in df['bchr']]# s here only works when there's one pair of alignments
+            print(qbuff)
             df['bstart'] += qbuff
             df['bend'] += qbuff
             df['ry'] = S - (step*s) if not v else 1 - S + (step*s) #   len(chrlengths) - s - 0.5 if not v else s + 0.5
@@ -1828,7 +1870,7 @@ def bezierpath(rs, re, qs, qe, ry, qy, v, col, alpha, label='', lw=0, zorder=0):
 # END
 
 
-def drawmarkers(ax, b, v, chrlengths, indents, chrs, chrgrps, S, cfg, itx, minl=0, maxl=-1):
+def drawmarkers(ax, b, v, chrlengths, indents, chrs, chrgrps, S, cfg, itx, chr_plt_coord, minl=0, maxl=-1):
     import logging
     logger = logging.getLogger('drawmarkers')
     mdata = readannobed(b, v, chrlengths)
@@ -1866,7 +1908,8 @@ def drawmarkers(ax, b, v, chrlengths, indents, chrs, chrgrps, S, cfg, itx, minl=
                 # if m.tt != '':
                 #     ax.text(indent+offset-m.tp, m.start, m.tt, color=m.tc, fontsize=m.ts, fontfamily=m.tf, ha='left', va='center', rotation='vertical')
         elif itx:
-            buff = genbuff(ind, chrlengths, chrgrps, chrs, maxl, v, cfg)
+            #buff = genbuff(ind, chrlengths, chrgrps, chrs, maxl, v, cfg)
+            buff = [coord[ind] for coord in chr_plt_coord[chrlengths[0][0]].values()]
             chrid = chrid[0]
             step = S/(len(chrlengths)-1)
             if not v:
@@ -1891,7 +1934,7 @@ def drawmarkers(ax, b, v, chrlengths, indents, chrs, chrgrps, S, cfg, itx, minl=
 # END
 
 
-def drawtracks(ax, tracks, s, chrgrps, chrlengths, v, itx, cfg, minl=0, maxl=-1):
+def drawtracks(ax, tracks, s, chrgrps, chrlengths, v, itx, cfg, chr_plt_coord, minl=0, maxl=-1):
     from matplotlib.patches import Rectangle
     import numpy as np
     from collections import deque
@@ -1913,7 +1956,8 @@ def drawtracks(ax, tracks, s, chrgrps, chrlengths, v, itx, cfg, minl=0, maxl=-1)
     if itx:
         if maxl < 1:
             raise ValueError("Incorrect value for maxl. This is a bug. Contact developers.")
-        rbuff = genbuff(0, chrlengths, chrgrps, chrs, maxl, v, cfg)
+        #rbuff = genbuff(0, chrlengths, chrgrps, chrs, maxl, v, cfg)
+        rbuff = [coord[0] for coord in chr_plt_coord[chrlengths[0][0]].values()]
     for i in range(len(tracks)):
         # Plot background rectangles for the tracks
         ti = tracks[i].ti   # tranck index
