@@ -1951,26 +1951,34 @@ def drawmarkers(ax, b, v, chrlengths, indents, chrs, chrgrps, S, cfg, itx, chr_p
                 #     ax.text(indent+offset-m.tp, m.start, m.tt, color=m.tc, fontsize=m.ts, fontfamily=m.tf, ha='left', va='center', rotation='vertical')
         elif itx:
             #buff = genbuff(ind, chrlengths, chrgrps, chrs, maxl, v, cfg)
-            buff = [coord[ind] for coord in chr_plt_coord[chrlengths[0][0]].values()]
-            #buff = [coord[ind] for coord in chr_plt_coord[chrlengths[0][0]].values()]# will coord[ind] cause an error?
+            #buff = [coord for coord in chr_plt_coord[m.genome].values()]
+            buff = chr_plt_coord[m.genome]
             chrid = chrid[0]
             step = S/(len(chrlengths)-1)
             if not v:
                 if m.mt != '_':
-                    ax.plot(m.start+buff[chrgrps[chrid][ind]], S - (step*ind), marker=m.mt, color=m.mc, markersize=m.ms)
-                    ax.text(m.start+buff[chrgrps[chrid][ind]], S - (step*ind) + m.tp, m.tt, color=m.tc, fontsize=m.ts, fontfamily=m.tf, ha='center', va='bottom')
+                    #ax.plot(m.start+buff[chrgrps[chrid][ind]], S - (step*ind), marker=m.mt, color=m.mc, markersize=m.ms)
+                    ax.plot(m.start + buff[chrid], S - (step * ind), marker=m.mt, color=m.mc, markersize=m.ms)
+                    #ax.text(m.start+buff[chrgrps[chrid][ind]], S - (step*ind) + m.tp, m.tt, color=m.tc, fontsize=m.ts, fontfamily=m.tf, ha='center', va='bottom')
+                    ax.text(m.start + buff[chrid], S - (step * ind) + m.tp, m.tt, color=m.tc, fontsize=m.ts, fontfamily=m.tf, ha='center', va='bottom')
                 else:
-                    ax.axhline(y=S - (step*ind), xmin=(m.start+buff[chrgrps[chrid][ind]])/ax.get_xlim()[1], xmax=(m.end+buff[chrgrps[chrid][ind]])/ax.get_xlim()[1], color=m.mc, linewidth=m.ms)
-                    ax.text(((m.start+m.end)/2)+buff[chrgrps[chrid][ind]], S - (step*ind) + m.tp, m.tt, color=m.tc, fontsize=m.ts, fontfamily=m.tf, ha='center', va='bottom')
+                    #ax.axhline(y=S - (step*ind), xmin=(m.start+buff[chrgrps[chrid][ind]])/ax.get_xlim()[1], xmax=(m.end+buff[chrgrps[chrid][ind]])/ax.get_xlim()[1], color=m.mc, linewidth=m.ms)
+                    ax.axhline(y=S - (step * ind), xmin=(m.start + buff[chrid]) / ax.get_xlim()[1], xmax=(m.end + buff[chrid]) / ax.get_xlim()[1], color=m.mc, linewidth=m.ms)
+                    #ax.text(((m.start+m.end)/2)+buff[chrgrps[chrid][ind]], S - (step*ind) + m.tp, m.tt, color=m.tc, fontsize=m.ts, fontfamily=m.tf, ha='center', va='bottom')
+                    ax.text(((m.start + m.end) / 2) + buff[chrid], S - (step * ind) + m.tp, m.tt, color=m.tc, fontsize=m.ts, fontfamily=m.tf, ha='center', va='bottom')
                 # if m.tt != '':
                 #     ax.text(m.start+buff[chrgrps[chrid][ind]], S - (step*ind) + m.tp, m.tt, color=m.tc, fontsize=m.ts, fontfamily=m.tf, ha='center', va='bottom')
-            elif v:
+            else:
                 if m.mt != '|':
-                    ax.plot(1 - S + (step*ind), m.start+buff[chrgrps[chrid][ind]], marker=m.mt, color=m.mc, markersize=m.ms)
-                    ax.text(1 - S + (step*ind)-m.tp, m.start+buff[chrgrps[chrid][ind]], m.tt, color=m.tc, fontsize=m.ts, fontfamily=m.tf, ha='left', va='center', rotation='vertical')
+                    #ax.plot(1 - S + (step*ind), m.start+buff[chrgrps[chrid][ind]], marker=m.mt, color=m.mc, markersize=m.ms)
+                    ax.plot(1 - S + (step * ind), m.start + buff[chrid], marker=m.mt, color=m.mc, markersize=m.ms)
+                    #ax.text(1 - S + (step*ind)-m.tp, m.start+buff[chrgrps[chrid][ind]], m.tt, color=m.tc, fontsize=m.ts, fontfamily=m.tf, ha='left', va='center', rotation='vertical')
+                    ax.text(1 - S + (step * ind) - m.tp, m.start + buff[chrid], m.tt, color=m.tc, fontsize=m.ts, fontfamily=m.tf, ha='left', va='center', rotation='vertical')
                 else:
-                    ax.axvline(x=1 - S + (step*ind), ymin=(m.start+buff[chrgrps[chrid][ind]])/ax.get_ylim()[1], ymax=(m.end+buff[chrgrps[chrid][ind]])/ax.get_ylim()[1], color=m.mc, linewidth=m.ms)
-                    ax.text(1 - S + (step*ind)-m.tp, ((m.start+m.end)/2)+buff[chrgrps[chrid][ind]], m.tt, color=m.tc, fontsize=m.ts, fontfamily=m.tf, ha='left', va='center', rotation='vertical')
+                    #ax.axvline(x=1 - S + (step*ind), ymin=(m.start+buff[chrgrps[chrid][ind]])/ax.get_ylim()[1], ymax=(m.end+buff[chrgrps[chrid][ind]])/ax.get_ylim()[1], color=m.mc, linewidth=m.ms)
+                    ax.axvline(x=1 - S + (step * ind), ymin=(m.start + buff[chrid]) / ax.get_ylim()[1], ymax=(m.end + buff[chrid]) / ax.get_ylim()[1], color=m.mc, linewidth=m.ms)
+                    #ax.text(1 - S + (step*ind)-m.tp, ((m.start+m.end)/2)+buff[chrgrps[chrid][ind]], m.tt, color=m.tc, fontsize=m.ts, fontfamily=m.tf, ha='left', va='center', rotation='vertical')
+                    ax.text(1 - S + (step * ind) - m.tp, ((m.start + m.end) / 2) + buff[chrid], m.tt, color=m.tc, fontsize=m.ts, fontfamily=m.tf, ha='left', va='center', rotation='vertical')
                 # if m.tt != '':
                 #     ax.text(1 - S + (step*ind)-m.tp, m.start+buff[chrgrps[chrid][ind]], m.tt, color=m.tc, fontsize=m.ts, fontfamily=m.tf, ha='left', va='center', rotation='vertical')
     return ax
@@ -2000,7 +2008,7 @@ def drawtracks(ax, tracks, s, chrgrps, chrlengths, v, itx, cfg, chr_plt_coord, m
         if maxl < 1:
             raise ValueError("Incorrect value for maxl. This is a bug. Contact developers.")
         #rbuff = genbuff(0, chrlengths, chrgrps, chrs, maxl, v, cfg)
-        rbuff = [coord for coord in chr_plt_coord[chrlengths[0][0]].values()]
+        rbuff = [coord for coord in chr_plt_coord[chrlengths[0][0]].values()]# chrlengths[0][0] selects the first genome
     for i in range(len(tracks)):
         # Plot background rectangles for the tracks
         ti = tracks[i].ti   # tranck index
