@@ -2008,14 +2008,14 @@ def drawtracks(ax, tracks, s, chrgrps, chrlengths, v, itx, cfg, chr_plt_coord, m
         if maxl < 1:
             raise ValueError("Incorrect value for maxl. This is a bug. Contact developers.")
         #rbuff = genbuff(0, chrlengths, chrgrps, chrs, maxl, v, cfg)
-        rbuff = [coord for coord in chr_plt_coord[chrlengths[0][0]].values()]# chrlengths[0][0] selects the first genome
+        #rbuff = [coord for coord in chr_plt_coord[chrlengths[0][0]].values()]#chrlengths[0][0] gets the name of the 1st genome
+        rbuff = chr_plt_coord[chrlengths[0][0]]# dict of chromosome plotting starting coordinates
     for i in range(len(tracks)):
         # Plot background rectangles for the tracks
-        ti = tracks[i].ti   # tranck index
+        ti = tracks[i].ti   # track index
         for j in range(cl):
             if not v:
-                x0 = 0 if not itx else 0 + rbuff[chrs[j]]
-                # y0 = cl - j - th*(i+1) if not itx else 1 - th*(i+1)
+                x0 = 0 if not itx else 0 + rbuff[chrs[j]]# no modification because the way it is now works
                 y0 = cl - j - th*(ti) if not itx else 1 - th*(ti)
                 ax.add_patch(Rectangle((x0, y0), chrlengths[0][1][chrs[j]], diff,  linewidth=0, facecolor=tracks[i].bc, alpha=tracks[i].ba, zorder=1))
             else:
