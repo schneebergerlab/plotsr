@@ -2064,6 +2064,7 @@ def drawtracks(ax, tracks, s, chrgrps, chrlengths, v, itx, cfg, chr_plt_coord, m
             if itx:
                 if not v:
                     xpos = chrlengths[0][1][chrs[j]] + margin if maxl == -1 else maxl + margin
+                    print(xpos, y0+diff/2)
                     ax.text(xpos, y0 + diff/2, tracks[i].n, color=tracks[i].nc, fontsize=tracks[i].ns, fontfamily=tracks[i].nf, ha='left', va='center', rotation='horizontal')
                 else:
                     ypos = chrlengths[0][1][chrs[j]] + margin if maxl == -1 else maxl + margin
@@ -2116,6 +2117,7 @@ def drawtracks(ax, tracks, s, chrgrps, chrlengths, v, itx, cfg, chr_plt_coord, m
             else:
                 pos = maxl + margin + (tracks[i].nm*maxl)
                 if not v:
+                    print(pos, float(pd.unique(anno['fixed'])))
                     axt(pos, float(pd.unique(anno['fixed'])))
                 else:
                     axt(float(pd.unique(anno['fixed'])), pos)
