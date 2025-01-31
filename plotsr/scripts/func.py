@@ -1569,6 +1569,8 @@ def pltchrbox(ax, v, loc, col, cw, maxl, minl=0, lab=None):
 
 def pltchrom(ax, chrs, chrgrps, chrlengths, v, S, genomes, cfg, itx, chr_start_coord, minl=0):
     chrlabs = [False]*len(chrlengths)
+    # Set chromosome direction
+    pltchr = ax.hlines if not v else ax.vlines
     chrlabels = []
     indents = []
     chrwidth = 0.025
@@ -1599,14 +1601,15 @@ def pltchrom(ax, chrs, chrgrps, chrlengths, v, S, genomes, cfg, itx, chr_start_c
             for i in range(len(chrs)):
                 offset = i if not v else -i
                 genome = [gen for gen in genomes if gen.n == chrlengths[s][0]][0]
+                chrlength = chrlengths[s][1][chrs[i]]
                 if not chrlabs[s]:
                     #ax, c = pltchrbox(ax, agpdata[genome.n][chrgrps[chrs[i]][s]], centrodata[genome.n][chrgrps[chrs[i]][s]], indents[s]-offset, genome.lc, chrwidth, minl=minl, lab=chrlengths[s][0])
-                    ax, c = pltchrbox(ax, v, indents[s] - offset, genome.lc, chrwidth, minl=minl, lab=chrlengths[s][0])
+                    ax, c = pltchrbox(ax, v, indents[s] - offset, genome.lc, chrwidth, maxl=chrlength, minl=minl, lab=chrlengths[s][0])
                     chrlabels.append(c)
                     chrlabs[s] = True
                 else:
                     #ax, c = pltchrbox(ax, agpdata[genome.n][chrgrps[chrs[i]][s]], centrodata[genome.n][chrgrps[chrs[i]][s]], indents[s]-offset, genome.lc, chrwidth, minl=minl)
-                    ax, c = pltchrbox(ax, v, indents[s] - offset, genome.lc, chrwidth, minl=minl)
+                    ax, c = pltchrbox(ax, v, indents[s] - offset, genome.lc, chrwidth, maxl=chrlength, minl=minl)
     elif itx:
         step = S/(len(chrlengths)-1)
         for s, chrl in enumerate(chrlengths):
@@ -1899,7 +1902,6 @@ def drawtracks(ax, tracks, s, chrgrps, chrlengths, v, itx, cfg, chr_start_coord,
             if itx:
                 if not v:
                     xpos = chrlengths[0][1][chrs[j]] + margin if maxl == -1 else maxl + margin
-                    print(xpos, y0+diff/2)
                     ax.text(xpos, y0 + diff/2, tracks[i].n, color=tracks[i].nc, fontsize=tracks[i].ns, fontfamily=tracks[i].nf, ha='left', va='center', rotation='horizontal')
                 else:
                     ypos = chrlengths[0][1][chrs[j]] + margin if maxl == -1 else maxl + margin
