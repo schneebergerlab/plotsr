@@ -397,7 +397,7 @@ def readannobed(path, v, chrlengths):
                 continue
             line = line.strip().split("\t")
             if len(line) < 4:
-                logger.warning("Incomplete example in BED file line:\n{}\nGenome coordinate (chromosome, start, end) and genome name are required columns; tags can be in optional column".format('\t'.join(line)))
+                logger.warning("Incomplete example in BED file line:\n{}\nGenome coordinate (chromosome, start, end) and genome name are required columns; tags can be in optional column.\nPlease ensure separators are tabs, not spaces.".format('\t'.join(line)))
                 continue
             found = False
             for i in chrlengths:
@@ -1387,10 +1387,10 @@ def genbuff(chrlengths, chrgrps, chrs, maxl, v, cfg):
     # read from config file
     mchr = cfg['marginchr']
     # declare output dict
-    chr_plt_coord = {}
+    chr_start_coord = {}
     for s, chrl in enumerate(chrlengths):
         # add genome_name as key
-        chr_plt_coord[chrl[0]] = {}
+        chr_start_coord[chrl[0]] = {}
         # initial start coordinate = 0
         start = 0
         if not v:
@@ -1403,25 +1403,25 @@ def genbuff(chrlengths, chrgrps, chrs, maxl, v, cfg):
             # four itx align modes
             if cfg['itxalign'] == 'L':
                 end = start + longer_chrom_length
-                chr_plt_coord[chrl[0]][cid] = start
+                chr_start_coord[chrl[0]][cid] = start
             elif cfg['itxalign'] == 'R':
                 padding = longer_chrom_length - self_length
                 end = start + longer_chrom_length
-                chr_plt_coord[chrl[0]][cid] = start + padding
+                chr_start_coord[chrl[0]][cid] = start + padding
             elif cfg['itxalign'] == 'C':
                 padding = (1/2) * (longer_chrom_length - self_length)
                 end = start + longer_chrom_length
-                chr_plt_coord[chrl[0]][cid] = start + padding
+                chr_start_coord[chrl[0]][cid] = start + padding
             else:# defaulting to cfg['itxalign'] == 'D'
                 end = start + self_length
-                chr_plt_coord[chrl[0]][cid] = start
+                chr_start_coord[chrl[0]][cid] = start
             # update start
             start = end + mchr * maxl
-    return chr_plt_coord
+    return chr_start_coord
 # END
 
 
-def drawax(ax, chrgrps, chrlengths, v, s, cfg, itx, minl=0, maxl=-1, chrname=None):
+def drawax(ax, chrgrps, chrlengths, v, s, cfg, itx, chr_start_coord, minl=0, maxl=-1, chrname=None):
     import numpy as np
     from collections import deque
     bottom_limit = -cfg['exmar']
@@ -1498,35 +1498,22 @@ def drawax(ax, chrgrps, chrlengths, v, s, cfg, itx, minl=0, maxl=-1, chrname=Non
             ax.yaxis.grid(True, which='both', linestyle='--')
             ax.set_axisbelow(True)
     elif itx:
-        MCHR = cfg['marginchr']
-        if cfg['itxalign'] in ['L', 'R', 'C']:
-            maxchr = sum([max([chrlengths[i][1][cid] for i, cid in enumerate(cg)]) for cg in chrgrps.values()])
-        else:# defaulting to equidistant
-            maxchr = max([sum(chrlengths[i][1].values()) for i in range(len(chrlengths))])
-        maxl = int(maxchr/(1 - (MCHR*(len(chrgrps) - 1))))
-        mchr = MCHR*maxl
         step = s/(len(chrlengths)-1)
         if not v:
             ax.set_xlim(0, maxl)
             ax.set_ylim(bottom_limit, 1+upper_limit)
             tick_pos = deque()
             tick_lab = deque()
-            offset = 0
-            for k, c in chrgrps.items():
-                if cfg['itxalign'] in ['L', 'R', 'C']:
-                    ## If left/center/right aligned: For x-tick position, get the middle position of the longest chromosome
-                    maxchr = max([chrlengths[i][1][cid] for i, cid in enumerate(c)])
-                else:
-                    ## If not aligned: For x-tick position, get the middle position of the bottom most chromosome
-                    maxchr = chrlengths[-1][1][c[-1]]
-                tick_pos.append(offset + (maxchr/2))
-                tick_lab.append(chrnamedict[k])
-                offset += maxchr + mchr
+            # get chrbox start coord of the last genome (plotted at bottom, closest to ticks)
+            offset = chr_start_coord[chrlengths[-1][0]]
+            for chr in chrgrps:
+                # tick position is offset plus half of last genome chrbox length
+                tick_pos.append(offset[chr] + (chrlengths[-1][1][chr])/2)
+                tick_lab.append(chrnamedict[chr])
             ax.set_xticks(tick_pos)
             ax.set_xticklabels(tick_lab)
             step = s/(len(chrlengths)-1)
             ax.set_yticks([round(step*i, 2) for i in range(len(chrlengths))])
-            # ax.set_yticks([i + 0.5 for i in range(len(chrlengths))][::-1])
             ax.set_yticklabels([i[0] for i in chrlengths][::-1])
             ax.tick_params(axis='y', right=False, left=False)
             ax.set_axisbelow(True)
@@ -1537,13 +1524,12 @@ def drawax(ax, chrgrps, chrlengths, v, s, cfg, itx, minl=0, maxl=-1, chrname=Non
             ax.set_xlim(bottom_limit, 1+upper_limit)
             tick_pos = deque()
             tick_lab = deque()
-            offset = 0
-            for k in chrgrps.__reversed__():
-                c = chrgrps[k]
-                maxchr = max([chrlengths[j][1][c[j]] for j in range(len(c))])
-                tick_pos.append(offset + (maxchr/2))
-                tick_lab.append(chrnamedict[k])
-                offset += maxchr + mchr
+            # get chrbox start coord of the first genome (plotted leftmost, closest to ticks)
+            offset = chr_start_coord[chrlengths[0][0]]
+            for chr in chrgrps.__reversed__():
+                # tick position is offset plus half of first/leftmost genome chrbox length
+                tick_pos.append(offset[chr] + (chrlengths[0][1][chr])/2)
+                tick_lab.append(chrnamedict[chr])
             ax.set_yticks(tick_pos)
             ax.set_yticklabels(tick_lab)
             ax.set_xticks([round((1-s) + step*i, 2) for i in range(len(chrlengths))])
@@ -1563,14 +1549,12 @@ def pltchrbox(ax, v, loc, col, cw, maxl, minl=0, lab=None):
     col = mc.rgb_to_hsv(mc.to_rgb(col))
     col1 = mc.to_hex(mc.hsv_to_rgb((col[0], 1, col[2])))
     col2 = mc.to_hex(mc.hsv_to_rgb((col[0], 0.75, col[2])))
-    #maxv = regions[-1][1]
     if lab is not None:
         chrlabel = ax.hlines(0, 0, 0, color=col1, linewidth=1, label=lab, zorder=2)
     if not v:
         ax.add_patch(Rectangle((minl+1, loc-cw/2), width=maxl, height=cw,  linewidth=0, facecolor=col1, alpha=1, zorder=2))
     else:
         ax.add_patch(Rectangle((loc-cw/2, minl+1), width=cw, height=maxl, linewidth=0, facecolor=col1, alpha=1, zorder=2))
-    #ax.add_patch(Rectangle((minl + 100, loc - (cw / 2)), maxv, cw, linewidth=0, facecolor=col1, alpha=1, zorder=2))
     '''
     # Add track for AGP. Currently overdrawn on the chromsome
     ax.add_patch(Rectangle((minl+1, loc-(cw/2)), maxv, cw,  linewidth=0, facecolor=col1, alpha=1, zorder=2))
@@ -1583,10 +1567,8 @@ def pltchrbox(ax, v, loc, col, cw, maxl, minl=0, lab=None):
     return ax, chrlabel
 
 
-def pltchrom(ax, chrs, chrgrps, chrlengths, v, S, genomes, cfg, itx, chr_plt_coord, minl=0):
+def pltchrom(ax, chrs, chrgrps, chrlengths, v, S, genomes, cfg, itx, chr_start_coord, minl=0):
     chrlabs = [False]*len(chrlengths)
-    # Set chromosome direction
-    #pltchr = ax.hlines if not v else ax.vlines
     chrlabels = []
     indents = []
     chrwidth = 0.025
@@ -1605,7 +1587,7 @@ def pltchrom(ax, chrs, chrgrps, chrlengths, v, S, genomes, cfg, itx, chr_plt_coo
             centrodata[line[1]] = readbedasdict(line[0])
     '''
     if not itx:
-        # Define indents
+        # define indents
         step = S/(len(chrlengths)-1)
         if not v:
             rend = len(chrs)-1+S+cfg['chrmar']
@@ -1616,17 +1598,15 @@ def pltchrom(ax, chrs, chrgrps, chrlengths, v, S, genomes, cfg, itx, chr_plt_coo
         for s in range(len(chrlengths)):
             for i in range(len(chrs)):
                 offset = i if not v else -i
-                #if maxl == -1:
-                #    maxcoord = chrlengths[s][1][chrgrps[chrs[i]][s]]
-                #else:
-                #    maxcoord = maxl
                 genome = [gen for gen in genomes if gen.n == chrlengths[s][0]][0]
                 if not chrlabs[s]:
-                    ax, c = pltchrbox(ax, agpdata[genome.n][chrgrps[chrs[i]][s]], centrodata[genome.n][chrgrps[chrs[i]][s]], indents[s]-offset, genome.lc, chrwidth, minl=minl, lab=chrlengths[s][0])
+                    #ax, c = pltchrbox(ax, agpdata[genome.n][chrgrps[chrs[i]][s]], centrodata[genome.n][chrgrps[chrs[i]][s]], indents[s]-offset, genome.lc, chrwidth, minl=minl, lab=chrlengths[s][0])
+                    ax, c = pltchrbox(ax, v, indents[s] - offset, genome.lc, chrwidth, minl=minl, lab=chrlengths[s][0])
                     chrlabels.append(c)
                     chrlabs[s] = True
                 else:
-                    ax, c = pltchrbox(ax, agpdata[genome.n][chrgrps[chrs[i]][s]], centrodata[genome.n][chrgrps[chrs[i]][s]], indents[s]-offset, genome.lc, chrwidth, minl=minl)
+                    #ax, c = pltchrbox(ax, agpdata[genome.n][chrgrps[chrs[i]][s]], centrodata[genome.n][chrgrps[chrs[i]][s]], indents[s]-offset, genome.lc, chrwidth, minl=minl)
+                    ax, c = pltchrbox(ax, v, indents[s] - offset, genome.lc, chrwidth, minl=minl)
     elif itx:
         step = S/(len(chrlengths)-1)
         for s, chrl in enumerate(chrlengths):
@@ -1634,17 +1614,17 @@ def pltchrom(ax, chrs, chrgrps, chrlengths, v, S, genomes, cfg, itx, chr_plt_coo
             genome = [gen for gen in genomes if gen.n == chrl[0]][0]
             # starting loc of the chrbox being plotted: used for x-coord if not v, for y-coord if v; is fixed when itx mode because chrboxes are plotted in one line
             fixed = S - (step*s) if not v else 1 - S + (step*s)
-            for cid in chr_plt_coord[chrl[0]]:
-                # chrl[0] gets the genome name; chr_plt_coord[chrl[0]] gets the dict of chromosome start coords, where the key/cid is chromosome name
+            for cid in chr_start_coord[chrl[0]]:
+                # chrl[0] gets the genome name; chr_start_coord[chrl[0]] gets the dict of chromosome start coords, where the key/cid is chromosome name
                 chrlength = chrl[1][chrgrps[cid][s]]
                 # chrlength is the length of the chromosome being plotted by the function below
                 # minl gets the chromosome starting coord: {dict of chromosome start coords}[cid]
-                ax, c = pltchrbox(ax, v, fixed, genome.lc, chrwidth, maxl=chrlength, minl=chr_plt_coord[chrl[0]][cid])
+                ax, c = pltchrbox(ax, v, fixed, genome.lc, chrwidth, maxl=chrlength, minl=chr_start_coord[chrl[0]][cid])
     return ax, indents, chrlabels
 # END
 
 
-def pltsv(ax, alignments, chrs, v, chrgrps, chrlengths, indents, S, cfg, itx, chr_plt_coord):
+def pltsv(ax, alignments, chrs, v, chrgrps, chrlengths, indents, S, cfg, itx, chr_start_coord):
     from collections import deque
     from copy import deepcopy
     def annotodict(anno):
@@ -1713,11 +1693,11 @@ def pltsv(ax, alignments, chrs, v, chrgrps, chrlengths, indents, S, cfg, itx, ch
         elif itx:
             step = S/(len(chrlengths)-1)
             S - (step*s) if not v else 1 - S + (step*s)
-            rbuff = chr_plt_coord[chrlengths[s][0]]
+            rbuff = chr_start_coord[chrlengths[s][0]]
             rbuff = [rbuff[c] for c in df['achr']]
             df['astart'] += rbuff
             df['aend'] += rbuff
-            qbuff = chr_plt_coord[chrlengths[s+1][0]]
+            qbuff = chr_start_coord[chrlengths[s+1][0]]
             qbuff = [qbuff[c] for c in df['bchr']]
             df['bstart'] += qbuff
             df['bend'] += qbuff
@@ -1779,7 +1759,7 @@ def bezierpath(rs, re, qs, qe, ry, qy, v, col, alpha, label='', lw=0, zorder=0):
 # END
 
 
-def drawmarkers(ax, b, v, chrlengths, indents, chrs, chrgrps, S, cfg, itx, chr_plt_coord, minl=0, maxl=-1):
+def drawmarkers(ax, b, v, chrlengths, indents, chrs, chrgrps, S, cfg, itx, chr_start_coord, minl=0, maxl=-1):
     import logging
     logger = logging.getLogger('drawmarkers')
     mdata = readannobed(b, v, chrlengths)
@@ -1819,9 +1799,9 @@ def drawmarkers(ax, b, v, chrlengths, indents, chrs, chrgrps, S, cfg, itx, chr_p
                 # if m.tt != '':
                 #     ax.text(indent+offset-m.tp, m.start, m.tt, color=m.tc, fontsize=m.ts, fontfamily=m.tf, ha='left', va='center', rotation='vertical')
         elif itx:
-            # chr_plt_coord is dict with genomes as keys and dict of chromosome plotting start coordinates per chromosome as values
+            # chr_start_coord is dict with genomes as keys and dict of chromosome plotting start coordinates per chromosome as values
             # buff selects the dict by genome name (m.genome)
-            buff = chr_plt_coord[m.genome]
+            buff = chr_start_coord[m.genome]
             chrid = chrid[0]
             step = S/(len(chrlengths)-1)
             if not v:
@@ -1843,7 +1823,7 @@ def drawmarkers(ax, b, v, chrlengths, indents, chrs, chrgrps, S, cfg, itx, chr_p
 # END
 
 
-def drawtracks(ax, tracks, s, chrgrps, chrlengths, v, itx, cfg, chr_plt_coord, minl=0, maxl=-1):
+def drawtracks(ax, tracks, s, chrgrps, chrlengths, v, itx, cfg, chr_start_coord, minl=0, maxl=-1):
     from matplotlib.patches import Rectangle
     import numpy as np
     from collections import deque
@@ -1864,8 +1844,8 @@ def drawtracks(ax, tracks, s, chrgrps, chrlengths, v, itx, cfg, chr_plt_coord, m
     if itx:
         if maxl < 1:
             raise ValueError("Incorrect value for maxl. This is a bug. Contact developers.")
-        rbuff = chr_plt_coord[chrlengths[-1][0]] if not v else chr_plt_coord[chrlengths[0][0]]# chr_plt_coord is dict of chromosome plotting starting coordinates
-        # chrlengths[-1][0] gets last genome name; chr_plt_coord[chrlengths[0][0]] gets the first for v mode
+        rbuff = chr_start_coord[chrlengths[-1][0]] if not v else chr_start_coord[chrlengths[0][0]]# chr_start_coord is dict of chromosome plotting starting coordinates
+        # chrlengths[-1][0] gets last genome name; chr_start_coord[chrlengths[0][0]] gets the first for v mode
     for i in range(len(tracks)):
         # Plot background rectangles for the tracks
         ti = tracks[i].ti   # track index

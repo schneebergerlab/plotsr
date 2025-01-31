@@ -245,14 +245,14 @@ def plotsr(args):
     if 'DUP' in allal['type'].array or 'INVDP' in allal['type'].array:
         labelcnt += 1
 
-    ## Draw Axes
-    ax = drawax(ax, chrgrps, chrlengths, V, S, cfg, ITX, minl=minl, maxl=maxl, chrname=CHRNAME)
-
     # chromosome plotting coordinates
-    chr_plt_coord = genbuff(chrlengths, chrgrps, chrs, maxl, V, cfg)
+    chr_start_coord = genbuff(chrlengths, chrgrps, chrs, maxl, V, cfg)
+
+    ## Draw Axes
+    ax = drawax(ax, chrgrps, chrlengths, V, S, cfg, ITX, chr_start_coord, minl=minl, maxl=maxl, chrname=CHRNAME)
 
     ## Draw Chromosomes
-    ax, indents, chrlabels = pltchrom(ax, chrs, chrgrps, chrlengths, V, S, genomes, cfg, ITX, chr_plt_coord, minl=minl)
+    ax, indents, chrlabels = pltchrom(ax, chrs, chrgrps, chrlengths, V, S, genomes, cfg, ITX, chr_start_coord, minl=minl)
 
     if cfg['genlegcol'] < 1:
         ncol = ceil(len(chrlengths)/labelcnt)
@@ -268,7 +268,7 @@ def plotsr(args):
             plt.gca().add_artist(l1)
 
     # Plot structural annotations
-    ax, svlabels = pltsv(ax, alignments, chrs, V, chrgrps, chrlengths, indents, S, cfg, ITX, chr_plt_coord)
+    ax, svlabels = pltsv(ax, alignments, chrs, V, chrgrps, chrlengths, indents, S, cfg, ITX, chr_start_coord)
 
     if cfg['legend']:
         bbox_to_anchor[0] += cfg['bboxmar']
@@ -276,13 +276,13 @@ def plotsr(args):
 
     # Plot markers
     if B is not None:
-        ax = drawmarkers(ax, B, V, chrlengths, indents, chrs, chrgrps, S, cfg, ITX, chr_plt_coord, minl=minl, maxl=maxl)
+        ax = drawmarkers(ax, B, V, chrlengths, indents, chrs, chrgrps, S, cfg, ITX, chr_start_coord, minl=minl, maxl=maxl)
 
     # Draw tracks
     if TRACKS is not None:
         tracks = readtrack(TRACKS, chrlengths)
         # tracks = readtrack(f, chrlengths) #TODO: delete this
-        ax = drawtracks(ax, tracks, S, chrgrps, chrlengths, V, ITX, cfg, chr_plt_coord, minl=minl, maxl=maxl)
+        ax = drawtracks(ax, tracks, S, chrgrps, chrlengths, V, ITX, cfg, chr_start_coord, minl=minl, maxl=maxl)
 
     # Save the plot
     try:
