@@ -221,7 +221,7 @@ def readbasecfg(f, v):
     # axis properties
     cfg['maxl'] = -1
     cfg['genname'] = 'T'
-
+    cfg['itxalign'] = 'D'
 
     if f == '':
         return cfg
