@@ -51,7 +51,13 @@ for fn in matplotlib.font_manager.findSystemFonts():
 FONT_NAMES = sorted(set(FONT_NAMES))
 
 
-# <editor-fold desc="SUPPORT FUNCTIONS">
+'''
+################################################################################
+# SUPPORT FUNCTIONS
+################################################################################
+'''
+
+
 def setlogconfig(lg):
     import logging.config
     logging.config.dictConfig({
@@ -172,6 +178,11 @@ def mergeranges(ranges):
 
 # </editor-fold>
 
+"""
+################################################################################
+DEFINE READERS/PARSERS
+################################################################################
+"""
 
 # <editor-fold desc="readers and parsres">
 
@@ -180,25 +191,37 @@ def readbasecfg(f, v):
     import matplotlib
     logger = logging.getLogger('readbasecfg')
     cfg = {}
+
     # Set alignment parameters
     cfg['syncol'] = '#DEDEDE'
     cfg['invcol'] = '#FFA500'
     cfg['tracol'] = '#9ACD32'
     cfg['dupcol'] = '#00BBFF'
+    cfg['synlwd'] = 0
+    cfg['invlwd'] = 0.1
+    cfg['tralwd'] = 0.1
+    cfg['duplwd'] = 0.1
     cfg['alpha'] = 0.8
+
     # Set chromosome margins
     cfg['chrmar'] = 0.1
     cfg['exmar'] = 0.1
+    cfg['marginchr'] = 0.01     # Set ITX margin
+
     # Set legend properties
     cfg['legend'] = True
     cfg['genlegcol'] = -1
     cfg['bbox'] = [0, 1.01, 0.5, 0.3]
     cfg['bbox_v'] = [0, 1.1, 0.5, 0.3]
     cfg['bboxmar'] = 0.5
-    # Set ITX margin
-    # TODO: Add marginchr to base.cfg in the repo
-    cfg['marginchr'] = 0.01
-    cfg['itxalign'] = 'D'
+
+    # track properties
+    cfg['norm'] = 'T'
+
+    # axis properties
+    cfg['maxl'] = -1
+    cfg['genname'] = 'T'
+
 
     if f == '':
         return cfg
@@ -222,7 +245,7 @@ def readbasecfg(f, v):
                     logger.error("Error in using colour: {} for {}. Use correct hexadecimal colours or named colours defined in matplotlib (https://matplotlib.org/stable/gallery/color/named_colors.html). Using default value.".format(line[1], line[0]))
                     continue
                 cfg[line[0]] = line[1]
-            elif line[0] in ['alpha', 'chrmar', 'exmar', 'bboxmar', 'genlegcol', 'marginchr']:
+            elif line[0] in ['synlwd', 'invlwd', 'tralwd', 'duplwd', 'alpha', 'chrmar', 'exmar', 'bboxmar', 'genlegcol', 'marginchr', 'maxl']:
                 try:
                     float(line[1])
                 except ValueError:
@@ -245,7 +268,7 @@ def readbasecfg(f, v):
                     logger.error("Non-numerical values {} provided for {}. Using default value.".format(line[1], line[0]))
                     continue
                 cfg['bboxmar'] = [float(i) for i in line[1]]
-            elif line[0] in ['legend', 'genname']:
+            elif line[0] in {'legend', 'norm', 'genname'}:
                 if line[1] not in ['T', 'F']:
                     logger.warning("Invalid value {} for {} in base.cfg. Valid values: T/F".format(line[1], line[0]))
                     continue
@@ -330,6 +353,7 @@ class bedAnno():
         self.mt = '.'
         self.mc = 'black'
         self.ms = 8
+        self.mz = 1
         self.tt = ''
         self.tc = 'black'
         self.ts = matplotlib.rcParams['font.size']
@@ -354,7 +378,7 @@ class bedAnno():
                         self.logger.error("Error in using colour: {} for position {}:{}-{}. Use correct hexadecimal colours or named colours define in matplotlib (https://matplotlib.org/stable/gallery/color/named_colors.html)".format(v, self.chr, self.start, self.end))
                         sys.exit()
                     setattr(self, n, v)
-                elif n in ['ms', 'ts', 'tp']:
+                elif n in ['ms', 'ts', 'tp', 'mz']:
                     try: float(v)
                     except ValueError:
                         self.logger.error("Non-numerical value {} for {} at marker position: {}:{}-{}".format(v, n, self.chr, self.start, self.end))
@@ -1394,9 +1418,9 @@ def genbuff(chrlengths, chrgrps, chrs, maxl, v, cfg):
         # initial start coordinate = 0
         start = 0
         if not v:
-            chr_iterate_order = chrs
+            chr_iterate_order = list(chrs)
         else:#elif v
-            chr_iterate_order = chrs[::-1]
+            chr_iterate_order = list(chrs)[::-1]
         for cid in chr_iterate_order:
             longer_chrom_length = max([c[1][chrgrps[cid][j]] for j, c in enumerate(chrlengths)])
             self_length = chrl[1][chrgrps[cid][s]]
@@ -1648,6 +1672,10 @@ def pltsv(ax, alignments, chrs, v, chrgrps, chrlengths, indents, S, cfg, itx, ch
                    'INV': cfg['invcol'],
                    'TRANS': cfg['tracol'],
                    'DUP': cfg['dupcol']}
+        lwddict = {'SYN': cfg['synlwd'],
+                   'INV': cfg['invlwd'],
+                   'TRANS': cfg['tralwd'],
+                   'DUP': cfg['duplwd']}
         # df['col'] = [coldict[c] for c in df['type']]
         labdict = {'SYN': 'Syntenic', 'INV': 'Inversion', 'TRANS': 'Translocation', 'DUP': 'Duplication'}
         df['lab'] = [labdict[c] for c in df['type']]
@@ -1864,15 +1892,25 @@ def drawtracks(ax, tracks, s, chrgrps, chrlengths, v, itx, cfg, chr_start_coord,
 
         if tracks[i].ft in ['bed', 'bedgraph']:
             bedbin = tracks[i].bincnt
-            # Select positions that are within the limits
+            globaltposmax = None
+            if cfg['norm'] == 'F':
+                for j in range(cl):
+                    # Select positions that are within the limits
+                    if maxl != -1:
+                        tpos = [k[1] for k in bedbin[chrs[j]] if minl <= k[0] <= maxl]
+                    else:
+                        tpos = [k[1] for k in bedbin[chrs[j]]]
+                    globaltposmax = (max(tpos) if globaltposmax is None else max(tpos + [globaltposmax])) if len(tpos) > 0 else globaltposmax
+
             for j in range(cl):
+                # Select positions that are within the limits
                 if maxl != -1:
                     chrpos = [k[0] if not itx else k[0] + rbuff[chrs[j]] for k in bedbin[chrs[j]] if minl <= k[0] <= maxl]
                     tpos = [k[1] for k in bedbin[chrs[j]] if minl <= k[0] <= maxl]
                 else:
                     chrpos = [k[0] if not itx else k[0] + rbuff[chrs[j]] for k in bedbin[chrs[j]]]
                     tpos = [k[1] for k in bedbin[chrs[j]]]
-                tposmax = max(tpos) if len(tpos) > 0 else 0
+                tposmax = (max(tpos) if len(tpos) > 0 else 0) if cfg['norm'] == 'T' else globaltposmax
                 tvars = {'color': tracks[i].lc, 'lw': tracks[i].lw, 'zorder': 2, 'alpha': tracks[i].ta}
                 if not v:
                     y0 = cl - j - th*(ti) if not itx else 1 - th*(ti)
@@ -1954,7 +1992,6 @@ def drawtracks(ax, tracks, s, chrgrps, chrlengths, v, itx, cfg, chr_start_coord,
             else:
                 pos = maxl + margin + (tracks[i].nm*maxl)
                 if not v:
-                    print(pos, float(pd.unique(anno['fixed'])))
                     axt(pos, float(pd.unique(anno['fixed'])))
                 else:
                     axt(float(pd.unique(anno['fixed'])), pos)
