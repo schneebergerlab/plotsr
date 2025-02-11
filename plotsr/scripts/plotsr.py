@@ -15,7 +15,6 @@ def plotsr(args):
     import logging
     from pandas import concat as pdconcat
     from pandas import unique
-    # from plotsr.scripts.func import *
     from plotsr.scripts.func import setlogconfig, readbasecfg, readsyriout, readbedout, filterinput, validalign2fasta, selectchrom, selectregion, createribbon, drawax, genbuff, pltchrom, pltsv, drawmarkers, readtrack, drawtracks, getfilehandler, definelogger
     from collections import deque, OrderedDict
     import os
@@ -33,7 +32,7 @@ def plotsr(args):
     ###################################################################
     # Check python and pandas version. Add other checks (if required!!)
     ###################################################################
-    logger.debug('checking arguments')
+    logger.debug('Checking arguments')
     try:
         assert sys.version_info.major == 3
         assert sys.version_info.minor >= 8
@@ -46,11 +45,11 @@ def plotsr(args):
 
     ## Validate input
     if args.sr is None and args.bp is None:
-        logger.error("No structural annotations provided. Use --sr or -bp to provide path to input files")
+        logger.error("No structural annotation file provided. Use --sr or -bp to provide paths to input files. Exiting.")
         sys.exit()
 
     if args.sr is not None and args.bp is not None:
-        logger.error("Both --sr and --bp cannot be used. Use single file type for all input structural annotations files. User converter to reformat BEDPE/syri.out files")
+        logger.error("Cannot use both --sr and --bp. Please enter a single file type for all input structural annotation files. Use a converter to reformat BEDPE/syri.out files. Exiting.")
         sys.exit()
 
     # Check if both --chr and --reg are defined
@@ -89,11 +88,7 @@ def plotsr(args):
     RTR = args.rtr
     CHRS = args.chr
     ITX = args.itx
-    CHRNAME= args.chrname.name if args.chrname is not None else None
-    # AC = args.aligncolour
-
-    # print(ITX)
-    # sys.exit()
+    CHRNAME = args.chrname.name if args.chrname is not None else None
 
     ## Get config
     cfg = readbasecfg('', V) if args.cfg is None else readbasecfg(args.cfg.name, V)
@@ -102,10 +97,10 @@ def plotsr(args):
 
     ## Check output file extension
     if len(O.split('.')) == 1:
-        logger.warning("Output filename has no extension. Plot would be saved as a pdf")
+        logger.warning("Output filename has no extension. Plot will be saved as a pdf.")
         O = O + ".pdf"
     elif O.split('.')[-1] not in ['pdf', 'png', 'svg']:
-        logger.warning("Output file extension is not in {'pdf','png', 'svg'}. Plot would be saved as a pdf")
+        logger.warning("Output file extension is not in {'pdf', 'png', 'svg'}. Plot will be saved as a pdf.")
         O = O.rsplit(".", 1)[0] + ".pdf"
 
     ## Set matplotlib backend
@@ -113,15 +108,14 @@ def plotsr(args):
         matplotlib.use(args.b)
         # matplotlib.use('Qt5Agg')    # TODO: Delete this line
     except :
-        sys.exit('Matplotlib backend cannot be selected')
+        sys.exit('Matplotlib backend cannot be selected. Exiting.')
 
-    # Read alignment coords
+    # Read alignment coords; format: ([['genome1_genome2.out', al_a], ['genome2_genome3.out', al_b], ...])
     alignments = deque()
     chrids = deque()
     if args.sr is not None:
         for f in args.sr:
             fin = f.name
-            # for fin in fins: #TODO: Delete this line
             al, cid = readsyriout(fin)
             alignments.append([os.path.basename(fin), al])
             chrids.append((os.path.basename(fin), cid))
@@ -132,7 +126,7 @@ def plotsr(args):
             alignments.append([os.path.basename(fin), al])
             chrids.append((os.path.basename(fin), cid))
 
-    # Get groups of homologous chromosomes. Use the order from the user if provided.
+    # Get groups of homologous chromosomes, using the order from the user if provided
     cs = set(unique(alignments[0][1]['achr']))
     if args.chrord is None:
         chrs = [k for k in chrids[0][1].keys() if k in alignments[0][1]['achr'].unique()]
@@ -148,10 +142,10 @@ def plotsr(args):
         chrs = list(chrs)
         # Check that the chrorder file contains all chromosomes
         if len(chrs) != len(cs):
-            logger.error("Number of chromsomes in {} is less than the number of chromsomes in the alignment file {}. Either list the order of all chromosomes or use --chr if chromosome selection is requires. Exiting.".format(args.chrord.name, alignments[0][0]))
+            logger.error("Number of chromosomes in {} is different from number of chromosomes in alignment file {}. Either list the order of ALL chromosomes in CHRORD file or enter selected chromosomes after --chr. Exiting.".format(args.chrord.name, alignments[0][0]))
             sys.exit()
 
-    # chrgrps: dict. key=reference chromosome id. value=homolougous chromosomes in all genomes
+    # chrgrps: dict. key=reference chromosome id. value=homologous chromosomes in all genomes
     chrgrps = OrderedDict()
     for c in chrs:
         cg = deque([c])
@@ -166,9 +160,8 @@ def plotsr(args):
     for i in range(len(alignments)):
         alignments[i][1] = filterinput(args, alignments[i][1], chrids[i][1], ITX)
 
-        # Check chromsome IDs and sizes
+    # Check chromsome IDs and sizes
     chrlengths, genomes = validalign2fasta(alignments, args.genomes.name)
-    # chrlengths, genomes = validalign2fasta(alignments, 'genomes.txt') # TODO: Delete this line
 
 
     # Select only chromosomes selected by --chr
@@ -190,7 +183,7 @@ def plotsr(args):
         invindex = ['INV' in i for i in df['type']]
         g = set(df.loc[invindex, 'bstart'] < df.loc[invindex, 'bend'])
         if len(g) == 2:
-            logger.error("Inconsistent coordinates in input file {}. For INV, INVTR, INVDUP annotations, either bstart < bend for all annotations or bstart > bend for all annotations. Mixing is not permitted.".format(alignments[i][0]))
+            logger.error("Inconsistent coordinates in input file {}. For INV, INVTR, INVDUP annotations, either bstart < bend for all annotations or bstart > bend for all annotations. Mixing is not permitted. Exiting.".format(alignments[i][0]))
             sys.exit()
         elif False in g:
             continue
@@ -215,10 +208,11 @@ def plotsr(args):
         else:
             fig = plt.figure(figsize=[W, H])
     except Exception as e:
-        logger.error("Error in initiliazing figure. Try using a different backend.\n{}".format(e.with_traceback()))
+        logger.error("Error in initializing figure. Try a different matplotlib backend. Exiting.\n{}".format(e.with_traceback()))
         sys.exit()
     ax = fig.add_subplot(111, frameon=False)
 
+    # concatenated al from all alignments
     allal = pdconcat([alignments[i][1] for i in range(len(alignments))])
     if ITX:
         minl = 0
@@ -335,8 +329,6 @@ def main(cmd):
     other.add_argument('--version', action='version', version='{version}'.format(version=__version__))
     parser._action_groups.append(other)
 
-    # args = parser.parse_args([]) # TODO: Delete this line
     args = parser.parse_args(cmd)
-    # args = parser.parse_args('--sr col_lersyri.out --sr ler_cvisyri.out --sr cvi_erisyri.out --sr eri_shasyri.out --sr sha_kyosyri.out --sr kyo_an1syri.out --sr an1_c24syri.out --genomes genomes.txt  --chr Chr3 -S 1 -o ampril_col0_chr3.png -W 5 -H 3 -f 8 --cfg base.cfg'.split())
     plotsr(args)
 # END

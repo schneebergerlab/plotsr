@@ -1686,7 +1686,7 @@ def pltsv(ax, alignments, chrs, v, chrgrps, chrlengths, indents, S, cfg, itx, ch
         for row in df.itertuples():
             if row.anno == '-':
                 newcol.append(coldict[row.type])
-                newlw.append(0 if row.type == 'SYN' else 0.1)
+                newlw.append(lwddict[row.type])
                 newz.append(0 if row.type == 'SYN' else 1)
             else:
                 anno = annotodict(row.anno)
