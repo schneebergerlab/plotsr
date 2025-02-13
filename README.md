@@ -6,7 +6,6 @@ https://anaconda.org/bioconda/plotsr)
 ## Introduction
 Plotsr generates high-quality visualisation of synteny and structural rearrangements between multiple genomes. For this, it uses the genomic structural annotations between multiple chromosome-level assemblies.
 
-
 ![Example](./example/ampril_col0_chr3_6600000_10000000.png)
 
 ## Installation
@@ -17,6 +16,7 @@ conda install -c bioconda plotsr
 For manual installation, the pre-requisites are:
 1. Python >= 3.8
 2. Python libraries
+
 These can be installed in a conda environment using:
 ```
 conda install numpy=1.21.2 pandas=1.2.4 matplotlib=3.3.4 setuptools
@@ -82,7 +82,7 @@ Example files can be found in the [example](./example/) folder.
 Example files can be found in the [example](./example/) folder. 
 
 ## Command line example
-For demonstration, we visualise the structural rearrangements between four accessions of <i>Arabidopsis thaliana</i> (Col-0, L<i>er</i>, Cvi, and Eri). All required files are in the [example](./example/) folder. Below is a list of input files:
+For demonstration, we visualise the structural rearrangements between four accessions of <i>Arabidopsis thaliana</i> (Col-0, L<i>er</i>, Cvi, and Eri). All required files are in the [example](./example/) folder. Below is the list of input files:
 | File name|  File Description   |
 |----|--------|
 | `*.chrlen` | Tables containing chromosome lengths for all genomes |
@@ -92,7 +92,7 @@ For demonstration, we visualise the structural rearrangements between four acces
 | `markers.bed` | [Markers information file](#visualising-markers) |
 | `base.cfg` | Configuration file for adjusting visual properties of the plot |
 
-Visualization of the structural rearrangements between the genomes can be generated using the following commands:
+Below are the commands:
 ```
 # Go to the directory containing all these files.
 cd example
@@ -112,7 +112,7 @@ plotsr --sr col_lersyri.filtered.out \
        -o output_plot.png \
        -S 0.5 -W 7 -H 10 -f 8 
 ```
-This creates the output_plot.png in the `example` directory.
+These steps create the output_plot.png in the `example` directory.
 
 [plotsr.sh](./example/plotsr.sh) file contains ten different commands corresponding to different modes of visualisation (stacked vs itx mode), different selection of genomic regions (all chromosomes, some chromosomes, or specific region), and different orientation of chromosomes (horizontal vs vertical).
 
@@ -263,4 +263,4 @@ Check [markers.txt](./config/marker_point_type.txt) for the list of available ma
 ## Citation
 If you find plotsr helpful, please [cite](https://doi.org/10.1093/bioinformatics/btac196):
 
-`Manish Goel, Korbinian Schneeberger, plotsr: visualizing structural similarities and rearrangements between multiple genomes, Bioinformatics, 2022; btac196, https://doi.org/10.1093/bioinformatics/btac196`
+Manish Goel, Korbinian Schneeberger, plotsr: visualizing structural similarities and rearrangements between multiple genomes, Bioinformatics, 2022; btac196, https://doi.org/10.1093/bioinformatics/btac196
