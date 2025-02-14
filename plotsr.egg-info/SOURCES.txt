@@ -1,0 +1,14 @@
+LICENSE
+README.rst
+setup.py
+bin/plotsr
+plotsr/__init__.py
+plotsr.egg-info/PKG-INFO
+plotsr.egg-info/SOURCES.txt
+plotsr.egg-info/dependency_links.txt
+plotsr.egg-info/top_level.txt
+plotsr/scripts/__init__.py
+plotsr/scripts/converter.py
+plotsr/scripts/func.py
+plotsr/scripts/plotsr.py
+test/test_plotsr.py
