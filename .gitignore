@@ -29,6 +29,7 @@ syri/pyxFiles/.nfs00*
 /syri/pyxFiles/*.c*
 
 #Random files
+*.DS_Store
 *.log
 /plotsr/*.swp
 ./conda.recipe
