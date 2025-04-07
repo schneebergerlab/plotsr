@@ -1,13 +1,14 @@
-##mt = marker type (use "_" for horizontal dash and "|" for vertical dash)
+##mt = marker type
 ##mc = marker colour
 ##ms = marker size
+##mz = marker zorder (objects with higher zorder value are plotted over objects with lower zorder values)
 ##tt = text
 ##tc = text colour
 ##ts = text size
 ##tf = text font
 ##tp = text position
 #chr	start	end genome_id	tags
-Chr3	4035330	4035331	eri	mt:v;mc:black;ms:3;tt:Inversion 1;tp:0.05;ts:8;tf:Arial;tc:black
-Chr4	2322547	2322548	ler	mt:^;mc:black;ms:3;tt:Inversion 2;tp:-0.05;ts:8;tf:Arial;tc:black
-Chr3	8792851	8792852	col-0	mt:.;mc:red;ms:10;tt:Not aligned;tp:0.05;ts:8;tf:Arial;tc:black
-Chr1	1	10000000	ler	mt:_;mc:black;ms:1;tt:contig;tp:0.05;ts:8;tf:Arial;tc:black
+Chr3	4035330	4035331	eri	mt:v;mc:black;ms:3;mz:2;tt:Inversion 1;tp:0.02;ts:8;tf:Arial;tc:black
+Chr4	2322547	2322548	ler	mt:^;mc:black;ms:3;mz:2;tt:Inversion 2;tp:-0.07;ts:8;tf:Arial;tc:black
+Chr3	8792851	8792852	col-0	mt:.;mc:red;ms:10;mz:2;tt:Notal aligned;tp:0.02;ts:8;tf:Arial;tc:black
+Chr1	1	10000000	ler	mt:_;mc:black;ms:1;mz:2;tt:contig;tp:0.02;ts:8;tf:Tinos;tc:black
