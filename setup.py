@@ -13,6 +13,7 @@ setup(
     packages=["plotsr", "plotsr.scripts"],
     py_modules=["plotsr.scripts.plotsr",
                 "plotsr.scripts.func"],
-    scripts=['bin/plotsr'],
+    #scripts=['bin/plotsr'],
+    entry_points={"console_scripts":["plotsr=plotsr.scripts.plotsr:main"]},
     long_description=open('README.rst').read(),
 )

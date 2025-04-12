@@ -176,7 +176,6 @@ def mergeranges(ranges):
     return np.array(out_range)
 # END
 
-# </editor-fold>
 
 """
 ################################################################################
@@ -184,14 +183,12 @@ DEFINE READERS/PARSERS
 ################################################################################
 """
 
-# <editor-fold desc="readers and parsres">
 
 def readbasecfg(f, v):
     import logging
     import matplotlib
     logger = logging.getLogger('readbasecfg')
     cfg = {}
-
     # Set alignment parameters
     cfg['syncol'] = '#DEDEDE'
     cfg['invcol'] = '#FFA500'
@@ -278,9 +275,10 @@ def readbasecfg(f, v):
                     logger.error("Invalid value {} for {} in base.cfg. Valid values: L/R/C/D (left/right/center/default). Defaulting to equidistant.".format(line[1], line[0]))
                     cfg[line[0]] = 'D'
                     continue
-                cfg['legend'] = line[1] == 'T'
+                cfg[line[0]] = line[1]
     return cfg
 # END
+
 
 
 def readfasta(f):
@@ -339,7 +337,6 @@ def readfasta(f):
             raise ValueError("Incorrect sequence for chromosome: {}. Genomic sequence can have only the following characters: {}".format(k, NUCBP))
     return out
 # END
-
 
 class bedAnno():
     def __init__(self, c, start, end, genome, v):
@@ -697,7 +694,13 @@ class track():
                     if len(line) < 4:
                         self.logger.warning("Incomplete information in bedgraph file at line: {}. Skipping it.".format("\t".join(line)))
                         continue
-                if curchr == line[0]:
+                if curchr == '':
+                    curchr = line[0]
+                    binv = np.zeros(ceil(chrlengths[0][1][curchr] / bw), dtype=int)
+                    s = deque([int(line[1])])
+                    e = deque([int(line[2])])
+                    v = deque([int(val)])
+                elif curchr == line[0]:
                     s.append(int(line[1]))
                     e.append(int(line[2]))
                     v.append(val)
@@ -708,12 +711,6 @@ class track():
                         self.logger.warning("Chromosome in BEDGRAPH is not present in FASTA or not selected for plotting. Skipping it. BED line: {}".format("\t".join(line)))
                         skipchrs.append(line[0])
                     continue
-                elif curchr == '':
-                    curchr = line[0]
-                    binv = np.zeros(ceil(chrlengths[0][1][curchr]/bw), dtype=int)
-                    s = deque([int(line[1])])
-                    e = deque([int(line[2])])
-                    v = deque([int(val)])
                 else:
                     if line[0] in added_chrs:
                         self.logger.error("BedGraph file: {} is not sorted. For plotting tracks, sorted BedGraph file is required. Exiting.".format(self.f))
