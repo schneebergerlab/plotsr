@@ -278,7 +278,7 @@ def readbasecfg(f, v):
                     logger.error("Invalid value {} for {} in base.cfg. Valid values: L/R/C/D (left/right/center/default). Defaulting to equidistant.".format(line[1], line[0]))
                     cfg[line[0]] = 'D'
                     continue
-                cfg[line[0]] = line[1]
+                cfg['legend'] = line[1] == 'T'
     return cfg
 # END
 
