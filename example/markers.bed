@@ -1,4 +1,4 @@
-##mt = marker type
+##mt = marker type (use "_" for horizontal dash and "|" for vertical dash)
 ##mc = marker colour
 ##ms = marker size
 ##mz = marker zorder (objects with higher zorder value are plotted over objects with lower zorder values)

@@ -15,8 +15,7 @@ def plotsr(args):
     import logging
     from pandas import concat as pdconcat
     from pandas import unique
-    # from plotsr.scripts.func import *
-    from plotsr.scripts.func import setlogconfig, readbasecfg, readsyriout, readbedout, filterinput, validalign2fasta, selectchrom, selectregion, createribbon, drawax, pltchrom, pltsv, drawmarkers, readtrack, drawtracks, getfilehandler, definelogger
+    from plotsr.scripts.func import setlogconfig, readbasecfg, readsyriout, readbedout, filterinput, validalign2fasta, selectchrom, selectregion, createribbon, drawax, genbuff, pltchrom, pltsv, drawmarkers, readtrack, drawtracks, getfilehandler, definelogger
     from collections import deque, OrderedDict
     import os
     from math import ceil
@@ -33,7 +32,7 @@ def plotsr(args):
     ###################################################################
     # Check python and pandas version. Add other checks (if required!!)
     ###################################################################
-    logger.debug('checking arguments')
+    logger.debug('Checking arguments')
     try:
         assert sys.version_info.major == 3
         assert sys.version_info.minor >= 8
@@ -46,11 +45,11 @@ def plotsr(args):
 
     ## Validate input
     if args.sr is None and args.bp is None:
-        logger.error("No structural annotations provided. Use --sr or -bp to provide path to input files")
+        logger.error("No structural annotation file provided. Use --sr or -bp to provide paths to input files. Exiting.")
         sys.exit()
 
     if args.sr is not None and args.bp is not None:
-        logger.error("Both --sr and --bp cannot be used. Use single file type for all input structural annotations files. User converter to reformat BEDPE/syri.out files")
+        logger.error("Cannot use both --sr and --bp. Please enter a single file type for all input structural annotation files. Use a converter to reformat BEDPE/syri.out files. Exiting.")
         sys.exit()
 
     # Check if both --chr and --reg are defined
@@ -89,11 +88,7 @@ def plotsr(args):
     RTR = args.rtr
     CHRS = args.chr
     ITX = args.itx
-    CHRNAME= args.chrname.name if args.chrname is not None else None
-    # AC = args.aligncolour
-
-    # print(ITX)
-    # sys.exit()
+    CHRNAME = args.chrname.name if args.chrname is not None else None
 
     ## Get config
     cfg = readbasecfg('', V) if args.cfg is None else readbasecfg(args.cfg.name, V)
@@ -102,28 +97,25 @@ def plotsr(args):
 
     ## Check output file extension
     if len(O.split('.')) == 1:
-        logger.warning("Output filename has no extension. Plot would be saved as a pdf")
+        logger.warning("Output filename has no extension. Plot will be saved as a pdf.")
         O = O + ".pdf"
     elif O.split('.')[-1] not in ['pdf', 'png', 'svg']:
-        logger.warning("Output file extension is not in {'pdf','png', 'svg'}. Plot would be saved as a pdf")
+        logger.warning("Output file extension is not in {'pdf', 'png', 'svg'}. Plot will be saved as a pdf.")
         O = O.rsplit(".", 1)[0] + ".pdf"
 
     ## Set matplotlib backend
-
     try :
         matplotlib.use(args.b)
         # matplotlib.use('Qt5Agg')    # TODO: Delete this line
     except :
-        sys.exit('Matplotlib backend cannot be selected')
+        sys.exit('Matplotlib backend cannot be selected. Exiting.')
 
-    # fins = ['col_lersyri.out', 'ler_cvisyri.out', 'cvi_erisyri.out', 'eri_shasyri.out', 'sha_kyosyri.out', 'kyo_an1syri.out', 'an1_c24syri.out'] #TODO: Delete this line
-    # Read alignment coords
+    # Read alignment coords; format: ([['genome1_genome2.out', al_a], ['genome2_genome3.out', al_b], ...])
     alignments = deque()
     chrids = deque()
     if args.sr is not None:
         for f in args.sr:
             fin = f.name
-            # for fin in fins: #TODO: Delete this line
             al, cid = readsyriout(fin)
             alignments.append([os.path.basename(fin), al])
             chrids.append((os.path.basename(fin), cid))
@@ -134,7 +126,7 @@ def plotsr(args):
             alignments.append([os.path.basename(fin), al])
             chrids.append((os.path.basename(fin), cid))
 
-    # Get groups of homologous chromosomes. Use the order from the user if provided.
+    # Get groups of homologous chromosomes, using the order from the user if provided
     cs = set(unique(alignments[0][1]['achr']))
     if args.chrord is None:
         chrs = [k for k in chrids[0][1].keys() if k in alignments[0][1]['achr'].unique()]
@@ -150,9 +142,10 @@ def plotsr(args):
         chrs = list(chrs)
         # Check that the chrorder file contains all chromosomes
         if len(chrs) != len(cs):
-            logger.error("Number of chromsomes in {} is less than the number of chromsomes in the alignment file {}. Either list the order of all chromosomes or use --chr if chromosome selection is requires. Exiting.".format(args.chrord.name, alignments[0][0]))
+            logger.error("Number of chromosomes in {} is different from number of chromosomes in alignment file {}. Either list the order of ALL chromosomes in CHRORD file or enter selected chromosomes after --chr. Exiting.".format(args.chrord.name, alignments[0][0]))
             sys.exit()
 
+    # chrgrps: dict. key=reference chromosome id. value=homologous chromosomes in all genomes
     chrgrps = OrderedDict()
     for c in chrs:
         cg = deque([c])
@@ -163,13 +156,12 @@ def plotsr(args):
             cur = n
         chrgrps[c] = cg
 
-    # Check chromsome IDs and sizes
-    chrlengths, genomes = validalign2fasta(alignments, args.genomes.name)
-    # chrlengths, genomes = validalign2fasta(alignments, 'genomes.txt') # TODO: Delete this line
-
     # Filter alignments to select long alignments between homologous chromosomes
     for i in range(len(alignments)):
         alignments[i][1] = filterinput(args, alignments[i][1], chrids[i][1], ITX)
+
+    # Check chromsome IDs and sizes
+    chrlengths, genomes = validalign2fasta(alignments, args.genomes.name)
 
 
     # Select only chromosomes selected by --chr
@@ -191,7 +183,7 @@ def plotsr(args):
         invindex = ['INV' in i for i in df['type']]
         g = set(df.loc[invindex, 'bstart'] < df.loc[invindex, 'bend'])
         if len(g) == 2:
-            logger.error("Inconsistent coordinates in input file {}. For INV, INVTR, INVDUP annotations, either bstart < bend for all annotations or bstart > bend for all annotations. Mixing is not permitted.".format(alignments[i][0]))
+            logger.error("Inconsistent coordinates in input file {}. For INV, INVTR, INVDUP annotations, either bstart < bend for all annotations or bstart > bend for all annotations. Mixing is not permitted. Exiting.".format(alignments[i][0]))
             sys.exit()
         elif False in g:
             continue
@@ -216,18 +208,22 @@ def plotsr(args):
         else:
             fig = plt.figure(figsize=[W, H])
     except Exception as e:
-        logger.error("Error in initiliazing figure. Try using a different backend.\n{}".format(e.with_traceback()))
+        logger.error("Error in initializing figure. Try a different matplotlib backend. Exiting.\n{}".format(e.with_traceback()))
         sys.exit()
     ax = fig.add_subplot(111, frameon=False)
 
+    # concatenated al from all alignments
     allal = pdconcat([alignments[i][1] for i in range(len(alignments))])
     if ITX:
         minl = 0
         MCHR = cfg['marginchr']
-        maxchr = max([sum(chrlengths[i][1].values()) for i in range(len(chrlengths))])
-        maxl = int(maxchr/(MCHR + 1 - (MCHR*len(chrgrps))))
-    elif cfg['maxl'] != -1:
-        minl, maxl = 0, cfg['maxl']
+        if cfg['itxalign'] in ['L', 'R', 'C']:
+            # the sum of the longer chrom from each pair
+            maxchr = sum([max([chrlengths[i][1][cid] for i, cid in enumerate(cg)]) for cg in chrgrps.values()])
+        else:# defaulting to equidistant
+            # the larger genome (larger sum of all chrom lengths from each genome)
+            maxchr = max([sum(chrlengths[i][1].values()) for i in range(len(chrlengths))])
+        maxl = int(maxchr/(1 - (MCHR*(len(chrgrps) - 1))))
     elif REG is None:
         minl, maxl = 0, -1
     else:
@@ -243,11 +239,14 @@ def plotsr(args):
     if 'DUP' in allal['type'].array or 'INVDP' in allal['type'].array:
         labelcnt += 1
 
+    # chromosome plotting coordinates
+    chr_start_coord = genbuff(chrlengths, chrgrps, chrs, maxl, V, cfg)
+
     ## Draw Axes
-    ax = drawax(ax, chrgrps, chrlengths, V, S, cfg, ITX, minl=minl, maxl=maxl, chrname=CHRNAME)
+    ax = drawax(ax, chrgrps, chrlengths, V, S, cfg, ITX, chr_start_coord, minl=minl, maxl=maxl, chrname=CHRNAME)
 
     ## Draw Chromosomes
-    ax, indents, chrlabels = pltchrom(ax, chrs, chrgrps, chrlengths, V, S, genomes, cfg, ITX, minl=minl, maxl=maxl)
+    ax, indents, chrlabels = pltchrom(ax, chrs, chrgrps, chrlengths, V, S, genomes, cfg, ITX, chr_start_coord, minl=minl)
 
     if cfg['genlegcol'] < 1:
         ncol = ceil(len(chrlengths)/labelcnt)
@@ -263,7 +262,7 @@ def plotsr(args):
             plt.gca().add_artist(l1)
 
     # Plot structural annotations
-    ax, svlabels = pltsv(ax, alignments, chrs, V, chrgrps, chrlengths, indents, S, cfg, ITX, maxl)
+    ax, svlabels = pltsv(ax, alignments, chrs, V, chrgrps, chrlengths, indents, S, cfg, ITX, chr_start_coord)
 
     if cfg['legend']:
         bbox_to_anchor[0] += cfg['bboxmar']
@@ -271,13 +270,13 @@ def plotsr(args):
 
     # Plot markers
     if B is not None:
-        ax = drawmarkers(ax, B, V, chrlengths, indents, chrs, chrgrps, S, cfg, ITX, minl=minl, maxl=maxl)
+        ax = drawmarkers(ax, B, V, chrlengths, indents, chrs, chrgrps, S, cfg, ITX, chr_start_coord, minl=minl, maxl=maxl)
 
     # Draw tracks
     if TRACKS is not None:
         tracks = readtrack(TRACKS, chrlengths)
         # tracks = readtrack(f, chrlengths) #TODO: delete this
-        ax = drawtracks(ax, tracks, S, chrgrps, chrlengths, V, ITX, cfg, minl=minl, maxl=maxl)
+        ax = drawtracks(ax, tracks, S, chrgrps, chrlengths, V, ITX, cfg, chr_start_coord, minl=minl, maxl=maxl)
 
     # Save the plot
     try:
@@ -293,33 +292,33 @@ def main():
     parser = argparse.ArgumentParser("Plotting structural rearrangements between genomes", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     other = parser._action_groups.pop()
     inputfiles = parser.add_argument_group("Input/Output files")
-    inputfiles.add_argument('--sr', help='Structural annotation mappings (syri.out) identified by SyRI', action='append', type=argparse.FileType('r'))
+    inputfiles.add_argument('--sr', help='Structural annotation mappings from SyRI (syri.out)', action='append', type=argparse.FileType('r'))
     inputfiles.add_argument('--bp', help='Structural annotation mappings in BEDPE format', action='append', type=argparse.FileType('r'))
     inputfiles.add_argument('--genomes', help='File containing path to genomes', type=argparse.FileType('r'), required=True)
-    inputfiles.add_argument('--markers', help='File containing path to markers (bed format)', type=argparse.FileType('r'))
+    inputfiles.add_argument('--markers', help='File containing path to markers (BED format)', type=argparse.FileType('r'))
     inputfiles.add_argument('--tracks', help='File listing paths and details for all tracks to be plotted', type=argparse.FileType('r'))
     inputfiles.add_argument('--chrord', help='File containing reference (first genome) chromosome IDs in the order in which they are to be plotted. File requires one chromosome ID per line. Not compatible with --chr', type=argparse.FileType('r'))
-    inputfiles.add_argument('--chrname', help='File containing reference (first genome) chromosome names to be used in the plot. File needs to be a TSV with the chromosome ID in first column and chromosome name in the second.', type=argparse.FileType('r'))
-    inputfiles.add_argument('-o', help='Output file name. Acceptable format: pdf, png, svg', default="plotsr.pdf")
+    inputfiles.add_argument('--chrname', help='File containing reference (first genome) chromosome names to be used in the plot. File must be a TSV with chromosome ID in first column and chromosome name in second column', type=argparse.FileType('r'))
+    inputfiles.add_argument('-o', help='Output file name. Acceptable format: PDF, PNG, SVG', default="plotsr.pdf")
 
     filtering = parser.add_argument_group("Data filtering")
-    filtering.add_argument('--itx', help='Use inter-chromosomal plotting mode (experimental)', default=False, action='store_true')
-    filtering.add_argument('--chr', help='Select specific chromosome on reference (first genome) and plots them in the given order. Not compatible with --chrord. Can be used multiple time to select more than one chromosomes.', type=str, action='append')
-    filtering.add_argument('--reg', help='Plots a specific region. Use as: GenomeID:ChromosomeID:Start-End. Not compatible with --chr and -R.', type=str)
-    filtering.add_argument('--rtr', help='When using --reg, plot all SRs that are within the boundaries of the homologous regions. For highly zoomed regions, this could result in visually disconnected alignments.', default=False, action='store_true')
+    filtering.add_argument('--itx', help='Use inter-chromosomal plotting mode', default=False, action='store_true')
+    filtering.add_argument('--chr', help='Enter one chromosome per option. This option can be used multiple times. Entered chromosome(s) will be plotted in the given order. Not compatible with --chrord', type=str, action='append')
+    filtering.add_argument('--reg', help='Enter specific region for plotting. Format: GenomeID:ChromosomeID:Start-End. Not compatible with --chr and -R', type=str)
+    filtering.add_argument('--rtr', help='When using --reg, plot all SRs that are within the boundaries of the homologous regions. For highly zoomed regions, this could result in visually disconnected alignments', default=False, action='store_true')
     filtering.add_argument('--nosyn', help='Do not plot syntenic regions', default=False, action='store_true')
     filtering.add_argument('--noinv', help='Do not plot inversions', default=False, action='store_true')
-    filtering.add_argument('--notr', help='Do not plot translocations regions', default=False, action='store_true')
-    filtering.add_argument('--nodup', help='Do not plot duplications regions', default=False, action='store_true')
-    filtering.add_argument('-s', help='minimum size of a SR to be plotted', type=int, default=10000)
+    filtering.add_argument('--notr', help='Do not plot translocations', default=False, action='store_true')
+    filtering.add_argument('--nodup', help='Do not plot duplications', default=False, action='store_true')
+    filtering.add_argument('-s', help='Minimum length (bp) of a SR to be plotted', type=int, default=10000)
 
     plotting = parser.add_argument_group("Plot adjustment")
-    plotting.add_argument('--cfg', help='Path to config file containing parameters to adjust plot.', type=argparse.FileType('r'))
-    plotting.add_argument('-R', help='Join adjacent syntenic blocks if they are not interrupted by SRs. Using this would decrease gaps in the visualisation.', default=False, action="store_true")
-    plotting.add_argument('-f', help='font size', type=int, default=6)
-    plotting.add_argument('-H', help='height of the plot', type=float)
-    plotting.add_argument('-W', help='width of the plot', type=float)
-    plotting.add_argument('-S', help='Space for homologous chromosome (0.1-0.75). Adjust this to make more space for annotation markers/texts and tracks.', default=0.7, type=float)
+    plotting.add_argument('--cfg', help='Path to config file containing parameters to adjust plot', type=argparse.FileType('r'))
+    plotting.add_argument('-R', help='Join adjacent syntenic blocks if they are not interrupted by SRs. Using this would decrease gaps in the visualisation', default=False, action="store_true")
+    plotting.add_argument('-f', help='Font size', type=int, default=6)
+    plotting.add_argument('-H', help='Height of the plot', type=float)
+    plotting.add_argument('-W', help='Width of the plot', type=float)
+    plotting.add_argument('-S', help='Space for homologous chromosome (0.1-0.75). Adjust this to make more space for annotation markers/texts and tracks', default=0.7, type=float)
     plotting.add_argument('-d', help='DPI for the final image', default="300", type=int)
     plotting.add_argument('-b', help='Matplotlib backend to use', default="agg", type=str, choices=bklist)
     plotting.add_argument('-v', help='Plot vertical chromosome', default=False, action='store_true')
@@ -330,8 +329,6 @@ def main():
     other.add_argument('--version', action='version', version='{version}'.format(version=__version__))
     parser._action_groups.append(other)
 
-    # args = parser.parse_args([]) # TODO: Delete this line
     args = parser.parse_args()
-    # args = parser.parse_args('--sr col_lersyri.out --sr ler_cvisyri.out --sr cvi_erisyri.out --sr eri_shasyri.out --sr sha_kyosyri.out --sr kyo_an1syri.out --sr an1_c24syri.out --genomes genomes.txt  --chr Chr3 -S 1 -o ampril_col0_chr3.png -W 5 -H 3 -f 8 --cfg base.cfg'.split())
     plotsr(args)
 # END

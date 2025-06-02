@@ -14,6 +14,7 @@ class TestHometools(unittest.TestCase):
         from subprocess import Popen, PIPE
         import os
         from glob import glob
+
         output = 'plotsr.pdf'
 
         try:
@@ -37,6 +38,7 @@ class TestHometools(unittest.TestCase):
         from subprocess import Popen, PIPE
         import os
         from glob import glob
+
         output = 'plotsr.png'
 
         try:
@@ -59,7 +61,6 @@ class TestHometools(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    os.chdir('test/test_data/')
+    pytest_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), 'test_data'))
+    os.chdir(pytest_dir)
     unittest.main(verbosity=3)
-
-
