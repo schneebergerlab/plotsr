@@ -47,26 +47,26 @@ def plotsr(args):
     ## Validate input
     if args.sr is None and args.bp is None:
         logger.error("No structural annotations provided. Use --sr or -bp to provide path to input files")
-        sys.exit()
+        sys.exit(1)
 
     if args.sr is not None and args.bp is not None:
         logger.error("Both --sr and --bp cannot be used. Use single file type for all input structural annotations files. User converter to reformat BEDPE/syri.out files")
-        sys.exit()
+        sys.exit(1)
 
     # Check if both --chr and --reg are defined
     if args.chr is not None and args.reg is not None:
         logger.error("Both --chr and --reg are provided. Only one parameter can be provided at a time. Exiting.")
-        sys.exit()
+        sys.exit(1)
 
     # Check if both --chr and --chrord are defined
     if args.chr is not None and args.chrord is not None:
         logger.error("Both --chr and --chrord are provided. Only one parameter can be provided at a time. Exiting.")
-        sys.exit()
+        sys.exit(1)
 
     # Check if --rtr is used without --reg
     if args.rtr and args.reg is None:
         logger.error("Cannot use --rtr without --reg. Exiting.")
-        sys.exit()
+        sys.exit(1)
 
 
     ###################################################################
@@ -151,7 +151,7 @@ def plotsr(args):
         # Check that the chrorder file contains all chromosomes
         if len(chrs) != len(cs):
             logger.error("Number of chromsomes in {} is less than the number of chromsomes in the alignment file {}. Either list the order of all chromosomes or use --chr if chromosome selection is requires. Exiting.".format(args.chrord.name, alignments[0][0]))
-            sys.exit()
+            sys.exit(1)
 
     chrgrps = OrderedDict()
     for c in chrs:
@@ -192,7 +192,7 @@ def plotsr(args):
         g = set(df.loc[invindex, 'bstart'] < df.loc[invindex, 'bend'])
         if len(g) == 2:
             logger.error("Inconsistent coordinates in input file {}. For INV, INVTR, INVDUP annotations, either bstart < bend for all annotations or bstart > bend for all annotations. Mixing is not permitted.".format(alignments[i][0]))
-            sys.exit()
+            sys.exit(1)
         elif False in g:
             continue
         df.loc[invindex, 'bstart'] = df.loc[invindex, 'bstart'] + df.loc[invindex, 'bend']
@@ -217,7 +217,7 @@ def plotsr(args):
             fig = plt.figure(figsize=[W, H])
     except Exception as e:
         logger.error("Error in initiliazing figure. Try using a different backend.\n{}".format(e.with_traceback()))
-        sys.exit()
+        sys.exit(1)
     ax = fig.add_subplot(111, frameon=False)
 
     allal = pdconcat([alignments[i][1] for i in range(len(alignments))])
@@ -241,6 +241,8 @@ def plotsr(args):
     if 'TRA' in allal['type'].array or 'INVTR' in allal['type'].array:
         labelcnt += 1
     if 'DUP' in allal['type'].array or 'INVDP' in allal['type'].array:
+        labelcnt += 1
+    if 'DEL' in allal['type'].array:
         labelcnt += 1
 
     ## Draw Axes
@@ -311,6 +313,7 @@ def main():
     filtering.add_argument('--noinv', help='Do not plot inversions', default=False, action='store_true')
     filtering.add_argument('--notr', help='Do not plot translocations regions', default=False, action='store_true')
     filtering.add_argument('--nodup', help='Do not plot duplications regions', default=False, action='store_true')
+    filtering.add_argument('--nodel', help='Do not plot deletions', default=False, action='store_true')
     filtering.add_argument('-s', help='minimum size of a SR to be plotted', type=int, default=10000)
 
     plotting = parser.add_argument_group("Plot adjustment")
@@ -330,8 +333,6 @@ def main():
     other.add_argument('--version', action='version', version='{version}'.format(version=__version__))
     parser._action_groups.append(other)
 
-    # args = parser.parse_args([]) # TODO: Delete this line
     args = parser.parse_args()
-    # args = parser.parse_args('--sr col_lersyri.out --sr ler_cvisyri.out --sr cvi_erisyri.out --sr eri_shasyri.out --sr sha_kyosyri.out --sr kyo_an1syri.out --sr an1_c24syri.out --genomes genomes.txt  --chr Chr3 -S 1 -o ampril_col0_chr3.png -W 5 -H 3 -f 8 --cfg base.cfg'.split())
     plotsr(args)
 # END
