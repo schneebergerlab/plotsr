@@ -1,6 +1,8 @@
 import sys
 import logging
 import matplotlib.font_manager
+import gzip
+from collections import defaultdict
 # Constants
 MARKERS = {".": "point",
            ",": "pixel",
@@ -908,6 +910,11 @@ Validation and filtering
 class genome():
     def __init__(self, f, n, c):
         import logging
+        import os
+        self.logger = logging.getLogger("genome")
+        if not os.path.isfile(f):
+            self.logger.error("Genome file not found for genome {}: {}".format(n, f))
+            sys.exit(1)
         self.f = f
         self.n = n
         self.lc = c
@@ -918,7 +925,6 @@ class genome():
         self.glen = None
         self._paint = None
         self._paintleg = None
-        self.logger = logging.getLogger("genome")
 
     # Add tags
     def addtags(self, tags):
@@ -937,7 +943,7 @@ class genome():
                             matplotlib.colors.to_hex(v)
                     except ValueError:
                         self.logger.error("Error in using colour: {} for genome {}. Use correct hexadecimal colours or named colours define in matplotlib (https://matplotlib.org/stable/gallery/color/named_colors.html)".format(v, self.n))
-                        sys.exit()
+                        sys.exit(1)
                     setattr(self, n, v)
                 ## Numerical parameters
                 elif n in ['lw']:
@@ -945,39 +951,39 @@ class genome():
                         float(v)
                     except ValueError:
                         self.logger.error("Non-numerical value {} for {} for genome {}".format(v, n, self.n))
-                        sys.exit()
+                        sys.exit(1)
                     setattr(self, n, float(v))
                 ## Input type parameters
                 elif n == 'ft':
                     if v not in ['fa', 'cl']:
                         self.logger.error("Unknown filetype specified for genome {}. Please provide input type as 'fa' for fasta or 'cl' for chromosome-lengh in tab-separated file. 'cl' files are faster to read.".format(v, self.n))
-                        sys.exit()
+                        sys.exit(1)
                     setattr(self, n, v)
                 ## Chromosome-bar painting
                 elif n == 'pf':
                     if not os.path.isfile(v):
                         self.logger.error("Paint file (pf) not found for genome {}: {}".format(self.n, v))
-                        sys.exit()
+                        sys.exit(1)
                     setattr(self, n, v)
                 elif n == 'ph':
                     try:
                         setattr(self, n, float(v))
                     except ValueError:
                         self.logger.error("Non-numerical paint height (ph) {} for genome {}".format(v, self.n))
-                        sys.exit()
+                        sys.exit(1)
             else:
                 self.logger.error("{} is not a valid tag".format(n))
-                sys.exit()
+                sys.exit(1)
         return
     #END
 
-    # Parsed paint file, cached: {chrom: [(start, end, 'r,g,b')]} from BED9 itemRgb.
-    def paint(self):
-        import gzip
+    # Parse the paint file (BED9), cached: {chrom: [(start, end, (r,g,b))]} from the itemRgb column.
+    def parse_pf(self):
         if self._paint is None:
-            self._paint = {}
-            self._paintleg = {}          # label -> 'r,g,b', first occurrence, for the paint legend
+            self._paint = defaultdict(list)
+            self._paintleg = {}          # label -> (r,g,b) float colour, for the paint legend
             if self.pf is not None:
+                # gzip.open also reads bgzip-compressed BED (bgzf is a valid gzip stream); read-only here
                 op = gzip.open(self.pf, 'rt') if str(self.pf).endswith('.gz') else open(self.pf)
                 with op as fh:
                     for line in fh:
@@ -985,14 +991,15 @@ class genome():
                         if len(f) < 4 or f[0].startswith(('#', 'track', 'browser')):
                             continue
                         rgb = f[8] if len(f) >= 9 else '150,150,150'
-                        self._paint.setdefault(f[0], []).append((int(f[1]), int(f[2]), rgb))
-                        self._paintleg.setdefault(f[3], rgb)
+                        col = tuple(int(x)/255 for x in rgb.split(','))
+                        self._paint[f[0]].append((int(f[1]), int(f[2]), col))
+                        self._paintleg[f[3]] = col
         return self._paint
     #END
 
-    # Paint labels for the legend: {label: 'r,g,b'} in first-seen order.
+    # Paint labels for the legend: {label: (r,g,b)} in first-seen order.
     def paintlegend(self):
-        self.paint()
+        self.parse_pf()
         return self._paintleg
     #END
 
@@ -1580,14 +1587,13 @@ def pltchrom(ax, chrs, chrgrps, chrlengths, v, S, genomes, cfg, itx, minl=0, max
                     # paint file draws a bar of height ph centred on base instead of the chromosome
                     # line; pltsv attaches ribbons at its inner edge. Painted genomes skip the legend.
                     ph = genome.barheight(itx)
-                    for ps, pe, prgb in genome.paint().get(chrgrps[chrs[i]][s], []):
+                    for ps, pe, c in genome.parse_pf().get(chrgrps[chrs[i]][s], []):
                         ps, pe = max(ps, minl), min(pe, maxcoord)
                         if pe <= ps:
                             continue
-                        c = tuple(int(x)/255 for x in prgb.split(','))
                         xy, w, hh = ((ps, base-ph/2), pe-ps, ph) if not v else ((base-ph/2, ps), ph, pe-ps)
                         ax.add_patch(Rectangle(xy, w, hh, facecolor=c, edgecolor='none', zorder=2))
-                    chrlabs[s] = True
+                    chrlabs[s] = True         # painted genomes carry no lc swatch; the feature legend covers them
                 if cfg['genname'] == 'T':
                     margin = (maxcoord - minl) * 0.01
                     if not v:
@@ -1614,8 +1620,7 @@ def pltchrom(ax, chrs, chrgrps, chrlengths, v, S, genomes, cfg, itx, minl=0, max
                 else:
                     # painted bar in place of the line, offset by the chromosome's cumulative start
                     ph = genome.barheight(itx)
-                    for ps, pe, prgb in genome.paint().get(chrom, []):
-                        c = tuple(int(x)/255 for x in prgb.split(','))
+                    for ps, pe, c in genome.parse_pf().get(chrom, []):
                         xy, w, hh = ((start+ps, fixed-ph/2), pe-ps, ph) if not v else ((fixed-ph/2, start+ps), ph, pe-ps)
                         ax.add_patch(Rectangle(xy, w, hh, facecolor=c, edgecolor='none', zorder=2))
                 start = end + (MCHR*maxl)

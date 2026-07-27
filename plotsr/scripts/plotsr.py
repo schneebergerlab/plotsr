@@ -279,8 +279,8 @@ def plotsr(args):
         pleg = {}
         for g in genomes:
             if g.pf is not None:
-                for lab, rgb in g.paintlegend().items():
-                    pleg.setdefault(lab, tuple(int(x)/255 for x in rgb.split(',')))
+                for lab, col in g.paintlegend().items():
+                    pleg.setdefault(lab, col)
         if pleg:
             plt.gca().add_artist(l2)
             bbox_to_anchor[0] += cfg['bboxmar']
