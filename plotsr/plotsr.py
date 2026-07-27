@@ -9,20 +9,21 @@ Description: Plotting multi genome structural annotations
 """
 
 import argparse
+import logging
+import os
+import sys
+
+import matplotlib
+
 from plotsr import __version__
 
 def plotsr(args):
-    import logging
     from pandas import concat as pdconcat
     from pandas import unique
-    # from plotsr.scripts.func import *
-    from plotsr.scripts.func import setlogconfig, readbasecfg, readsyriout, readbedout, filterinput, validalign2fasta, selectchrom, selectregion, createribbon, drawax, pltchrom, pltsv, drawmarkers, readtrack, drawtracks, getfilehandler, definelogger
+    from plotsr.func import setlogconfig, readbasecfg, readsyriout, readbedout, filterinput, validalign2fasta, selectchrom, selectregion, createribbon, drawax, pltchrom, pltsv, drawmarkers, readtrack, drawtracks, getfilehandler, definelogger
     from collections import deque, OrderedDict
-    import os
     from math import ceil
-    import matplotlib
     from matplotlib.patches import Patch
-    import sys
 
     ## Define loggers
     setlogconfig(args.log)
@@ -310,7 +311,10 @@ def plotsr(args):
 # END
 
 def main():
-    from matplotlib.rcsetup import non_interactive_bk as bklist
+    # fetch valid non-interactive backends
+    # API changed in matplotlib 3.11
+    bklist = matplotlib.backends.backend_registry.list_builtin(filter_=matplotlib.backends.BackendFilter.NON_INTERACTIVE)
+
     parser = argparse.ArgumentParser("Plotting structural rearrangements between genomes", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     other = parser._action_groups.pop()
     inputfiles = parser.add_argument_group("Input/Output files")
