@@ -47,4 +47,4 @@ jobs:
         plotsr -h
     - name: Run tests
       run: |
-        python test/pytest.py
+        python test/test.py
