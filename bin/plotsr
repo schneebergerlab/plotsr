@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from plotsr.scripts.plotsr import main
+from plotsr.plotsr import main
 import sys
 if __name__ == '__main__':
     main(sys.argv[1:])

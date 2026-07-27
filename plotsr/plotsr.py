@@ -15,8 +15,7 @@ def plotsr(args):
     import logging
     from pandas import concat as pdconcat
     from pandas import unique
-    # from plotsr.scripts.func import *
-    from plotsr.scripts.func import setlogconfig, readbasecfg, readsyriout, readbedout, filterinput, validalign2fasta, selectchrom, selectregion, createribbon, drawax, pltchrom, pltsv, drawmarkers, readtrack, drawtracks, getfilehandler, definelogger
+    from plotsr.func import setlogconfig, readbasecfg, readsyriout, readbedout, filterinput, validalign2fasta, selectchrom, selectregion, createribbon, drawax, pltchrom, pltsv, drawmarkers, readtrack, drawtracks, getfilehandler, definelogger
     from collections import deque, OrderedDict
     import os
     from math import ceil
