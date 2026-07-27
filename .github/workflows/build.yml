@@ -1,0 +1,51 @@
+# This workflow will use the build action to build the plotsr python package, and call the CLI interface to check the install worked
+name: Test build
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+# Cancel if a newer run is started
+# taken from https://github.com/nf-core/modules/blob/master/.github/workflows/nf-test.yml
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13", "3.14"]
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v4
+      # use old install manually
+      # since switching to conda no longer supports different python version
+      #    - name: Build msyd
+      #      uses: schneebergerlab/msyd@main
+      #      #      with:
+      #      #        python-version: ${{ matrix.python-version }}
+    - name: Set up Python ${{ inputs.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+        cache: pip
+    - name: Update pip
+      run: python -m pip install --upgrade pip setuptools
+      shell: bash
+    - name: Build using pip
+      run: pip install .
+      shell: bash
+    - name: Test installation
+      run: |
+        plotsr --version
+        plotsr -h
+    - name: Run pytests
+      run: |
+        python -m pip install pytest
+        python test/pytest.py
