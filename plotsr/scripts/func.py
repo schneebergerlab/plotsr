@@ -1,6 +1,8 @@
 import sys
 import logging
 import matplotlib.font_manager
+import gzip
+from collections import defaultdict
 # Constants
 MARKERS = {".": "point",
            ",": "pixel",
@@ -210,6 +212,7 @@ def readbasecfg(f, v):
     # Set legend properties
     cfg['legend'] = True
     cfg['genlegcol'] = -1
+    cfg['featlegcol'] = 0       # genome-features legend columns (0 = fit to figure height)
     cfg['bbox'] = [0, 1.01, 0.5, 0.3]
     cfg['bbox_v'] = [0, 1.1, 0.5, 0.3]
     cfg['bboxmar'] = 0.5
@@ -244,7 +247,7 @@ def readbasecfg(f, v):
                     logger.error("Error in using colour: {} for {}. Use correct hexadecimal colours or named colours defined in matplotlib (https://matplotlib.org/stable/gallery/color/named_colors.html). Using default value.".format(line[1], line[0]))
                     continue
                 cfg[line[0]] = line[1]
-            elif line[0] in ['synlwd', 'invlwd', 'tralwd', 'duplwd', 'delwd','alpha', 'chrmar', 'exmar', 'bboxmar', 'genlegcol', 'marginchr', 'maxl']:
+            elif line[0] in ['synlwd', 'invlwd', 'tralwd', 'duplwd', 'delwd', 'alpha', 'chrmar', 'exmar', 'bboxmar', 'genlegcol', 'featlegcol', 'marginchr', 'maxl']:
                 try:
                     float(line[1])
                 except ValueError:
@@ -907,17 +910,26 @@ Validation and filtering
 class genome():
     def __init__(self, f, n, c):
         import logging
+        import os
+        self.logger = logging.getLogger("genome")
+        if not os.path.isfile(f):
+            self.logger.error("Genome file not found for genome {}: {}".format(n, f))
+            sys.exit(1)
         self.f = f
         self.n = n
         self.lc = c
         self.lw = 1
         self.ft = 'fa'          # Input file type: "fa"=fasta, "cl"="chromosome length
+        self.pf = None          # paint file (BED9) to colour the chromosome bar
+        self.ph = None          # painted-bar height (None -> mode default, see barheight)
         self.glen = None
-        self.logger = logging.getLogger("genome")
+        self._paint = None
+        self._paintleg = None
 
     # Add tags
     def addtags(self, tags):
         import matplotlib
+        import os
         import sys
         for i in tags.split(";"):
             n, v = i.split(":")
@@ -931,7 +943,7 @@ class genome():
                             matplotlib.colors.to_hex(v)
                     except ValueError:
                         self.logger.error("Error in using colour: {} for genome {}. Use correct hexadecimal colours or named colours define in matplotlib (https://matplotlib.org/stable/gallery/color/named_colors.html)".format(v, self.n))
-                        sys.exit()
+                        sys.exit(1)
                     setattr(self, n, v)
                 ## Numerical parameters
                 elif n in ['lw']:
@@ -939,18 +951,64 @@ class genome():
                         float(v)
                     except ValueError:
                         self.logger.error("Non-numerical value {} for {} for genome {}".format(v, n, self.n))
-                        sys.exit()
+                        sys.exit(1)
                     setattr(self, n, float(v))
                 ## Input type parameters
                 elif n == 'ft':
                     if v not in ['fa', 'cl']:
                         self.logger.error("Unknown filetype specified for genome {}. Please provide input type as 'fa' for fasta or 'cl' for chromosome-lengh in tab-separated file. 'cl' files are faster to read.".format(v, self.n))
-                        sys.exit()
+                        sys.exit(1)
                     setattr(self, n, v)
+                ## Chromosome-bar painting
+                elif n == 'pf':
+                    if not os.path.isfile(v):
+                        self.logger.error("Paint file (pf) not found for genome {}: {}".format(self.n, v))
+                        sys.exit(1)
+                    setattr(self, n, v)
+                elif n == 'ph':
+                    try:
+                        setattr(self, n, float(v))
+                    except ValueError:
+                        self.logger.error("Non-numerical paint height (ph) {} for genome {}".format(v, self.n))
+                        sys.exit(1)
             else:
                 self.logger.error("{} is not a valid tag".format(n))
-                sys.exit()
+                sys.exit(1)
         return
+    #END
+
+    # Parse the paint file (BED9), cached: {chrom: [(start, end, (r,g,b))]} from the itemRgb column.
+    def parse_pf(self):
+        if self._paint is None:
+            self._paint = defaultdict(list)
+            self._paintleg = {}          # label -> (r,g,b) float colour, for the paint legend
+            if self.pf is not None:
+                # gzip.open also reads bgzip-compressed BED (bgzf is a valid gzip stream); read-only here
+                op = gzip.open(self.pf, 'rt') if str(self.pf).endswith('.gz') else open(self.pf)
+                with op as fh:
+                    for line in fh:
+                        f = line.rstrip('\n').split('\t')
+                        if len(f) < 4 or f[0].startswith(('#', 'track', 'browser')):
+                            continue
+                        rgb = f[8] if len(f) >= 9 else '150,150,150'
+                        col = tuple(int(x)/255 for x in rgb.split(','))
+                        self._paint[f[0]].append((int(f[1]), int(f[2]), col))
+                        self._paintleg[f[3]] = col
+        return self._paint
+    #END
+
+    # Paint labels for the legend: {label: (r,g,b)} in first-seen order.
+    def paintlegend(self):
+        self.parse_pf()
+        return self._paintleg
+    #END
+
+    # Painted-bar height: the ph tag if set, else a mode default (thinner under --itx, where many
+    # genomes share one row, so the synteny stays visible).
+    def barheight(self, itx):
+        if self.ph is not None:
+            return self.ph
+        return 0.05 if itx else 0.15
     #END
 
     # Read chromosome lengths
@@ -1494,6 +1552,7 @@ def drawax(ax, chrgrps, chrlengths, v, s, cfg, itx, minl=0, maxl=-1, chrname=Non
 
 
 def pltchrom(ax, chrs, chrgrps, chrlengths, v, S, genomes, cfg, itx, minl=0, maxl=-1):
+    from matplotlib.patches import Rectangle
     chrlabs = [False]*len(chrlengths)
     # Set chromosome direction
     pltchr = ax.hlines if not v else ax.vlines
@@ -1516,18 +1575,25 @@ def pltchrom(ax, chrs, chrgrps, chrlengths, v, S, genomes, cfg, itx, minl=0, max
                 else:
                     maxcoord = maxl
                 genome = [gen for gen in genomes if gen.n == chrlengths[s][0]][0]
-                if not chrlabs[s]:
-                    chrlabels.append(pltchr(indents[s]-offset, minl, maxcoord,
-                                            color=genome.lc,
-                                            linewidth=genome.lw,
-                                            label=chrlengths[s][0],
-                                            zorder=2))
-                    chrlabs[s] = True
+                base = indents[s] - offset
+                lab = chrlengths[s][0] if not chrlabs[s] else None
+                if genome.pf is None:
+                    h = pltchr(base, minl, maxcoord, color=genome.lc, linewidth=genome.lw,
+                               label=lab, zorder=2)
+                    if not chrlabs[s]:
+                        chrlabels.append(h)
+                        chrlabs[s] = True
                 else:
-                    pltchr(indents[s]-offset, minl, maxcoord,
-                           color=genome.lc,
-                           linewidth=genome.lw,
-                           zorder=2)
+                    # paint file draws a bar of height ph centred on base instead of the chromosome
+                    # line; pltsv attaches ribbons at its inner edge. Painted genomes skip the legend.
+                    ph = genome.barheight(itx)
+                    for ps, pe, c in genome.parse_pf().get(chrgrps[chrs[i]][s], []):
+                        ps, pe = max(ps, minl), min(pe, maxcoord)
+                        if pe <= ps:
+                            continue
+                        xy, w, hh = ((ps, base-ph/2), pe-ps, ph) if not v else ((base-ph/2, ps), ph, pe-ps)
+                        ax.add_patch(Rectangle(xy, w, hh, facecolor=c, edgecolor='none', zorder=2))
+                    chrlabs[s] = True         # painted genomes carry no lc swatch; the feature legend covers them
                 if cfg['genname'] == 'T':
                     margin = (maxcoord - minl) * 0.01
                     if not v:
@@ -1547,14 +1613,16 @@ def pltchrom(ax, chrs, chrgrps, chrlengths, v, S, genomes, cfg, itx, minl=0, max
             genome = [gen for gen in genomes if gen.n == chrlengths[s][0]][0]
             fixed = S - (step*s) if not v else 1 - S + (step*s)
             for i in range(len(chrs)):
-                if not v:
-                    end = start + chrlengths[s][1][chrgrps[chrs[i]][s]]
+                chrom = chrgrps[chrs[i]][s] if not v else chrgrps[chrs[len(chrs)-1-i]][s]
+                end = start + chrlengths[s][1][chrom]
+                if genome.pf is None:
+                    pltchr(fixed, start, end, color=genome.lc, linewidth=genome.lw, zorder=2)
                 else:
-                    end = start + chrlengths[s][1][chrgrps[chrs[len(chrs)-1-i]][s]]
-                pltchr(fixed, start, end,
-                       color=genome.lc,
-                       linewidth=genome.lw,
-                       zorder=2)
+                    # painted bar in place of the line, offset by the chromosome's cumulative start
+                    ph = genome.barheight(itx)
+                    for ps, pe, c in genome.parse_pf().get(chrom, []):
+                        xy, w, hh = ((start+ps, fixed-ph/2), pe-ps, ph) if not v else ((fixed-ph/2, start+ps), ph, pe-ps)
+                        ax.add_patch(Rectangle(xy, w, hh, facecolor=c, edgecolor='none', zorder=2))
                 start = end + (MCHR*maxl)
     return ax, indents, chrlabels
 # END
@@ -1576,9 +1644,15 @@ def genbuff(s, chrlengths, chrgrps, chrs, maxl, v, cfg):
 # END
 
 
-def pltsv(ax, alignments, chrs, v, chrgrps, chrlengths, indents, S, cfg, itx, maxl):
+def pltsv(ax, alignments, chrs, v, chrgrps, chrlengths, indents, S, cfg, itx, maxl, genomes=None):
     from collections import deque
     from copy import deepcopy
+    # Per-genome half bar-height, so painted ribbons start at the bar edge (0 for unpainted genomes).
+    phh = [0.0]*len(chrlengths)
+    if genomes is not None:
+        for j in range(len(chrlengths)):
+            g = [gen for gen in genomes if gen.n == chrlengths[j][0]][0]
+            phh[j] = g.barheight(itx)/2 if g.pf is not None else 0.0
     def annotodict(anno):
         return {a.split(':')[0]: a.split(':')[1] for a in anno.split(';')}
     #END
@@ -1646,6 +1720,13 @@ def pltsv(ax, alignments, chrs, v, chrgrps, chrlengths, indents, S, cfg, itx, ma
                 offset = i if not v else -i
                 df.loc[df['achr'] == chrgrps[chrs[i]][s], 'ry'] -= offset
                 df.loc[df['achr'] == chrgrps[chrs[i]][s], 'qy'] -= offset
+            if any(phh):                            # shift ribbon ends to the painted bar edges
+                if not v:
+                    df['ry'] -= phh[s]
+                    df['qy'] += phh[s+1]
+                else:
+                    df['ry'] += phh[s]
+                    df['qy'] -= phh[s+1]
             for row in df.itertuples(index=False):
                 p = bezierpath(row.astart, row.aend, row.bstart, row.bend, row.ry, row.qy, v, row.col, alpha=alpha, label=row.lab, lw=row.lw, zorder=row.zorder)
                 l = ax.add_patch(p)
@@ -1666,6 +1747,13 @@ def pltsv(ax, alignments, chrs, v, chrgrps, chrlengths, indents, S, cfg, itx, ma
             df['bend'] += qbuff
             df['ry'] = S - (step*s) if not v else 1 - S + (step*s) #   len(chrlengths) - s - 0.5 if not v else s + 0.5
             df['qy'] = S - (step*(s+1)) if not v else 1 - S + (step*(s+1)) #    len(chrlengths) - s - 1 - 0.5 if not v else s + 1 + 0.5
+            if any(phh):                            # shift ribbon ends to the painted bar edges
+                if not v:
+                    df['ry'] -= phh[s]
+                    df['qy'] += phh[s+1]
+                else:
+                    df['ry'] += phh[s]
+                    df['qy'] -= phh[s+1]
             for row in df.itertuples(index=False):
                 p = bezierpath(row.astart, row.aend, row.bstart, row.bend, row.ry, row.qy, v, row.col, alpha=alpha, label=row.lab, lw=row.lw, zorder=row.zorder)
                 l = ax.add_patch(p)

@@ -162,6 +162,8 @@ Currently, the following tags are available for genomes.
 ft = File type (fa/cl for fasta/chromosome_length, default = fa); cl files must be in tsv format with chromosome name in column 1 and chromosome length in column 2; using cl files is much faster than using fasta files
 lw = line width
 lc = line colour
+pf = paint file: a BED9 (chromosome, start, end, name, ..., itemRgb in column 9) that colours the chromosome bar instead of drawing a line; the name column feeds a "Genome features" legend, colours come from itemRgb (grey if absent). Chromosome names must exactly match this genome!
+ph = height of the painted bar (default 0.15, or 0.05 with --itx where genomes share one row); synteny ribbons attach at the bar edge
 ```
 Check the [genomes.txt](./example/genomes.txt) for a working example.
 

@@ -21,6 +21,7 @@ def plotsr(args):
     import os
     from math import ceil
     import matplotlib
+    from matplotlib.patches import Patch
     import sys
 
     ## Define loggers
@@ -259,17 +260,35 @@ def plotsr(args):
     # Get Genome legend
     if cfg['legend']:
         bbox_to_anchor = cfg['bbox']
-        if not ITX:
+        if not ITX and chrlabels:
             l1 = plt.legend(handles=chrlabels, loc='lower left', bbox_to_anchor=bbox_to_anchor, ncol=ncol, mode=None, borderaxespad=0., frameon=False, title='Genomes')
             l1._legend_box.align = "left"
             plt.gca().add_artist(l1)
 
     # Plot structural annotations
-    ax, svlabels = pltsv(ax, alignments, chrs, V, chrgrps, chrlengths, indents, S, cfg, ITX, maxl)
+    ax, svlabels = pltsv(ax, alignments, chrs, V, chrgrps, chrlengths, indents, S, cfg, ITX, maxl, genomes=genomes)
 
     if cfg['legend']:
-        bbox_to_anchor[0] += cfg['bboxmar']
-        plt.legend(handles=svlabels, loc='lower left', bbox_to_anchor=bbox_to_anchor, ncol=1, mode='expand', borderaxespad=0., frameon=False, title='Annotations')._legend_box.align = "left"
+        if not ITX and chrlabels:                # only shift past the Genomes legend if it was drawn
+            bbox_to_anchor[0] += cfg['bboxmar']
+        l2 = plt.legend(handles=svlabels, loc='lower left', bbox_to_anchor=bbox_to_anchor, ncol=1, mode='expand', borderaxespad=0., frameon=False, title='Annotations')
+        l2._legend_box.align = "left"
+
+    # Genome-features legend: labels and colours taken from the supplied BED9 paint files
+    if cfg['legend']:
+        pleg = {}
+        for g in genomes:
+            if g.pf is not None:
+                for lab, col in g.paintlegend().items():
+                    pleg.setdefault(lab, col)
+        if pleg:
+            plt.gca().add_artist(l2)
+            bbox_to_anchor[0] += cfg['bboxmar']
+            # Spread into several short columns to use the plot width (featlegcol overrides).
+            rows = max(1, int(H))
+            ncolf = int(cfg['featlegcol']) or ceil(len(pleg)/rows)
+            handles = [Patch(facecolor=c, edgecolor='none', label=l) for l, c in pleg.items()]
+            plt.legend(handles=handles, loc='lower left', bbox_to_anchor=bbox_to_anchor, ncol=ncolf, mode=None, borderaxespad=0., frameon=False, title='Genome features', columnspacing=1.0, handletextpad=0.5)._legend_box.align = "left"
 
     # Plot markers
     if B is not None:
